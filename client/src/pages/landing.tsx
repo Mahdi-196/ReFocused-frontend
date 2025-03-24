@@ -1,8 +1,5 @@
-import Header from '../components/header';
-
 const Landing = () => (
-  <div>
-    <Header />
+  <div className="bg-[var(--color-primary1)]">
   </div>
 );
 

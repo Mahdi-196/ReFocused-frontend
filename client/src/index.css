@@ -15,3 +15,8 @@
   --color-dark-secondary2: #FF8A65; /* Light Deep Orange */
   --color-dark-background: #263238; /* Dark Background */
 }
+
+/* scroll bar disabled*/
+body {
+  overflow: hidden;
+}
