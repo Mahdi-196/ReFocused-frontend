@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+:root {
+  /* Light Mode Colors */
+  --color-primary1: #1976D2; /* Royal Blue */
+  --color-primary2: #009688; /* Teal */
+  --color-secondary1: #FFC107; /* Amber */
+  --color-secondary2: #FF5722; /* Deep Orange */
+  --color-background: #ECEFF1; /* Light Background */
+
+  /* Dark Mode Colors */
+  --color-dark-primary1: #90CAF9; /* Light Royal Blue */
+  --color-dark-primary2: #80CBC4; /* Light Teal */
+  --color-dark-secondary1: #FFD54F; /* Light Amber */
+  --color-dark-secondary2: #FF8A65; /* Light Deep Orange */
+  --color-dark-background: #263238; /* Dark Background */
+}
