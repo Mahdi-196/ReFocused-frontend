@@ -1,8 +1,8 @@
-import DraftEditor from '../components/draftEditor';
+import TextEditor from '../components/textEditor';
 
 const Landing = () => (
   <div className="bg-[var(--color-primary1)] p-4">
-    <DraftEditor />
+    <TextEditor />
   </div>
 );
 
