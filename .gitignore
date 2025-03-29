@@ -1,24 +1,46 @@
-# Logs
-logs
+# Node modules
+node_modules/
+.yarn/
+.pnp.*
+.yarnrc.yml
+
+# Build output
+dist/
+build/
 *.log
+
+# Vite cache
+.vite/
+
+# Temp files
+*.tmp
+*.swp
+*.swo
+*.DS_Store
+*.bak
+
+# IDEs
+.vscode/
+.idea/
+
+# Test coverage
+coverage/
+
+# Environment variables
+.env*
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# npm debug files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Output of 'npm pack'
+*.tgz
