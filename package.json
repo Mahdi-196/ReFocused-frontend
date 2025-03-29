@@ -7,7 +7,7 @@
     "client"
   ],
   "scripts": {
-    "dev": "vite --open",
+    "dev": "yarn workspace client dev",
     "build": "tsc -b && vite build",
     "start": "yarn build && vite preview --open",
     "preview": "vite preview --open"
