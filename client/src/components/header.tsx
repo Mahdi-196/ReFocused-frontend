@@ -26,7 +26,7 @@ const Header = () => {
             <Link to="/dashboard" className="block text-[var(--color-primary1)]">
               Dashboard
             </Link>
-            <Link to="/journal" className="block text-[var(--color-primary1)]">
+            <Link to="/journalLanding" className="block text-[var(--color-primary1)]">
               Journal
             </Link>
             <Link to="/landing" className="block text-[var(--color-primary1)]">

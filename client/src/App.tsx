@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Landing from './pages/landing';
 import Dashboard from './pages/dashboard';
-import Journal from './pages/journal';
+import JournalLanding from './pages/journal/journalLanding';
 import Planner from './pages/planner';
 import Settings from './pages/settings';
 import Study from './pages/study';
@@ -16,7 +16,7 @@ function App() {
       <Routes>
         <Route path="/landing" element={<Landing />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/journal" element={<Journal />} />
+        <Route path="/journalLanding" element={<JournalLanding />} />
         <Route path="/planner" element={<Planner />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/study" element={<Study />} />
