@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import TextEditor from "@/components/textEditor";
+import TextEditor from "@/components/TextEditor";
 import { Plus } from "lucide-react";
 
 type Entry = {

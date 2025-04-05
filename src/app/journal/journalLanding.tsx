@@ -1,6 +1,6 @@
 "use client";
 
-import TextEditor from "@/components/textEditor";
+import TextEditor from "@/components/TextEditor";
 
 const JournalLanding = () => (
   <div className="bg-[var(--color-primary1)] p-4">

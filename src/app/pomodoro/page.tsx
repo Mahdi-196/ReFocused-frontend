@@ -1,6 +1,6 @@
 "use client";
 
-import Pomodoro from "@/components/pomodoro";
+import Pomodoro from "@/components/Pomodoro";
 
 const PomodoroPage = () => {
   return (

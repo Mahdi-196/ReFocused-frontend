@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
-import DevToolsMenu from "@/components/devTools";
+import DevToolsMenu from "@/components/DevTools";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
