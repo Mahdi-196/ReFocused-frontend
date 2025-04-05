@@ -19,9 +19,9 @@
 }
 
 /* scroll bar disabled*/
-/* body {
+body {
   overflow: hidden;
-} */
+}
 
 /* global.css or App.css */
 .ql-container {
@@ -34,3 +34,17 @@
   padding-bottom: 2rem; /* Make space above Save */
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 1s ease-out forwards;
+}

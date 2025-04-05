@@ -1,8 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import TextEditor from "@/components/TextEditor";
+import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
+
+// ✅ Dynamically import to disable SSR
+const TextEditor = dynamic(() => import("@/components/TextEditor"), {
+  ssr: false,
+});
 
 type Entry = {
   id: string;
