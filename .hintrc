@@ -3,9 +3,6 @@
     "development"
   ],
   "hints": {
-    "typescript-config/consistent-casing": "off",
-    "typescript-config/strict": "off",
-    "typescript-config/is-valid": "off",
     "axe/forms": [
       "default",
       {
@@ -13,12 +10,13 @@
         "label": "off"
       }
     ],
-    "no-inline-styles": "off",
     "axe/name-role-value": [
       "default",
       {
         "button-name": "off"
       }
-    ]
+    ],
+    "no-inline-styles": "off",
+    "typescript-config/consistent-casing": "off"
   }
 }
