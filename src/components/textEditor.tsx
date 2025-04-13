@@ -7,15 +7,20 @@ import "quill/dist/quill.snow.css";
 type Props = {
   value: string;
   onChange: (html: string) => void;
+  onCountUpdate?: (counts: { words: number; chars: number }) => void;
 };
 
-const TextEditor: React.FC<Props> = ({ value = "", onChange }) => {
+const TextEditor: React.FC<Props> = ({
+  value = "",
+  onChange,
+  onCountUpdate,
+}) => {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true); // ensure only renders on client
+    setIsMounted(true); // Ensure component is mounted on client only
   }, []);
 
   useEffect(() => {
@@ -37,7 +42,15 @@ const TextEditor: React.FC<Props> = ({ value = "", onChange }) => {
 
     quillRef.current.on("text-change", () => {
       if (quillRef.current) {
-        onChange(quillRef.current.root.innerHTML);
+        const html = quillRef.current.root.innerHTML;
+        const text = quillRef.current.getText().trim();
+        onChange(html);
+
+        // ✅ Word and character count logic
+        const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
+        const charCount = text.replace(/\s/g, "").length;
+
+        onCountUpdate?.({ words: wordCount, chars: charCount });
       }
     });
 
