@@ -1,7 +1,7 @@
 // src/components/Header.tsx
 import Link from 'next/link';
 import { MdNotifications, MdPersonOutline } from 'react-icons/md';
-import DevTools from './DevTools';
+import DevTools from './devTools';
 
 const Header = () => {
   return (

@@ -55,7 +55,7 @@ const TextEditor: React.FC<Props> = ({
     });
 
     quillRef.current.root.innerHTML = value;
-  }, [isMounted]);
+  }, [isMounted, onChange, onCountUpdate, value]);
 
   useEffect(() => {
     if (

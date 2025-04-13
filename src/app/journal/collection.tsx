@@ -57,7 +57,7 @@ export function useCollections() {
         const parsed = JSON.parse(savedCollections);
         if (Array.isArray(parsed) && parsed.every(c => c && typeof c.id === 'string' && typeof c.name === 'string' && Array.isArray(c.entries))) {
             // Ensure "My Notes" exists and is first (logic moved from getInitialCollections)
-            let myNotesIndex = parsed.findIndex(c => c.id === "default-my-notes");
+            const myNotesIndex = parsed.findIndex(c => c.id === "default-my-notes");
             if (myNotesIndex === -1) {
               parsed.unshift(getDefaultCollection());
             } else if (myNotesIndex > 0) {
@@ -123,20 +123,20 @@ export function useCollections() {
     setPasswordHashes(loadedHashes);
 
     // Handle initial hashing for default private collection AFTER loading state
-     const privateCollection = loadedCollections.find(c => c.name === "Private" && c.isPrivate);
-     if (privateCollection && !loadedHashes[privateCollection.id]) {
-         console.log("Setting initial password hash for default private collection...");
-         bcrypt.hash("pass1", 10).then(hash => {
-             // Use functional update based on the *latest* state
-             setPasswordHashes(prev => {
-                 const newHashes = {...prev, [privateCollection.id]: hash };
-                 // Save updated hashes (will trigger the save effect below)
-                 return newHashes;
-             });
-         }).catch(err => {
-            console.error("Failed to hash initial password:", err);
-         });
-     }
+    const privateCollection = loadedCollections.find(c => c.name === "Private" && c.isPrivate);
+    if (privateCollection && !loadedHashes[privateCollection.id]) {
+        console.log("Setting initial password hash for default private collection...");
+        bcrypt.hash("pass1", 10).then(hash => {
+            // Use functional update based on the *latest* state
+            setPasswordHashes(prev => {
+                const newHashes = {...prev, [privateCollection.id]: hash };
+                // Save updated hashes (will trigger the save effect below)
+                return newHashes;
+            });
+        }).catch(err => {
+           console.error("Failed to hash initial password:", err);
+        });
+    }
 
     setIsLoading(false); // Set loading to false
     console.log("Initial loading complete.");
@@ -241,7 +241,6 @@ export function useCollections() {
     currentPassword?: string
   ) => {
     // Find collection using functional state update to ensure freshness
-    let success = false;
     let collectionToUpdate: Collection | undefined;
     setCollections(prev => {
         const collectionIndex = prev.findIndex(c => c.id === collectionId);
@@ -343,7 +342,8 @@ export function useCollections() {
 
     if (collectionToDelete && collectionToDelete.id !== "default-my-notes") {
         setPasswordHashes((prev) => {
-          const { [collectionId]: _, ...rest } = prev;
+          const rest = { ...prev };
+          delete rest[collectionId];
           return rest;
         });
     }

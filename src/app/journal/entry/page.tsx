@@ -7,7 +7,7 @@ import { useCollections } from "../collection";
 import type { Entry } from "../collection";
 import { ChevronLeft } from "lucide-react";
 
-const TextEditor = dynamic(() => import("@/components/TextEditor"), {
+const TextEditor = dynamic(() => import("@/components/textEditor"), {
   ssr: false,
 });
 

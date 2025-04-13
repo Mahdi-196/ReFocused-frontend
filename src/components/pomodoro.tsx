@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   X,
   Play,
@@ -115,6 +115,23 @@ const Pomodoro = () => {
     else setTimeLeft(longBreakTime * 60);
   }, [pomodoroTime, shortBreakTime, longBreakTime, mode]);
 
+  // === COMPLETE SESSION HELPER ===
+  const completeSession = useCallback((autoStart: boolean) => {
+    if (mode === "pomodoro") {
+      setRounds((prev) => {
+        const newRounds = prev + 1;
+        const nextMode = newRounds % longBreakInterval === 0 ? "long" : "short";
+        setMode(nextMode);
+        // Only auto start if the session naturally ended (autoStart true)
+        setIsRunning(autoStart ? autoStartBreaks : false);
+        return newRounds;
+      });
+    } else {
+      setMode("pomodoro");
+      setIsRunning(autoStart ? autoStartPomodoros : false);
+    }
+  }, [mode, longBreakInterval, autoStartBreaks, autoStartPomodoros]);
+
   // === SMOOTH COUNTDOWN (update every 100ms) ===
   useEffect(() => {
     if (!isRunning) return;
@@ -129,29 +146,7 @@ const Pomodoro = () => {
       });
     }, 100);
     return () => clearInterval(interval);
-  }, [isRunning]);
-
-  // === COMPLETE SESSION HELPER ===
-  // autoStart: true if session ended naturally, false if skipped manually
-  function completeSession(autoStart: boolean) {
-    if (mode === "pomodoro") {
-      setRounds((prev) => {
-        const newRounds = prev + 1;
-        const nextMode = newRounds % longBreakInterval === 0 ? "long" : "short";
-        setMode(nextMode);
-        // Only auto start if the session naturally ended (autoStart true)
-        setIsRunning(autoStart ? autoStartBreaks : false);
-        return newRounds;
-      });
-    } else {
-      setMode("pomodoro");
-      setIsRunning(autoStart ? autoStartPomodoros : false);
-    }
-  }
-
-  function handleSessionComplete() {
-    completeSession(true);
-  }
+  }, [isRunning, completeSession]);
 
   function handleSkip() {
     completeSession(false);

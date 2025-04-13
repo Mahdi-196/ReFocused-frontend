@@ -1,16 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Edit, Calendar, Lock, FileText, Trash2, X } from "lucide-react";
+import { Plus, Search, Edit, Calendar, Lock, FileText, X } from "lucide-react";
 import { useCollections, Entry, Collection } from "./collection";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import DropdownMenu from "@/components/DropdownMenu";
-
-const TextEditor = dynamic(() => import("@/components/TextEditor"), {
-  ssr: false,
-});
 
 function getTimeAgo(isoString: string | undefined): string {
   if (!isoString) return "Never";
@@ -24,23 +19,6 @@ function getTimeAgo(isoString: string | undefined): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
-}
-
-async function exportToPDF(html: string, title: string) {
-  const html2pdf = (await import("html2pdf.js")).default;
-
-  const container = document.createElement("div");
-  container.innerHTML = html;
-
-  const opt = {
-    margin: 0.5,
-    filename: `${title || "journal"}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-  };
-
-  html2pdf().set(opt).from(container).save();
 }
 
 // Update the Modal component
@@ -97,7 +75,6 @@ const Journal: React.FC = () => {
     collections,
     addCollection,
     deleteCollection,
-    saveEntry,
     deleteEntry,
     verifyPassword,
     updateCollection,
@@ -110,7 +87,7 @@ const Journal: React.FC = () => {
   const [password, setPassword] = useState("");
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [_, forceUpdate] = useState(0);
+  const [, forceUpdate] = useState(0);
   const [passwordPrompt, setPasswordPrompt] = useState<{ collectionId: string; name: string } | null>(null);
   const [enteredPassword, setEnteredPassword] = useState("");
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
@@ -312,7 +289,7 @@ const Journal: React.FC = () => {
                         e.stopPropagation();
                         console.log(`<<< CLICK Collection Edit Icon for: ${col.name} (${col.id}) >>>`);
                         const rect = e.currentTarget.getBoundingClientRect();
-                        const nextState = openDropdown?.id === col.id ? null : { type: 'collection' as 'collection', id: col.id, rect: rect, collection: col };
+                        const nextState = openDropdown?.id === col.id ? null : { type: 'collection' as const, id: col.id, rect: rect, collection: col };
                         console.log(`<<< Setting openDropdown to:`, nextState);
                         setOpenDropdown(nextState);
                       }}
@@ -551,7 +528,7 @@ const Journal: React.FC = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setOpenDropdown(openDropdown?.id === entry.id ? null : { type: 'entry', id: entry.id, rect: e.currentTarget.getBoundingClientRect(), collection: selectedCollection, entry: entry });
+                        setOpenDropdown(openDropdown?.id === entry.id ? null : { type: 'entry' as const, id: entry.id, rect: e.currentTarget.getBoundingClientRect(), collection: selectedCollection, entry: entry });
                       }}
                       className="text-gray-400 hover:text-blue-500 transition-colors duration-150 ease-in-out"
                       title="Edit Entry"

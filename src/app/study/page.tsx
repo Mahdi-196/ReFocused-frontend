@@ -1,6 +1,6 @@
 // src/app/study/page.tsx
 import React from 'react';
-import Pomodoro from '@/components/Pomodoro';
+import Pomodoro from '@/components/pomodoro';
 
 export default function StudyPage() {
   return (
