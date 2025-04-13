@@ -139,9 +139,9 @@ const Journal: React.FC = () => {
         alert("Please create a collection first");
         return;
       }
-      router.push(`/journal/new?collection=${defaultCol.id}`);
+      router.push(`/journal/entry?collection=${defaultCol.id}`);
     } else {
-      router.push(`/journal/new?collection=${selectedCollectionId}`);
+      router.push(`/journal/entry?collection=${selectedCollectionId}`);
     }
   };
 
