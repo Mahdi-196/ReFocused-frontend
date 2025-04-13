@@ -3,14 +3,15 @@
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCollections, Entry } from "../collection";
+import { useCollections } from "../collection";
+import type { Entry } from "../collection";
 import { ChevronLeft } from "lucide-react";
 
 const TextEditor = dynamic(() => import("@/components/TextEditor"), {
   ssr: false,
 });
 
-function NewEntryContent() {
+function EntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { collections, saveEntry } = useCollections();
@@ -18,12 +19,26 @@ function NewEntryContent() {
   const [content, setContent] = useState("");
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [entryId, setEntryId] = useState<string | null>(null);
 
-  // Set collection ID from URL or default
+  // Set collection ID and load entry data from URL
   useEffect(() => {
     const collectionId = searchParams.get('collection');
+    const entryId = searchParams.get('entry');
+
     if (collectionId && collections.some(c => c.id === collectionId)) {
       setSelectedCollectionId(collectionId);
+      
+      // If editing an existing entry, load its data
+      if (entryId) {
+        setEntryId(entryId);
+        const collection = collections.find(c => c.id === collectionId);
+        const entry = collection?.entries.find(e => e.id === entryId);
+        if (entry) {
+          setTitle(entry.title || "");
+          setContent(entry.content || "");
+        }
+      }
     } else if (collections.length > 0) {
       const defaultCol = collections.find((c) => c.name === "My Notes") || collections[0];
       if (defaultCol) {
@@ -47,15 +62,15 @@ function NewEntryContent() {
 
     try {
       setIsSaving(true);
-      const newEntry: Entry = {
-        id: crypto.randomUUID(),
+      const entry: Entry = {
+        id: entryId || crypto.randomUUID(),
         title: title.trim() || "Untitled Entry",
         content,
-        createdAt: new Date().toISOString(),
+        createdAt: entryId ? undefined : new Date().toISOString(),
         lastSavedAt: new Date().toISOString(),
       };
 
-      saveEntry(selectedCollectionId, newEntry);
+      saveEntry(selectedCollectionId, entry);
       router.push("/journal");
     } catch (error) {
       console.error("Failed to save entry:", error);
@@ -133,10 +148,10 @@ function NewEntryContent() {
   );
 }
 
-export default function NewEntry() {
+export default function Entry() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <NewEntryContent />
+      <EntryContent />
     </Suspense>
   );
 } 

@@ -20,7 +20,7 @@
 
 /* scroll bar disabled*/
 body {
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 /* global.css or App.css */

@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Edit, Calendar, Lock, FileText, Trash2, X } from "lucide-react";
 import { useCollections, Entry, Collection } from "./collection";
+import ConfirmationDialog from "@/components/ConfirmationDialog";
+import DropdownMenu from "@/components/DropdownMenu";
 
 const TextEditor = dynamic(() => import("@/components/TextEditor"), {
   ssr: false,
@@ -114,6 +116,18 @@ const Journal: React.FC = () => {
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    type: 'entry' | 'collection';
+    id: string;
+    name?: string;
+  } | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<{
+    type: 'entry' | 'collection';
+    id: string;
+    rect: DOMRect | null;
+    collection?: Collection;
+    entry?: Entry;
+  } | null>(null);
 
   // Add function to check if name exists
   const checkNameExists = (name: string, excludeId?: string) => {
@@ -203,12 +217,41 @@ const Journal: React.FC = () => {
 
   const handleDeleteEntry = (entryId: string) => {
     if (!selectedCollectionId) return;
-    deleteEntry(selectedCollectionId, entryId);
+    const entry = selectedCollection?.entries.find(e => e.id === entryId);
+    setDeleteConfirmation({
+      type: 'entry',
+      id: entryId,
+      name: entry?.title || 'Untitled'
+    });
+  };
+
+  const handleDeleteCollection = (collectionId: string) => {
+    const collection = collections.find(c => c.id === collectionId);
+    if (collection && collection.id !== "default-my-notes") {
+      setDeleteConfirmation({
+        type: 'collection',
+        id: collectionId,
+        name: collection.name
+      });
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!deleteConfirmation) return;
+    
+    if (deleteConfirmation.type === 'entry') {
+      deleteEntry(selectedCollectionId!, deleteConfirmation.id);
+    } else {
+      deleteCollection(deleteConfirmation.id);
+    }
+    
+    setDeleteConfirmation(null);
     forceUpdate(n => n + 1);
   };
 
   const handleEditEntry = (entryId: string) => {
-    console.log("Edit entry clicked:", entryId);
+    if (!selectedCollectionId) return;
+    router.push(`/journal/entry?collection=${selectedCollectionId}&entry=${entryId}`);
   };
 
   const handleCollectionSelect = async (collectionId: string) => {
@@ -251,26 +294,34 @@ const Journal: React.FC = () => {
             {collections.map(col => (
               <div
                 key={col.id}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-md flex items-center gap-1.5 text-sm font-medium transition-colors duration-150 ease-in-out cursor-pointer ${
+                className={`flex-shrink-0 px-4 py-1.5 rounded-md flex items-center gap-1.5 text-sm font-medium transition-colors duration-150 ease-in-out cursor-pointer relative ${
                   selectedCollectionId === col.id
                     ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
                     : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 onClick={() => handleCollectionSelect(col.id)}
               >
-                {col.isPrivate ? <Lock size={16} /> : <FileText size={16} />}
-                <span className="truncate max-w-[150px]">{col.name}</span>
+                <div className="flex items-center gap-1.5 pointer-events-none">
+                  {col.isPrivate ? <Lock size={16} /> : <FileText size={16} />}
+                  <span className="truncate max-w-[150px]">{col.name}</span>
+                </div>
                 {col.name !== "My Notes" && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditCollection(col);
-                    }}
-                    className="ml-2 text-gray-400 hover:text-blue-500 transition-colors"
-                    title="Edit Collection"
-                  >
-                    <Edit size={14} />
-                  </button>
+                  <div className="ml-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log(`<<< CLICK Collection Edit Icon for: ${col.name} (${col.id}) >>>`);
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const nextState = openDropdown?.id === col.id ? null : { type: 'collection' as 'collection', id: col.id, rect: rect, collection: col };
+                        console.log(`<<< Setting openDropdown to:`, nextState);
+                        setOpenDropdown(nextState);
+                      }}
+                      className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded-full hover:bg-gray-200"
+                      title="Edit Collection"
+                    >
+                      <Edit size={14} />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -444,6 +495,48 @@ const Journal: React.FC = () => {
         </div>
       </Modal>
 
+      {/* Add delete confirmation dialog */}
+      <ConfirmationDialog
+        isOpen={!!deleteConfirmation}
+        onClose={() => setDeleteConfirmation(null)}
+        onConfirm={confirmDelete}
+        title={`Delete ${deleteConfirmation?.type === 'entry' ? 'Note' : 'Collection'}`}
+        message={`Are you sure you want to delete "${deleteConfirmation?.name}"? This action cannot be undone.`}
+      />
+
+      {/* RENDER DROPDOWN OUTSIDE the scroll container */}
+      {openDropdown && openDropdown.rect && (
+        <div
+          className="fixed z-[1000]"
+          style={{
+            left: `${openDropdown.rect.left}px`,
+            top: `${openDropdown.rect.bottom + window.scrollY + 4}px`,
+          }}
+        >
+          <DropdownMenu
+            onEdit={(e) => {
+              e?.stopPropagation(); 
+              if (openDropdown.type === 'collection' && openDropdown.collection) {
+                handleEditCollection(openDropdown.collection);
+              } else if (openDropdown.type === 'entry' && openDropdown.entry) {
+                handleEditEntry(openDropdown.id);
+              }
+              setOpenDropdown(null);
+            }}
+            onDelete={(e) => {
+              e?.stopPropagation();
+              if (openDropdown.type === 'collection') {
+                handleDeleteCollection(openDropdown.id);
+              } else if (openDropdown.type === 'entry') {
+                handleDeleteEntry(openDropdown.id);
+              }
+              setOpenDropdown(null);
+            }}
+            className="shadow-xl"
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {displayedEntries.map((entry) => {
           const previewText = typeof entry.content === 'string' ? entry.content.replace(/<[^>]+>/g, '').substring(0, 150) + (entry.content.length > 150 ? '...' : '') : 'No content preview available';
@@ -454,12 +547,16 @@ const Journal: React.FC = () => {
               <div>
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-semibold text-gray-800 break-words">{entry.title || "Untitled"}</h3>
-                  <div className="flex space-x-2 text-gray-400 flex-shrink-0 ml-2">
-                    <button onClick={() => handleEditEntry(entry.id)} className="hover:text-blue-600 transition-colors duration-150 ease-in-out" title="Edit Entry">
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenDropdown(openDropdown?.id === entry.id ? null : { type: 'entry', id: entry.id, rect: e.currentTarget.getBoundingClientRect(), collection: selectedCollection, entry: entry });
+                      }}
+                      className="text-gray-400 hover:text-blue-500 transition-colors duration-150 ease-in-out"
+                      title="Edit Entry"
+                    >
                       <Edit size={16} />
-                    </button>
-                    <button onClick={() => handleDeleteEntry(entry.id)} className="hover:text-red-600 transition-colors duration-150 ease-in-out" title="Delete Entry">
-                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
@@ -479,7 +576,7 @@ const Journal: React.FC = () => {
         {selectedCollectionId && displayedEntries.length === 0 && (
           <div className="col-span-full text-center text-gray-500 py-16 bg-white rounded-lg shadow border border-gray-200">
             <p className="text-lg mb-2">This collection is empty{searchQuery ? ' for your current search' : ''}.</p>
-            <p>Click "New Entry" to add your first note!</p>
+            <p>Click "New Entry" to add a note!</p>
           </div>
         )}
         {!selectedCollectionId && collections.length > 0 && (
