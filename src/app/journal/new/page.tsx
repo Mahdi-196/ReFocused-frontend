@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCollections, Entry } from "../collection";
@@ -10,7 +10,7 @@ const TextEditor = dynamic(() => import("@/components/TextEditor"), {
   ssr: false,
 });
 
-export default function NewEntry() {
+function NewEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { collections, saveEntry } = useCollections();
@@ -130,5 +130,13 @@ export default function NewEntry() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewEntry() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewEntryContent />
+    </Suspense>
   );
 } 
