@@ -74,6 +74,7 @@ export default function TrackPage() {
   const [newHabit, setNewHabit] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date('2025-04-01'));
+  const [activeTab, setActiveTab] = useState<TabType>('Summary');
 
   const handleAddHabit = () => {
     if (newHabit.trim()) {
@@ -176,8 +177,6 @@ export default function TrackPage() {
   };
 
   const renderDayDetails = () => {
-    const [activeTab, setActiveTab] = useState<TabType>('Summary');
-
     if (!selectedDate || !mockDayData[selectedDate]) {
       return <p className={styles.noData}>No tracking data for this date</p>;
     }
