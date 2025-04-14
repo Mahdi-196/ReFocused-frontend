@@ -1,0 +1,538 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f0f0;
+}
+
+.hello {
+  font-size: 4rem;
+  color: #333;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.5s ease-out;
+}
+
+.visible {
+  opacity: 1;
+  transform: translateY(0);
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.headerTitle {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.headerDescription {
+  color: #666;
+}
+
+.section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+/* Habit Tracker Styles */
+.habitTracker {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.addHabit {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.habitInput {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.addButton {
+  padding: 0.5rem 1rem;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.habitList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.habitItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.habitName {
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.habitStatus {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.completed {
+  background: #4caf50;
+  color: white;
+}
+
+.missed {
+  background: #ef4444;
+  color: white;
+}
+
+/* Mood Tracking Styles */
+.moodGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.moodCard {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.moodTitle {
+  margin-bottom: 0.5rem;
+}
+
+.moodDescription {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+/* Range Input Styles */
+.rangeInput {
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.scaleLabels {
+  display: flex;
+  justify-content: space-between;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.rating {
+  text-align: center;
+  background: #fff9e6;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+  color: #666;
+}
+
+/* Rate Your Day Styles */
+.rateDay {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Calendar Styles */
+.calendarContainer {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.calendarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: white;
+}
+
+.calendarNav {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendarNav:hover {
+  background: #f0f0f0;
+}
+
+.calendarGrid {
+  padding: 0 1.5rem 1.5rem;
+}
+
+.weekDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.weekDay {
+  text-align: center;
+  font-weight: 500;
+  color: #666;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.calendarRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.calendarDay {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  position: relative;
+  background: white;
+  border: 1px solid #eee;
+  transition: all 0.2s ease;
+}
+
+.calendarDay:hover {
+  background: #f8f9fa;
+  border-color: #ddd;
+}
+
+.otherMonth {
+  color: #adb5bd;
+  background: #f8f9fa;
+}
+
+.selected {
+  background: #1a1a1a !important;
+  color: white !important;
+  font-weight: 500;
+  border-color: #1a1a1a !important;
+}
+
+.greatDay {
+  background: #e8f5e9;
+  border-color: #c8e6c9;
+}
+
+.goodDay {
+  background: #e3f2fd;
+  border-color: #bbdefb;
+}
+
+.averageDay {
+  background: #fff3e0;
+  border-color: #ffe0b2;
+}
+
+.toughDay {
+  background: #ffebee;
+  border-color: #ffcdd2;
+}
+
+/* Day Details Styles */
+.dayDetails {
+  padding: 1.5rem;
+  border-top: 1px solid #eee;
+}
+
+.selectedDate {
+  font-size: 1.25rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.dayDetailsTabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 2rem;
+  background: #f5f6f7;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.dayDetailsTabs > div {
+  flex: 1;
+  padding: 0.75rem;
+  cursor: pointer;
+  color: #666;
+  text-align: center;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.tabActive {
+  color: #333;
+  font-weight: 500;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dayDetailsContent {
+  color: #333;
+}
+
+.summarySection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dayRatingLabel {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.dayRatingBadge {
+  display: inline-flex;
+  align-items: center;
+  background: #4caf50;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.moodSection {
+  margin-top: 1rem;
+}
+
+.moodLabel {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.75rem;
+}
+
+.moodBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.moodBadgeHappy {
+  background: #4caf50;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.moodBadgeSatisfied {
+  background: #4caf50;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.moodBadgeStress {
+  background: #f44336;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.habitsSection {
+  margin-top: 1rem;
+}
+
+.habitsLabel {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.75rem;
+}
+
+.habitsCount {
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.legendSection {
+  margin-top: 2rem;
+}
+
+.legendTitle {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.legendDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legendDotGreat {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+}
+
+.legendDotGood {
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+}
+
+.legendDotAverage {
+  background: #fff3e0;
+  border: 1px solid #ffe0b2;
+}
+
+.legendDotTough {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+}
+
+.noData {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+  font-size: 0.95rem;
+}
+
+.addButton:hover {
+  opacity: 0.9;
+}
+
+/* Mood Progress Styles */
+.moodItem {
+  margin-bottom: 1.5rem;
+}
+
+.moodProgressContainer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.moodProgress {
+  flex: 1;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.moodProgressBar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.moodProgressHappy {
+  background: #3b82f6;
+}
+
+.moodProgressSatisfied {
+  background: #4caf50;
+}
+
+.moodProgressStress {
+  background: #ef4444;
+}
+
+.moodRating {
+  background: #4caf50;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-width: 40px;
+  text-align: center;
+}
+
+.moodRatingStress {
+  background: #ef4444;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 1rem;
+  }
+  
+  .moodGrid {
+    grid-template-columns: 1fr;
+  }
+} 
