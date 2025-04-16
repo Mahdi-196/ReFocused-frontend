@@ -1,9 +1,14 @@
+"use client";
+
 // src/components/Header.tsx
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { MdNotifications, MdPersonOutline } from 'react-icons/md';
 import DevTools from './devTools';
 
 const Header = () => {
+  const pathname = usePathname();
+
   return (
     <header className="bg-white shadow py-4">
       <div className="container mx-auto flex items-center justify-between px-4">
@@ -21,27 +26,52 @@ const Header = () => {
         <nav>
           <ul className="flex space-x-6">
             <li>
-              <Link href="/" className="text-gray-700 hover:text-blue-500">
+              <Link 
+                href="/" 
+                className={`text-gray-700 hover:text-blue-500 transition-colors ${
+                  pathname === '/' ? 'text-blue-500 font-medium' : ''
+                }`}
+              >
                 Home
               </Link>
             </li>
             <li>
-              <Link href="/track" className="text-gray-700 hover:text-blue-500">
+              <Link 
+                href="/track" 
+                className={`text-gray-700 hover:text-blue-500 transition-colors ${
+                  pathname === '/track' ? 'text-blue-500 font-medium' : ''
+                }`}
+              >
                 Track
               </Link>
             </li>
             <li>
-              <Link href="/study" className="text-gray-700 hover:text-blue-500">
+              <Link 
+                href="/study" 
+                className={`text-gray-700 hover:text-blue-500 transition-colors ${
+                  pathname === '/study' ? 'text-blue-500 font-medium' : ''
+                }`}
+              >
                 Study
               </Link>
             </li>
             <li>
-              <Link href="/journal" className="text-gray-700 hover:text-blue-500">
+              <Link 
+                href="/journal" 
+                className={`text-gray-700 hover:text-blue-500 transition-colors ${
+                  pathname === '/journal' ? 'text-blue-500 font-medium' : ''
+                }`}
+              >
                 Journal
               </Link>
             </li>
             <li>
-              <Link href="/relax" className="text-gray-700 hover:text-blue-500">
+              <Link 
+                href="/relax" 
+                className={`text-gray-700 hover:text-blue-500 transition-colors ${
+                  pathname === '/relax' ? 'text-blue-500 font-medium' : ''
+                }`}
+              >
                 Relax
               </Link>
             </li>

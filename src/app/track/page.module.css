@@ -166,13 +166,207 @@
   margin-top: 0.5rem;
 }
 
+/* Rating Box Colors */
 .rating {
   text-align: center;
-  background: #fff9e6;
   padding: 0.5rem;
   border-radius: 4px;
   margin-top: 1rem;
-  color: #666;
+  color: white;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  background: #fbbf24; /* Default yellow */
+}
+
+/* Day Rating Box Colors */
+.rating[data-rating="1"],
+.rating[data-rating="2"] {
+  background: #ef4444 !important; /* Red for very low ratings */
+}
+
+.rating[data-rating="3"],
+.rating[data-rating="4"] {
+  background: #f97316 !important; /* Orange for low ratings */
+}
+
+.rating[data-rating="5"],
+.rating[data-rating="6"] {
+  background: #fbbf24 !important; /* Yellow for medium ratings */
+}
+
+.rating[data-rating="7"],
+.rating[data-rating="8"] {
+  background: #22c55e !important; /* Green for good ratings */
+}
+
+.rating[data-rating="9"],
+.rating[data-rating="10"] {
+  background: #22c55e !important; /* Green for excellent ratings */
+}
+
+/* Mood Rating Box Colors */
+.moodRating {
+  background: #22c55e; /* Default green */
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-width: 40px;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.moodRating[data-rating="1"],
+.moodRating[data-rating="2"] {
+  background: #ef4444 !important; /* Red for very low mood */
+}
+
+.moodRating[data-rating="3"] {
+  background: #f97316 !important; /* Orange for low mood */
+}
+
+.moodRating[data-rating="4"] {
+  background: #fbbf24 !important; /* Yellow for medium mood */
+}
+
+.moodRating[data-rating="5"] {
+  background: #22c55e !important; /* Green for high mood */
+}
+
+/* Stress Rating Box Colors (inverted scale) */
+.moodRatingStress {
+  background: #22c55e; /* Default green */
+  transition: background-color 0.3s ease;
+}
+
+.moodRatingStress[data-rating="1"] {
+  background: #22c55e !important; /* Green for low stress */
+}
+
+.moodRatingStress[data-rating="2"] {
+  background: #fbbf24 !important; /* Yellow for medium-low stress */
+}
+
+.moodRatingStress[data-rating="3"] {
+  background: #f97316 !important; /* Orange for medium stress */
+}
+
+.moodRatingStress[data-rating="4"] {
+  background: #ef4444 !important; /* Red for high stress */
+}
+
+.moodRatingStress[data-rating="5"] {
+  background: #ef4444 !important; /* Red for very high stress */
+}
+
+/* Mood Badge Colors */
+.moodBadgeHappy,
+.moodBadgeSatisfied {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.moodBadgeHappy[data-rating="1"],
+.moodBadgeHappy[data-rating="2"] {
+  background: #ef4444; /* Red for very low happiness */
+}
+
+.moodBadgeHappy[data-rating="3"] {
+  background: #f97316; /* Orange for low happiness */
+}
+
+.moodBadgeHappy[data-rating="4"] {
+  background: #fbbf24; /* Yellow for medium happiness */
+}
+
+.moodBadgeHappy[data-rating="5"] {
+  background: #22c55e; /* Green for high happiness */
+}
+
+.moodBadgeSatisfied[data-rating="1"],
+.moodBadgeSatisfied[data-rating="2"] {
+  background: #ef4444; /* Red for very low satisfaction */
+}
+
+.moodBadgeSatisfied[data-rating="3"] {
+  background: #f97316; /* Orange for low satisfaction */
+}
+
+.moodBadgeSatisfied[data-rating="4"] {
+  background: #fbbf24; /* Yellow for medium satisfaction */
+}
+
+.moodBadgeSatisfied[data-rating="5"] {
+  background: #22c55e; /* Green for high satisfaction */
+}
+
+.moodBadgeStress {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.moodBadgeStress[data-rating="1"] {
+  background: #22c55e; /* Green for low stress */
+}
+
+.moodBadgeStress[data-rating="2"] {
+  background: #fbbf24; /* Yellow for medium-low stress */
+}
+
+.moodBadgeStress[data-rating="3"] {
+  background: #f97316; /* Orange for medium stress */
+}
+
+.moodBadgeStress[data-rating="4"] {
+  background: #ef4444; /* Red for high stress */
+}
+
+.moodBadgeStress[data-rating="5"] {
+  background: #7f1d1d; /* Dark red for very high stress */
+}
+
+/* Day Rating Badge Colors */
+.dayRatingBadge {
+  display: inline-flex;
+  align-items: center;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.dayRatingBadge[data-rating="1"],
+.dayRatingBadge[data-rating="2"] {
+  background: #ef4444; /* Red for very low ratings */
+}
+
+.dayRatingBadge[data-rating="3"],
+.dayRatingBadge[data-rating="4"] {
+  background: #f97316; /* Orange for low ratings */
+}
+
+.dayRatingBadge[data-rating="5"],
+.dayRatingBadge[data-rating="6"] {
+  background: #fbbf24; /* Yellow for medium ratings */
+}
+
+.dayRatingBadge[data-rating="7"],
+.dayRatingBadge[data-rating="8"] {
+  background: #22c55e; /* Green for good ratings */
+}
+
+.dayRatingBadge[data-rating="9"],
+.dayRatingBadge[data-rating="10"] {
+  background: #15803d; /* Dark green for excellent ratings */
 }
 
 /* Rate Your Day Styles */
@@ -187,6 +381,10 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .calendarHeader {
@@ -195,6 +393,11 @@
   align-items: center;
   padding: 1rem 1.5rem;
   background: white;
+}
+
+.calendarTitle {
+  font-size: 1.25rem;
+  color: #333;
 }
 
 .calendarNav {
@@ -210,6 +413,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: manipulation;
 }
 
 .calendarNav:hover {
@@ -218,6 +422,7 @@
 
 .calendarGrid {
   padding: 0 1.5rem 1.5rem;
+  transition: transform 0.3s ease;
 }
 
 .weekDays {
@@ -254,6 +459,7 @@
   background: white;
   border: 1px solid #eee;
   transition: all 0.2s ease;
+  touch-action: manipulation;
 }
 
 .calendarDay:hover {
@@ -307,7 +513,7 @@
 
 .dayDetailsTabs {
   display: flex;
-  gap: 0;
+  gap: 0.5rem;
   margin-bottom: 2rem;
   background: #f5f6f7;
   border-radius: 8px;
@@ -526,13 +732,173 @@
   background: #ef4444;
 }
 
-/* Responsive Design */
+/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .dashboard {
     padding: 1rem;
   }
-  
+
+  .section {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.25rem;
+  }
+
+  .calendarContainer {
+    padding: 0.5rem;
+  }
+
+  .calendarHeader {
+    padding: 0.5rem 1rem;
+  }
+
+  .calendarTitle {
+    font-size: 1.1rem;
+  }
+
+  .calendarNav {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .weekDay {
+    font-size: 0.75rem;
+    padding: 0.25rem;
+  }
+
+  .calendarDay {
+    font-size: 0.8rem;
+    padding: 0.25rem;
+    min-height: 32px;
+  }
+
+  .calendarDay:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  /* Habit Tracker Mobile */
+  .habitTracker {
+    padding: 1rem;
+  }
+
+  .addHabit {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .habitInput {
+    width: 100%;
+  }
+
+  .habitList {
+    gap: 0.75rem;
+  }
+
+  .habitItem {
+    font-size: 0.9rem;
+  }
+
+  /* Mood Tracking Mobile */
   .moodGrid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
+
+  .moodCard {
+    padding: 1rem;
+  }
+
+  .moodTitle {
+    font-size: 1.1rem;
+  }
+
+  /* Day Details Mobile */
+  .dayDetails {
+    padding: 1rem;
+  }
+
+  .dayDetailsTabs {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .dayDetailsTabs > div {
+    width: 100%;
+    padding: 0.5rem;
+  }
+
+  .moodBadges {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .moodBadgeHappy,
+  .moodBadgeSatisfied,
+  .moodBadgeStress {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Touch Feedback */
+  .calendarDay:active,
+  .habitItem:active,
+  .moodCard:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard {
+    padding: 0.75rem;
+  }
+
+  .section {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .calendarDay {
+    min-height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .moodBadges {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .moodBadgeHappy,
+  .moodBadgeSatisfied,
+  .moodBadgeStress {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Prevent text selection during swipe */
+.calendarContainer {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Add smooth transitions for calendar navigation */
+.calendarGrid {
+  transition: transform 0.3s ease;
+}
+
+/* Improve touch targets */
+.calendarDay,
+.calendarNav,
+.habitItem,
+.moodCard {
+  cursor: pointer;
+  touch-action: manipulation;
 } 

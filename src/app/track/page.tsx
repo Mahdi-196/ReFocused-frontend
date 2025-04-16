@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import styles from './page.module.css';
+import NumberMood from '../../components/NumberMood';
 
 interface DayData {
   mood: {
@@ -73,8 +74,30 @@ export default function TrackPage() {
   ]);
   const [newHabit, setNewHabit] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date('2025-04-01'));
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [activeTab, setActiveTab] = useState<TabType>('Summary');
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+    
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)));
+      } else {
+        setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)));
+      }
+    }
+    setTouchStart(null);
+  };
 
   const handleAddHabit = () => {
     if (newHabit.trim()) {
@@ -98,7 +121,6 @@ export default function TrackPage() {
     const days = [];
     const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-    // Add weekday headers
     days.push(
       <div key="weekdays" className={styles.weekDays}>
         {weekDays.map(day => (
@@ -107,7 +129,6 @@ export default function TrackPage() {
       </div>
     );
 
-    // Add empty cells for days before the first day of the month
     const firstDayOfWeek = firstDay.getDay();
     const previousMonth = new Date(firstDay);
     previousMonth.setDate(0);
@@ -116,7 +137,6 @@ export default function TrackPage() {
     const dateRows = [];
     let currentRow = [];
 
-    // Previous month days
     for (let i = 0; i < firstDayOfWeek; i++) {
       const date = daysInPreviousMonth - firstDayOfWeek + i + 1;
       currentRow.push(
@@ -126,7 +146,6 @@ export default function TrackPage() {
       );
     }
 
-    // Current month days
     for (let date = 1; date <= lastDay.getDate(); date++) {
       const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
       const dayClass = getDayClass(dateStr);
@@ -151,7 +170,6 @@ export default function TrackPage() {
       }
     }
 
-    // Next month days
     const remainingCells = 7 - currentRow.length;
     if (remainingCells < 7) {
       for (let i = 1; i <= remainingCells; i++) {
@@ -196,15 +214,23 @@ export default function TrackPage() {
             <div className={styles.summarySection}>
               <div>
                 <div className={styles.dayRatingLabel}>Day Rating:</div>
-                <div className={styles.dayRatingBadge}>{data.dayRating}/10</div>
+                <div className={styles.dayRatingBadge} data-rating={data.dayRating}>
+                  {data.dayRating}/10
+                </div>
               </div>
 
               <div className={styles.moodSection}>
                 <div className={styles.moodLabel}>Mood:</div>
                 <div className={styles.moodBadges}>
-                  <span className={styles.moodBadgeHappy}>Happy: {data.mood.happiness}/5</span>
-                  <span className={styles.moodBadgeSatisfied}>Satisfied: {data.mood.satisfaction}/5</span>
-                  <span className={styles.moodBadgeStress}>Stress: {data.mood.stress}/5</span>
+                  <span className={styles.moodBadgeHappy} data-rating={data.mood.happiness}>
+                    Happy: {data.mood.happiness}/5
+                  </span>
+                  <span className={styles.moodBadgeSatisfied} data-rating={data.mood.satisfaction}>
+                    Satisfied: {data.mood.satisfaction}/5
+                  </span>
+                  <span className={styles.moodBadgeStress} data-rating={data.mood.stress}>
+                    Stress: {data.mood.stress}/5
+                  </span>
                 </div>
               </div>
 
@@ -229,7 +255,9 @@ export default function TrackPage() {
                       style={{ width: `${(data.mood.happiness / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={styles.moodRating}>{data.mood.happiness}/5</div>
+                  <div className={styles.moodRating} data-rating={data.mood.happiness}>
+                    {data.mood.happiness}/5
+                  </div>
                 </div>
               </div>
 
@@ -242,7 +270,9 @@ export default function TrackPage() {
                       style={{ width: `${(data.mood.satisfaction / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={styles.moodRating}>{data.mood.satisfaction}/5</div>
+                  <div className={styles.moodRating} data-rating={data.mood.satisfaction}>
+                    {data.mood.satisfaction}/5
+                  </div>
                 </div>
               </div>
 
@@ -255,7 +285,9 @@ export default function TrackPage() {
                       style={{ width: `${(data.mood.stress / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={`${styles.moodRating} ${styles.moodRatingStress}`}>{data.mood.stress}/5</div>
+                  <div className={`${styles.moodRating} ${styles.moodRatingStress}`} data-rating={data.mood.stress}>
+                    {data.mood.stress}/5
+                  </div>
                 </div>
               </div>
             </div>
@@ -337,47 +369,8 @@ export default function TrackPage() {
         </div>
       </section>
 
-      {/* Mood Tracking Section */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Mood Tracking</h2>
-        <div className={styles.moodGrid}>
-          <div className={styles.moodCard}>
-            <h3 className={styles.moodTitle}>Happiness</h3>
-            <p className={styles.moodDescription}>How happy do you feel today?</p>
-            <input type="range" className={styles.rangeInput} min="1" max="5" defaultValue="3" />
-            <div className={styles.scaleLabels}>
-              <span>1</span>
-              <span>3</span>
-              <span>5</span>
-            </div>
-            <div className={styles.rating}>Medium (3/5)</div>
-          </div>
-
-          <div className={styles.moodCard}>
-            <h3 className={styles.moodTitle}>Satisfaction</h3>
-            <p className={styles.moodDescription}>How satisfied are you with your day?</p>
-            <input type="range" className={styles.rangeInput} min="1" max="5" defaultValue="3" />
-            <div className={styles.scaleLabels}>
-              <span>1</span>
-              <span>3</span>
-              <span>5</span>
-            </div>
-            <div className={styles.rating}>Medium (3/5)</div>
-          </div>
-
-          <div className={styles.moodCard}>
-            <h3 className={styles.moodTitle}>Stress</h3>
-            <p className={styles.moodDescription}>How stressed do you feel today?</p>
-            <input type="range" className={styles.rangeInput} min="1" max="5" defaultValue="3" />
-            <div className={styles.scaleLabels}>
-              <span>1</span>
-              <span>3</span>
-              <span>5</span>
-            </div>
-            <div className={styles.rating}>Medium (3/5)</div>
-          </div>
-        </div>
-      </section>
+      {/* Mood Tracking Section - Now using the NumberMood component */}
+      <NumberMood />
 
       {/* Rate Your Day Section */}
       <section className={styles.section}>
@@ -385,21 +378,39 @@ export default function TrackPage() {
         <div className={styles.rateDay}>
           <h3 className={styles.moodTitle}>Rate Your Day</h3>
           <p className={styles.moodDescription}>How would you rate your overall day on a scale of 1-10?</p>
-          <input type="range" className={styles.rangeInput} min="1" max="10" defaultValue="5" />
+          <input 
+            type="range" 
+            className={styles.rangeInput} 
+            min="1" 
+            max="10" 
+            defaultValue="5" 
+            onChange={(e) => {
+              const rating = e.target.value;
+              const ratingElement = e.target.nextElementSibling?.nextElementSibling;
+              if (ratingElement) {
+                ratingElement.setAttribute('data-rating', rating);
+                ratingElement.textContent = `${rating}/10`;
+              }
+            }}
+          />
           <div className={styles.scaleLabels}>
             <span>1</span>
             <span>5</span>
             <span>10</span>
           </div>
-          <div className={styles.rating}>5/10</div>
-          <p className={styles.moodDescription}>Your day rating: Average</p>
+          <div className={styles.rating} data-rating="5">5/10</div>
         </div>
       </section>
 
       {/* Calendar Section */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Calendar Overview</h2>
-        <div className={styles.calendarContainer}>
+        <div 
+          className={styles.calendarContainer}
+          ref={calendarRef}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className={styles.calendarHeader}>
             <button 
               className={styles.calendarNav}
@@ -407,7 +418,7 @@ export default function TrackPage() {
             >
               ←
             </button>
-            <h3>
+            <h3 className={styles.calendarTitle}>
               {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </h3>
             <button 

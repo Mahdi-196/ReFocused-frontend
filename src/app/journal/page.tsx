@@ -537,7 +537,7 @@ const Journal: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-4 break-words overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                <p className="text-sm text-gray-600 mb-4 break-words " style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
                   {previewText}
                 </p>
               </div>

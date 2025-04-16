@@ -1,0 +1,156 @@
+.section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.moodGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.moodCard {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.moodTitle {
+  margin-bottom: 0.5rem;
+}
+
+.moodDescription {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.rangeInput {
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.scaleLabels {
+  display: flex;
+  justify-content: space-between;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.rating {
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+  color: white;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  background: #fbbf24; /* Default yellow */
+}
+
+/* Day Rating Box Colors */
+.rating[data-rating="1"],
+.rating[data-rating="2"] {
+  background: #ef4444 !important; /* Red for very low ratings */
+}
+
+.rating[data-rating="3"],
+.rating[data-rating="4"] {
+  background: #f97316 !important; /* Orange for low ratings */
+}
+
+.rating[data-rating="5"],
+.rating[data-rating="6"] {
+  background: #fbbf24 !important; /* Yellow for medium ratings */
+}
+
+.rating[data-rating="7"],
+.rating[data-rating="8"] {
+  background: #22c55e !important; /* Green for good ratings */
+}
+
+.rating[data-rating="9"],
+.rating[data-rating="10"] {
+  background: #22c55e !important; /* Green for excellent ratings */
+}
+
+/* Mood Rating Box Colors */
+.moodRating {
+  background: #22c55e; /* Default green */
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-width: 40px;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.moodRating[data-rating="1"],
+.moodRating[data-rating="2"] {
+  background: #ef4444 !important; /* Red for very low mood */
+}
+
+.moodRating[data-rating="3"] {
+  background: #f97316 !important; /* Orange for low mood */
+}
+
+.moodRating[data-rating="4"] {
+  background: #fbbf24 !important; /* Yellow for medium mood */
+}
+
+.moodRating[data-rating="5"] {
+  background: #22c55e !important; /* Green for high mood */
+}
+
+/* Stress Rating Box Colors (inverted scale) */
+.moodRatingStress {
+  background: #22c55e; /* Default green */
+  transition: background-color 0.3s ease;
+}
+
+.moodRatingStress[data-rating="1"] {
+  background: #22c55e !important; /* Green for low stress */
+}
+
+.moodRatingStress[data-rating="2"] {
+  background: #fbbf24 !important; /* Yellow for medium-low stress */
+}
+
+.moodRatingStress[data-rating="3"] {
+  background: #f97316 !important; /* Orange for medium stress */
+}
+
+.moodRatingStress[data-rating="4"] {
+  background: #ef4444 !important; /* Red for high stress */
+}
+
+.moodRatingStress[data-rating="5"] {
+  background: #ef4444 !important; /* Red for very high stress */
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .moodGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .moodCard {
+    padding: 1rem;
+  }
+
+  .moodTitle {
+    font-size: 1.1rem;
+  }
+} 
