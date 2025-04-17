@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import styles from './page.module.css';
 import NumberMood from '../../components/NumberMood';
 
 interface DayData {
@@ -109,10 +108,40 @@ export default function TrackPage() {
   const getDayClass = (dateStr: string) => {
     if (!mockDayData[dateStr]) return '';
     const dayRating = mockDayData[dateStr].dayRating;
-    if (dayRating >= 8) return styles.greatDay;
-    if (dayRating >= 6) return styles.goodDay;
-    if (dayRating >= 4) return styles.averageDay;
-    return styles.toughDay;
+    if (dayRating >= 8) return 'bg-green-50 border-green-200';
+    if (dayRating >= 6) return 'bg-blue-50 border-blue-200';
+    if (dayRating >= 4) return 'bg-yellow-50 border-yellow-200';
+    return 'bg-red-50 border-red-200';
+  };
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 9) return 'bg-green-600';
+    if (rating >= 7) return 'bg-green-500';
+    if (rating >= 5) return 'bg-yellow-400';
+    if (rating >= 3) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
+
+  const getMoodBadgeColor = (rating: number, type: 'happiness' | 'satisfaction' | 'stress' = 'happiness') => {
+    if (type === 'stress') {
+      switch (rating) {
+        case 1: return 'bg-green-500';
+        case 2: return 'bg-yellow-400';
+        case 3: return 'bg-orange-500';
+        case 4:
+        case 5: return 'bg-red-500';
+        default: return 'bg-green-500';
+      }
+    } else {
+      switch (rating) {
+        case 1:
+        case 2: return 'bg-red-500';
+        case 3: return 'bg-orange-500';
+        case 4: return 'bg-yellow-400';
+        case 5: return 'bg-green-500';
+        default: return 'bg-yellow-400';
+      }
+    }
   };
 
   const renderCalendar = () => {
@@ -122,9 +151,11 @@ export default function TrackPage() {
     const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
     days.push(
-      <div key="weekdays" className={styles.weekDays}>
+      <div key="weekdays" className="grid grid-cols-7 gap-2 mb-2">
         {weekDays.map(day => (
-          <div key={day} className={styles.weekDay}>{day}</div>
+          <div key={day} className="text-center text-sm font-medium text-gray-500 p-2">
+            {day}
+          </div>
         ))}
       </div>
     );
@@ -140,7 +171,7 @@ export default function TrackPage() {
     for (let i = 0; i < firstDayOfWeek; i++) {
       const date = daysInPreviousMonth - firstDayOfWeek + i + 1;
       currentRow.push(
-        <div key={`prev-${date}`} className={`${styles.calendarDay} ${styles.otherMonth}`}>
+        <div key={`prev-${date}`} className="aspect-square flex items-center justify-center text-gray-400 bg-gray-50 rounded">
           {date}
         </div>
       );
@@ -153,7 +184,11 @@ export default function TrackPage() {
       currentRow.push(
         <div
           key={date}
-          className={`${styles.calendarDay} ${dayClass} ${selectedDate === dateStr ? styles.selected : ''}`}
+          className={`aspect-square flex items-center justify-center cursor-pointer rounded border transition-all ${
+            dayClass
+          } ${
+            selectedDate === dateStr ? 'bg-black text-white border-black' : ''
+          }`}
           onClick={() => setSelectedDate(dateStr)}
         >
           {date}
@@ -162,7 +197,7 @@ export default function TrackPage() {
 
       if (currentRow.length === 7) {
         dateRows.push(
-          <div key={`row-${dateRows.length}`} className={styles.calendarRow}>
+          <div key={`row-${dateRows.length}`} className="grid grid-cols-7 gap-2">
             {currentRow}
           </div>
         );
@@ -174,20 +209,20 @@ export default function TrackPage() {
     if (remainingCells < 7) {
       for (let i = 1; i <= remainingCells; i++) {
         currentRow.push(
-          <div key={`next-${i}`} className={`${styles.calendarDay} ${styles.otherMonth}`}>
+          <div key={`next-${i}`} className="aspect-square flex items-center justify-center text-gray-400 bg-gray-50 rounded">
             {i}
           </div>
         );
       }
       dateRows.push(
-        <div key={`row-${dateRows.length}`} className={styles.calendarRow}>
+        <div key={`row-${dateRows.length}`} className="grid grid-cols-7 gap-2">
           {currentRow}
         </div>
       );
     }
 
     return (
-      <div className={styles.calendarGrid}>
+      <div className="p-6">
         {days}
         {dateRows}
       </div>
@@ -196,7 +231,7 @@ export default function TrackPage() {
 
   const renderDayDetails = () => {
     if (!selectedDate || !mockDayData[selectedDate]) {
-      return <p className={styles.noData}>No tracking data for this date</p>;
+      return <p className="text-center text-gray-500 py-8">No tracking data for this date</p>;
     }
 
     const data = mockDayData[selectedDate];
@@ -211,32 +246,32 @@ export default function TrackPage() {
       switch (activeTab) {
         case 'Summary':
           return (
-            <div className={styles.summarySection}>
+            <div className="flex flex-col gap-6">
               <div>
-                <div className={styles.dayRatingLabel}>Day Rating:</div>
-                <div className={styles.dayRatingBadge} data-rating={data.dayRating}>
+                <div className="font-medium text-gray-800 mb-2">Day Rating:</div>
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-white font-medium ${getRatingColor(data.dayRating)}`}>
                   {data.dayRating}/10
                 </div>
               </div>
 
-              <div className={styles.moodSection}>
-                <div className={styles.moodLabel}>Mood:</div>
-                <div className={styles.moodBadges}>
-                  <span className={styles.moodBadgeHappy} data-rating={data.mood.happiness}>
+              <div>
+                <div className="font-medium text-gray-800 mb-3">Mood:</div>
+                <div className="flex flex-col gap-2">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.happiness)}`}>
                     Happy: {data.mood.happiness}/5
                   </span>
-                  <span className={styles.moodBadgeSatisfied} data-rating={data.mood.satisfaction}>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.satisfaction)}`}>
                     Satisfied: {data.mood.satisfaction}/5
                   </span>
-                  <span className={styles.moodBadgeStress} data-rating={data.mood.stress}>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.stress, 'stress')}`}>
                     Stress: {data.mood.stress}/5
                   </span>
                 </div>
               </div>
 
-              <div className={styles.habitsSection}>
-                <div className={styles.habitsLabel}>Habits:</div>
-                <div className={styles.habitsCount}>
+              <div>
+                <div className="font-medium text-gray-800 mb-2">Habits:</div>
+                <div className="text-gray-700">
                   {data.habits.filter(h => h.completed).length}/{data.habits.length} completed
                 </div>
               </div>
@@ -245,47 +280,47 @@ export default function TrackPage() {
         
         case 'Mood':
           return (
-            <div>
-              <div className={styles.moodItem}>
-                <div className={styles.moodLabel}>Happiness</div>
-                <div className={styles.moodProgressContainer}>
-                  <div className={styles.moodProgress}>
+            <div className="space-y-6">
+              <div>
+                <div className="font-medium text-gray-800 mb-2">Happiness</div>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className={`${styles.moodProgressBar} ${styles.moodProgressHappy}`}
+                      className={`h-full bg-blue-500 transition-all duration-300`}
                       style={{ width: `${(data.mood.happiness / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={styles.moodRating} data-rating={data.mood.happiness}>
+                  <div className={`px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.happiness)}`}>
                     {data.mood.happiness}/5
                   </div>
                 </div>
               </div>
 
-              <div className={styles.moodItem}>
-                <div className={styles.moodLabel}>Satisfaction</div>
-                <div className={styles.moodProgressContainer}>
-                  <div className={styles.moodProgress}>
+              <div>
+                <div className="font-medium text-gray-800 mb-2">Satisfaction</div>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className={`${styles.moodProgressBar} ${styles.moodProgressSatisfied}`}
+                      className={`h-full bg-green-500 transition-all duration-300`}
                       style={{ width: `${(data.mood.satisfaction / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={styles.moodRating} data-rating={data.mood.satisfaction}>
+                  <div className={`px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.satisfaction)}`}>
                     {data.mood.satisfaction}/5
                   </div>
                 </div>
               </div>
 
-              <div className={styles.moodItem}>
-                <div className={styles.moodLabel}>Stress</div>
-                <div className={styles.moodProgressContainer}>
-                  <div className={styles.moodProgress}>
+              <div>
+                <div className="font-medium text-gray-800 mb-2">Stress</div>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className={`${styles.moodProgressBar} ${styles.moodProgressStress}`}
+                      className={`h-full bg-red-500 transition-all duration-300`}
                       style={{ width: `${(data.mood.stress / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={`${styles.moodRating} ${styles.moodRatingStress}`} data-rating={data.mood.stress}>
+                  <div className={`px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.stress, 'stress')}`}>
                     {data.mood.stress}/5
                   </div>
                 </div>
@@ -295,11 +330,13 @@ export default function TrackPage() {
 
         case 'Habits':
           return (
-            <div>
+            <div className="space-y-3">
               {data.habits.map((habit, index) => (
-                <div key={index} className={styles.habitItem}>
-                  <span className={styles.habitName}>{habit.name}</span>
-                  <span className={`${styles.habitStatus} ${habit.completed ? styles.completed : styles.missed}`}>
+                <div key={index} className="flex items-center justify-between">
+                  <span className="text-gray-800">{habit.name}</span>
+                  <span className={`px-3 py-1 rounded-full text-white font-medium ${
+                    habit.completed ? 'bg-green-500' : 'bg-red-500'
+                  }`}>
                     {habit.completed ? 'Completed' : 'Missed'}
                   </span>
                 </div>
@@ -310,14 +347,16 @@ export default function TrackPage() {
     };
 
     return (
-      <div className={styles.dayDetails}>
-        <h3 className={styles.selectedDate}>{formattedDate}</h3>
+      <div className="p-6 border-t border-gray-200">
+        <h3 className="text-xl font-medium text-gray-800 mb-6">{formattedDate}</h3>
         
-        <div className={styles.dayDetailsTabs}>
+        <div className="flex gap-2 mb-6 bg-gray-100 rounded-lg p-1">
           {(['Summary', 'Mood', 'Habits'] as TabType[]).map((tab) => (
             <div
               key={tab}
-              className={activeTab === tab ? styles.tabActive : ''}
+              className={`flex-1 text-center py-2 rounded cursor-pointer transition-colors ${
+                activeTab === tab ? 'bg-white text-gray-800 font-medium shadow-sm' : 'text-gray-600'
+              }`}
               onClick={() => setActiveTab(tab)}
             >
               {tab}
@@ -325,7 +364,7 @@ export default function TrackPage() {
           ))}
         </div>
 
-        <div className={styles.dayDetailsContent}>
+        <div className="text-gray-700">
           {renderTabContent()}
         </div>
       </div>
@@ -333,54 +372,65 @@ export default function TrackPage() {
   };
 
   return (
-    <div className={styles.dashboard}>
-      <header className={styles.header}>
-        <h1 className={styles.headerTitle}>Tracking Dashboard</h1>
-        <p className={styles.headerDescription}>Monitor your mood, habits, and daily progress</p>
+    <div className="max-w-6xl mx-auto p-6 font-sans">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Tracking Dashboard</h1>
+        <p className="text-gray-600">Monitor your mood, habits, and daily progress</p>
       </header>
 
       {/* Habit Tracking Section */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Habit Tracking</h2>
-        <div className={styles.habitTracker}>
-          <h3 className={styles.sectionTitle}>Habit Tracker</h3>
-          <p className={styles.headerDescription}>Track your daily habits and build streaks</p>
+      <section className="bg-white rounded-xl p-6 mb-8 shadow-sm">
+        <h2 className="text-2xl text-gray-800 mb-4">Habit Tracking</h2>
+        <div className="bg-white rounded-lg p-6">
+          <h3 className="text-xl font-medium text-gray-800 mb-2">Habit Tracker</h3>
+          <p className="text-gray-600 mb-4">Track your daily habits and build streaks</p>
           
-          <div className={styles.addHabit}>
+          <div className="flex gap-2 mb-6">
             <input
               type="text"
-              className={styles.habitInput}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Add a new habit..."
               value={newHabit}
               onChange={(e) => setNewHabit(e.target.value)}
             />
-            <button className={styles.addButton} onClick={handleAddHabit}>Add</button>
+            <button 
+              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              onClick={handleAddHabit}
+            >
+              Add
+            </button>
           </div>
 
-          <div className={styles.habitList}>
+          <div className="space-y-3">
             {habits.map((habit, index) => (
-              <div key={index} className={styles.habitItem}>
-                <input type="checkbox" className={styles.habitCheckbox} id={`habit-${index}`} />
-                <label htmlFor={`habit-${index}`}>{habit.name}</label>
-                <span className={styles.streak}>{habit.streak} days</span>
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    className="w-5 h-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    id={`habit-${index}`} 
+                  />
+                  <label htmlFor={`habit-${index}`} className="text-gray-800">{habit.name}</label>
+                </div>
+                <span className="text-gray-600">{habit.streak} days</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Mood Tracking Section - Now using the NumberMood component */}
+      {/* Mood Tracking Section */}
       <NumberMood />
 
       {/* Rate Your Day Section */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Rate Your Day</h2>
-        <div className={styles.rateDay}>
-          <h3 className={styles.moodTitle}>Rate Your Day</h3>
-          <p className={styles.moodDescription}>How would you rate your overall day on a scale of 1-10?</p>
+      <section className="bg-white rounded-xl p-6 mb-8 shadow-sm">
+        <h2 className="text-2xl text-gray-800 mb-4">Rate Your Day</h2>
+        <div className="max-w-xl mx-auto">
+          <h3 className="text-xl font-medium text-gray-800 mb-2">Rate Your Day</h3>
+          <p className="text-gray-600 mb-4">How would you rate your overall day on a scale of 1-10?</p>
           <input 
             type="range" 
-            className={styles.rangeInput} 
+            className="w-full my-4" 
             min="1" 
             max="10" 
             defaultValue="5" 
@@ -393,36 +443,38 @@ export default function TrackPage() {
               }
             }}
           />
-          <div className={styles.scaleLabels}>
+          <div className="flex justify-between text-gray-600 mt-2">
             <span>1</span>
             <span>5</span>
             <span>10</span>
           </div>
-          <div className={styles.rating} data-rating="5">5/10</div>
+          <div className={`text-center py-2 rounded mt-4 text-white font-medium ${getRatingColor(5)}`}>
+            5/10
+          </div>
         </div>
       </section>
 
       {/* Calendar Section */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Calendar Overview</h2>
+      <section className="bg-white rounded-xl mb-8 shadow-sm overflow-hidden">
+        <h2 className="text-2xl text-gray-800 p-6">Calendar Overview</h2>
         <div 
-          className={styles.calendarContainer}
+          className="select-none"
           ref={calendarRef}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <div className={styles.calendarHeader}>
+          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
             <button 
-              className={styles.calendarNav}
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors"
               onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}
             >
               ←
             </button>
-            <h3 className={styles.calendarTitle}>
+            <h3 className="text-xl font-medium text-gray-800">
               {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </h3>
             <button 
-              className={styles.calendarNav}
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors"
               onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}
             >
               →

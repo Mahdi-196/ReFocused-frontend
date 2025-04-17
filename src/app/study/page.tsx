@@ -234,20 +234,25 @@ export default function StudyPage() {
 
               {/* Flashcard Display */}
               {selectedSet?.cards.length ? (
-                <div 
-                  className="min-h-[150px] border border-gray-200 rounded-lg mb-3 flex items-center justify-center cursor-pointer transition-transform duration-300 transform-gpu"
-                  onClick={() => setIsFlipped(!isFlipped)}
-                  style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
-                >
-                  <div className="backface-hidden">
-                    <p className="text-lg">{selectedSet?.cards[currentCard - 1]?.front}</p>
-                  </div>
-                  <div className="backface-hidden absolute inset-0 flex items-center justify-center" style={{ transform: 'rotateY(180deg)' }}>
-                    <p className="text-lg">{selectedSet?.cards[currentCard - 1]?.back}</p>
+                <div className="relative min-h-[270px] mb-3">
+                  <div 
+                    className={`w-3/4 h-[270px] transition-transform duration-300 transform-gpu select-none mx-auto ${
+                      isFlipped ? 'rotate-y-180' : ''
+                    }`}
+                    onClick={() => setIsFlipped(!isFlipped)}
+                  >
+                    {/* Front of card */}
+                    <div className="absolute w-full h-full bg-white border border-gray-200 rounded-lg flex items-center justify-center p-8 backface-hidden select-none">
+                      <p className="text-xl text-center select-none">{selectedSet?.cards[currentCard - 1]?.front}</p>
+                    </div>
+                    {/* Back of card */}
+                    <div className="absolute w-full h-full bg-white border border-gray-200 rounded-lg flex items-center justify-center p-8 backface-hidden rotate-y-180 select-none">
+                      <p className="text-xl text-center select-none">{selectedSet?.cards[currentCard - 1]?.back}</p>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="min-h-[150px] border border-gray-200 rounded-lg mb-3 flex items-center justify-center">
+                <div className="min-h-[270px] border border-gray-200 rounded-lg mb-3 flex items-center justify-center">
                   <p className="text-gray-500">No cards yet. Click "Add Card" to get started!</p>
                 </div>
               )}

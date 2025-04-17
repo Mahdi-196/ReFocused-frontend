@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-// Re-importing the styles module
-import styles from '../app/track/page.module.css';
 
 interface MoodRating {
   happiness: number;
@@ -24,99 +22,112 @@ export default function NumberMood() {
     }));
   };
 
-  // Removed Tailwind getRatingColor function
+  const getRatingColor = (rating: number, type: 'normal' | 'stress' = 'normal') => {
+    if (type === 'stress') {
+      switch (rating) {
+        case 1: return 'bg-green-500';
+        case 2: return 'bg-yellow-400';
+        case 3: return 'bg-orange-500';
+        case 4:
+        case 5: return 'bg-red-500';
+        default: return 'bg-green-500';
+      }
+    } else {
+      switch (rating) {
+        case 1:
+        case 2: return 'bg-red-500';
+        case 3: return 'bg-orange-500';
+        case 4: return 'bg-yellow-400';
+        case 5: return 'bg-green-500';
+        default: return 'bg-yellow-400';
+      }
+    }
+  };
 
   return (
-    // Reverted section and content to use styles.*
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Mood Tracking</h2>
-      <div className={styles.moodGrid}>
-        {/* Happiness Card */}
-        <div className={styles.moodCard}>
-          <h3 className={styles.moodTitle}>Happiness</h3>
-          <p className={styles.moodDescription}>How happy do you feel today?</p>
+    <section className="bg-white rounded-xl p-6 mb-8 shadow-sm">
+      <h2 className="text-2xl text-gray-800 mb-4">Mood Tracking</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium mb-2">Happiness</h3>
+          <p className="text-gray-600 mb-4">How happy do you feel today?</p>
           <input 
             type="range" 
-            className={styles.rangeInput} 
+            className="w-full my-4" 
             min="1" 
             max="5" 
             value={moodRatings.happiness}
-            // Restoring original onChange logic if it manipulated DOM attributes
-             onChange={(e) => {
-               handleRatingChange('happiness', e.target.value);
-               const ratingElement = e.target.nextElementSibling?.nextElementSibling;
-               if (ratingElement) {
-                 ratingElement.setAttribute('data-rating', e.target.value);
-                 ratingElement.textContent = `${e.target.value}/5`;
-               }
-             }}
+            onChange={(e) => {
+              handleRatingChange('happiness', e.target.value);
+              const ratingElement = e.target.nextElementSibling?.nextElementSibling;
+              if (ratingElement) {
+                ratingElement.setAttribute('data-rating', e.target.value);
+                ratingElement.textContent = `${e.target.value}/5`;
+              }
+            }}
           />
-          <div className={styles.scaleLabels}>
+          <div className="flex justify-between text-gray-600 mt-2">
             <span>1</span>
             <span>3</span>
             <span>5</span>
           </div>
-          {/* Reverted rating div - relies on CSS module for color via data-rating */}
-          <div className={styles.rating} data-rating={moodRatings.happiness}>
+          <div className={`text-center py-2 rounded mt-4 text-white font-medium transition-colors duration-300 ${getRatingColor(moodRatings.happiness)}`}>
             {moodRatings.happiness}/5
           </div>
         </div>
 
-        {/* Satisfaction Card */}
-        <div className={styles.moodCard}>
-          <h3 className={styles.moodTitle}>Satisfaction</h3>
-          <p className={styles.moodDescription}>How satisfied are you with your day?</p>
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium mb-2">Satisfaction</h3>
+          <p className="text-gray-600 mb-4">How satisfied are you with your day?</p>
           <input 
             type="range" 
-            className={styles.rangeInput} 
+            className="w-full my-4" 
             min="1" 
             max="5" 
             value={moodRatings.satisfaction}
-             onChange={(e) => {
-               handleRatingChange('satisfaction', e.target.value);
-               const ratingElement = e.target.nextElementSibling?.nextElementSibling;
-               if (ratingElement) {
-                 ratingElement.setAttribute('data-rating', e.target.value);
-                 ratingElement.textContent = `${e.target.value}/5`;
-               }
-             }}
+            onChange={(e) => {
+              handleRatingChange('satisfaction', e.target.value);
+              const ratingElement = e.target.nextElementSibling?.nextElementSibling;
+              if (ratingElement) {
+                ratingElement.setAttribute('data-rating', e.target.value);
+                ratingElement.textContent = `${e.target.value}/5`;
+              }
+            }}
           />
-          <div className={styles.scaleLabels}>
+          <div className="flex justify-between text-gray-600 mt-2">
             <span>1</span>
             <span>3</span>
             <span>5</span>
           </div>
-          <div className={styles.rating} data-rating={moodRatings.satisfaction}>
+          <div className={`text-center py-2 rounded mt-4 text-white font-medium transition-colors duration-300 ${getRatingColor(moodRatings.satisfaction)}`}>
             {moodRatings.satisfaction}/5
           </div>
         </div>
 
-        {/* Stress Card */}
-        <div className={styles.moodCard}>
-          <h3 className={styles.moodTitle}>Stress</h3>
-          <p className={styles.moodDescription}>How stressed do you feel today?</p>
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium mb-2">Stress</h3>
+          <p className="text-gray-600 mb-4">How stressed do you feel today?</p>
           <input 
             type="range" 
-            className={styles.rangeInput} 
+            className="w-full my-4" 
             min="1" 
             max="5" 
             value={moodRatings.stress}
-             onChange={(e) => {
-               handleRatingChange('stress', e.target.value);
-               const ratingElement = e.target.nextElementSibling?.nextElementSibling;
-               if (ratingElement) {
-                 ratingElement.setAttribute('data-rating', e.target.value);
-                 ratingElement.textContent = `${e.target.value}/5`;
-               }
-             }}
+            onChange={(e) => {
+              handleRatingChange('stress', e.target.value);
+              const ratingElement = e.target.nextElementSibling?.nextElementSibling;
+              if (ratingElement) {
+                ratingElement.setAttribute('data-rating', e.target.value);
+                ratingElement.textContent = `${e.target.value}/5`;
+              }
+            }}
           />
-          <div className={styles.scaleLabels}>
+          <div className="flex justify-between text-gray-600 mt-2">
             <span>1</span>
             <span>3</span>
             <span>5</span>
           </div>
-          {/* Using moodRatingStress class for inverted colors */}
-          <div className={`${styles.rating} ${styles.moodRatingStress}`} data-rating={moodRatings.stress}>
+          <div className={`text-center py-2 rounded mt-4 text-white font-medium transition-colors duration-300 ${getRatingColor(moodRatings.stress, 'stress')}`}>
             {moodRatings.stress}/5
           </div>
         </div>
