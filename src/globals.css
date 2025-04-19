@@ -30,30 +30,3 @@ body {
 .animate-fade-in {
   animation: fade-in 1s ease-out forwards;
 }
-
-/* Flash card styles */
-.backface-hidden {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-}
-
-.rotate-y-180 {
-  transform: rotateY(180deg);
-  -webkit-transform: rotateY(180deg);
-}
-
-/* Ensure the card container has perspective */
-.relative {
-  perspective: 1000px;
-  -webkit-perspective: 1000px;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-}
-
-/* Flash card container */
-.relative > div {
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-}
