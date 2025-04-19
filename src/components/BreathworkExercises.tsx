@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Clock, Box, Star, Infinity, Heart, Sun, Wind, Activity, Brain } from 'lucide-react';
+import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain } from 'lucide-react';
 import MeditationTimer from './MeditationTimer';
 
 export interface Technique {
@@ -37,7 +37,7 @@ const BREATHING_TECHNIQUES: Technique[] = [
     key: 'lazy-eight',
     label: 'Lazy Eight Breathing',
     description: 'Follows a figure-8 pattern for 5 min',
-    icon: <Infinity className="w-5 h-5" />,
+    icon: <InfinityIcon className="w-5 h-5" />,
     pattern: 'Trace the infinity symbol with your breath',
     durationSec: 300, // 5 min
     category: 'breathing'
@@ -159,13 +159,12 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
     } else if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, [isPlaying, selectedTechnique]);
+  }, [isPlaying, selectedTechnique, BOX_PHASES.exhale, BOX_PHASES.hold, BOX_PHASES.hold2, BOX_PHASES.inhale]);
 
   useEffect(() => {
     if (selectedTechnique) {

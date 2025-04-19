@@ -43,7 +43,7 @@ export default function StudyPage() {
         setSelectedSetId(parsed[0].id);
       }
     }
-  }, []);
+  }, [selectedSetId]);
 
   // Save study sets to localStorage whenever they change
   useEffect(() => {

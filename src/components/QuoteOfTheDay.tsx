@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
 
 interface Quote {
@@ -65,16 +65,16 @@ export default function QuoteOfTheDay({
   const [quote, setQuote] = useState<Quote>(initialQuote || DEFAULT_QUOTES[0]);
   const [isFading, setIsFading] = useState(false);
 
-  const getRandomQuote = () => {
+  const getRandomQuote = useCallback(() => {
     const currentIndex = DEFAULT_QUOTES.findIndex(q => q.text === quote.text);
     let randomIndex;
     do {
       randomIndex = Math.floor(Math.random() * DEFAULT_QUOTES.length);
     } while (randomIndex === currentIndex && DEFAULT_QUOTES.length > 1);
     return DEFAULT_QUOTES[randomIndex];
-  };
+  }, [quote.text]);
 
-  const refreshQuote = () => {
+  const refreshQuote = useCallback(() => {
     setIsFading(true);
     setTimeout(() => {
       if (onRefresh) {
@@ -84,7 +84,7 @@ export default function QuoteOfTheDay({
       }
       setIsFading(false);
     }, 500);
-  };
+  }, [onRefresh, getRandomQuote]);
 
   useEffect(() => {
     if (!initialQuote) {
