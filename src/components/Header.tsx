@@ -23,7 +23,7 @@ const Header = () => {
           <ul className="flex space-x-6">
             <li>
               <Link
-                href="/home"
+                href="/"
                 className={`text-gray-700 hover:text-blue-500 transition-colors ${
                   pathname === "/" ? "text-blue-500 font-medium" : ""
                 }`}
