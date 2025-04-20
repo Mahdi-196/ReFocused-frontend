@@ -1,6 +1,5 @@
 "use client";
 
-// src/components/Header.tsx
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MdNotifications, MdPersonOutline } from "react-icons/md";
@@ -14,7 +13,7 @@ const Header = () => {
       <div className="container mx-auto flex items-center justify-between px-4">
         {/* Logo */}
         <div className="flex items-center space-x-2">
-          <img src="/canva-brain.png" alt="Brain Logo" className="w-10 h-10" />
+          <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" />
           <span className="text-xl font-bold text-gray-800">ReFocused</span>
           <DevTools />
         </div>
