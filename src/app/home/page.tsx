@@ -32,23 +32,99 @@ const CircularProgress = ({ value }: { value: number }) => (
   </div>
 );
 
-type GoalView = 'daily' | 'sprint' | 'vision';
+type Task = {
+  id: number;
+  text: string;
+  completed: boolean;
+};
+
+type Goal = {
+  id: number;
+  name: string;
+  progress: number; // Percentage 0-100
+};
+
+type GoalView = 'sprint' | 'vision';
 
 const Home = () => {
-  const [activeGoalView, setActiveGoalView] = useState<GoalView>('daily');
+  const [activeGoalView, setActiveGoalView] = useState<GoalView>('sprint');
   const [newTask, setNewTask] = useState('');
-  const [tasks, setTasks] = useState([
-    { id: 1, text: 'Review project documentation', completed: false },
-    { id: 2, text: 'Team sync meeting at 2 PM', completed: true },
+  const [tasks, setTasks] = useState<Task[]>([
+    { id: 1, text: 'Complete project meeting', completed: false },
+    { id: 2, text: 'Write documentation', completed: false },
     { id: 3, text: 'Update sprint board', completed: false },
   ]);
 
+  // Goal Tracker State
+  const [sprintGoals, setSprintGoals] = useState<Goal[]>([
+    { id: 201, name: 'Implement new features', progress: 45 },
+    { id: 202, name: 'Code refactoring', progress: 80 },
+  ]);
+  const [visionGoals, setVisionGoals] = useState<Goal[]>([
+    { id: 301, name: 'Launch MVP', progress: 25 },
+    { id: 302, name: 'Grow user base', progress: 15 },
+  ]);
+  const [newGoalName, setNewGoalName] = useState('');
+
+  // Edit Goal Modal State
+  const [isEditGoalModalOpen, setIsEditGoalModalOpen] = useState(false);
+  // Store the goal being edited (including its type)
+  const [editingGoal, setEditingGoal] = useState<Goal & { type: 'sprint' | 'vision' } | null>(null);
+  const [editedGoalProgress, setEditedGoalProgress] = useState(0);
+
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newTask.trim()) {
+    if (tasks.length < 3 && newTask.trim()) {
       setTasks([...tasks, { id: Date.now(), text: newTask.trim(), completed: false }]);
       setNewTask('');
     }
+  };
+
+  const handleAddGoal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGoalName.trim()) return;
+
+    const newGoal: Goal = {
+      id: Date.now(),
+      name: newGoalName.trim(),
+      progress: 0, // Start progress at 0
+    };
+
+    if (activeGoalView === 'sprint') {
+      setSprintGoals([...sprintGoals, newGoal]);
+    } else if (activeGoalView === 'vision') {
+      setVisionGoals([...visionGoals, newGoal]);
+    }
+
+    setNewGoalName(''); // Clear input after adding
+  };
+
+  const handleOpenEditGoalModal = (goal: Goal, type: 'sprint' | 'vision') => {
+    setEditingGoal({ ...goal, type });
+    setEditedGoalProgress(goal.progress);
+    setIsEditGoalModalOpen(true);
+  };
+
+  const handleUpdateGoal = () => {
+    if (!editingGoal) return;
+
+    const updatedGoal = { 
+      ...editingGoal, 
+      progress: editedGoalProgress 
+    };
+
+    if (editingGoal.type === 'sprint') {
+      setSprintGoals(sprintGoals.map(g => g.id === editingGoal.id ? updatedGoal : g));
+    } else if (editingGoal.type === 'vision') {
+      setVisionGoals(visionGoals.map(g => g.id === editingGoal.id ? updatedGoal : g));
+    }
+
+    setIsEditGoalModalOpen(false);
+    setEditingGoal(null);
+  };
+
+  const handleDeleteTask = (taskId: number) => {
+    setTasks(tasks.filter(task => task.id !== taskId));
   };
 
   return (
@@ -68,7 +144,7 @@ const Home = () => {
               <input
                 type="text"
                 placeholder="Set your main goal for today..."
-                className="w-full p-2 bg-white rounded-md border border-gray-200"
+                className="w-full p-2 bg-transparent text-lg font-semibold text-gray-800 placeholder-gray-500 focus:outline-none focus:border-b-2 focus:border-blue-300"
               />
             </div>
 
@@ -119,39 +195,51 @@ const Home = () => {
                 <span className="font-medium text-gray-700">✅ Today's Tasks</span>
               </div>
               <div className="bg-white rounded-lg p-4">
-                <ul className="space-y-2">
+                <ul className="space-y-2 mb-3">
                   {tasks.map(task => (
-                    <li key={task.id} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => {
-                          setTasks(tasks.map(t =>
-                            t.id === task.id ? { ...t, completed: !t.completed } : t
-                          ));
-                        }}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                        {task.text}
-                      </span>
+                    <li key={task.id} className="group relative flex items-center justify-between gap-2 pr-8">
+                      <div className="flex items-center gap-2 flex-grow">
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          onChange={() => {
+                            setTasks(tasks.map(t =>
+                              t.id === task.id ? { ...t, completed: !t.completed } : t
+                            ));
+                          }}
+                          className="flex-shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                          {task.text}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-gray-100"
+                        aria-label="Delete task"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </li>
                   ))}
                 </ul>
-                <form onSubmit={handleAddTask} className="mt-3 flex items-center gap-2">
+                <form onSubmit={handleAddTask} className="flex items-center gap-2">
                   <input
                     type="text"
                     value={newTask}
                     onChange={(e) => setNewTask(e.target.value)}
-                    placeholder="Add a task..."
-                    className="flex-1 text-sm bg-transparent border-0 border-b border-gray-200 focus:ring-0 focus:border-blue-300 placeholder-gray-400"
+                    placeholder={tasks.length >= 3 ? "Task limit reached" : "Add a new task..."}
+                    className="flex-grow p-2 bg-white rounded-md border border-gray-200 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    disabled={tasks.length >= 3}
                   />
                   <button
                     type="submit"
-                    className="text-gray-400 hover:text-gray-600"
-                    disabled={!newTask.trim()}
+                    className="p-2 bg-gray-900 text-white rounded-md hover:bg-gray-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    disabled={tasks.length >= 3 || !newTask.trim()}
                   >
-                    <span className="text-lg">+</span>
+                    +
                   </button>
                 </form>
               </div>
@@ -213,16 +301,6 @@ const Home = () => {
             {/* Goal Type Selector */}
             <div className="flex space-x-2 mb-8">
               <button
-                onClick={() => setActiveGoalView('daily')}
-                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                  activeGoalView === 'daily'
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Daily Goals
-              </button>
-              <button
                 onClick={() => setActiveGoalView('sprint')}
                 className={`px-6 py-3 rounded-lg font-medium transition-colors ${
                   activeGoalView === 'sprint'
@@ -244,93 +322,91 @@ const Home = () => {
               </button>
             </div>
 
-            {/* Daily Goals View */}
-            {activeGoalView === 'daily' && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">Complete project meeting</span>
-                    <span>100%</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-900 rounded-full" style={{ width: '100%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">Write documentation</span>
-                    <span>60%</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-900 rounded-full" style={{ width: '60%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">Review pull requests</span>
-                    <span>30%</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-900 rounded-full" style={{ width: '30%' }}></div>
-                  </div>
-                </div>
-                <button className="w-full mt-8 py-3 text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100">
-                  Add Goal
-                </button>
-              </div>
-            )}
-
             {/* Sprint View */}
             {activeGoalView === 'sprint' && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">Implement new features</span>
-                    <span>45%</span>
+              <div className="space-y-4">
+                {sprintGoals.map(goal => (
+                  <div key={goal.id} className="group relative pr-8">
+                    <div className="flex justify-between items-center text-sm mb-1">
+                      <span className="font-medium">{goal.name}</span>
+                      <div className="flex items-center">
+                        <span>{goal.progress}%</span>
+                        <button
+                          onClick={() => handleOpenEditGoalModal(goal, 'sprint')}
+                          className="ml-2 p-1 text-gray-400 hover:text-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-gray-100"
+                          aria-label="Edit sprint goal"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-gray-900 rounded-full" style={{ width: `${goal.progress}%` }}></div>
+                    </div>
                   </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-900 rounded-full" style={{ width: '45%' }}></div>
+                ))}
+                <form onSubmit={handleAddGoal} className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      value={newGoalName}
+                      onChange={(e) => setNewGoalName(e.target.value)}
+                      placeholder="Add a new sprint goal..."
+                      className="flex-grow p-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+                    />
+                    <button 
+                      type="submit"
+                      className="p-2 bg-gray-900 text-white rounded-md hover:bg-gray-700 transition-colors text-sm disabled:bg-gray-400"
+                      disabled={!newGoalName.trim()}
+                    >
+                      Add Goal
+                    </button>
                   </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">Code refactoring</span>
-                    <span>80%</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-900 rounded-full" style={{ width: '80%' }}></div>
-                  </div>
-                </div>
-                <button className="w-full mt-8 py-3 text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100">
-                  Add Sprint Goal
-                </button>
+                </form>
               </div>
             )}
 
             {/* Vision View */}
             {activeGoalView === 'vision' && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">Launch MVP</span>
-                    <span>25%</span>
+              <div className="space-y-4">
+                {visionGoals.map(goal => (
+                  <div key={goal.id} className="group relative pr-8">
+                    <div className="flex justify-between items-center text-sm mb-1">
+                      <span className="font-medium">{goal.name}</span>
+                      <div className="flex items-center">
+                        <span>{goal.progress}%</span>
+                        <button
+                          onClick={() => handleOpenEditGoalModal(goal, 'vision')}
+                          className="ml-2 p-1 text-gray-400 hover:text-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-gray-100"
+                          aria-label="Edit vision goal"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-gray-900 rounded-full" style={{ width: `${goal.progress}%` }}></div>
+                    </div>
                   </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-900 rounded-full" style={{ width: '25%' }}></div>
+                ))}
+                <form onSubmit={handleAddGoal} className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      value={newGoalName}
+                      onChange={(e) => setNewGoalName(e.target.value)}
+                      placeholder="Add a new vision goal..."
+                      className="flex-grow p-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+                    />
+                    <button 
+                      type="submit"
+                      className="p-2 bg-gray-900 text-white rounded-md hover:bg-gray-700 transition-colors text-sm disabled:bg-gray-400"
+                      disabled={!newGoalName.trim()}
+                    >
+                      Add Goal
+                    </button>
                   </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">Grow user base</span>
-                    <span>15%</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-900 rounded-full" style={{ width: '15%' }}></div>
-                  </div>
-                </div>
-                <button className="w-full mt-8 py-3 text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100">
-                  Add Vision Goal
-                </button>
+                </form>
               </div>
             )}
           </div>
@@ -478,6 +554,57 @@ const Home = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Goal Modal */} 
+      {isEditGoalModalOpen && editingGoal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-semibold mb-4">Update Progress</h3>
+            
+            {/* Display Goal Name (Read-only) */} 
+            <div className="mb-4">
+              <p className="block text-sm font-medium text-gray-500 mb-1">
+                Goal
+              </p>
+              <p className="text-lg font-semibold text-gray-800">{editingGoal.name}</p>
+            </div>
+
+            {/* Goal Progress Slider */} 
+            <div className="mb-6">
+              <label htmlFor="goalProgress" className="block text-sm font-medium text-gray-700 mb-1">
+                Progress: {editedGoalProgress}%
+              </label>
+              <input
+                id="goalProgress"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={editedGoalProgress}
+                onChange={(e) => setEditedGoalProgress(parseInt(e.target.value, 10))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                autoFocus
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsEditGoalModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateGoal}
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-md hover:bg-gray-700 transition-colors disabled:bg-gray-400"
+              >
+                Save Progress
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

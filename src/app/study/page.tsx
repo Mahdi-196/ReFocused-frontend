@@ -33,7 +33,7 @@ export default function StudyPage() {
     back: ''
   });
 
-  // Load study sets from localStorage on mount
+  // Load study sets from localStorage on mount and save whenever they change
   useEffect(() => {
     const savedSets = localStorage.getItem('studySets');
     if (savedSets) {
@@ -43,11 +43,12 @@ export default function StudyPage() {
         setSelectedSetId(parsed[0].id);
       }
     }
-  }, [selectedSetId]);
+  }, []);
 
-  // Save study sets to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('studySets', JSON.stringify(studySets));
+    if (studySets.length > 0) {
+      localStorage.setItem('studySets', JSON.stringify(studySets));
+    }
   }, [studySets]);
 
   const selectedSet = studySets.find(set => set.id === selectedSetId);
@@ -98,7 +99,7 @@ export default function StudyPage() {
     setStudySets(prev =>
       prev.map(set =>
         set.id === selectedSetId
-          ? { ...set, cards: [newCardWithId, ...set.cards] }
+          ? { ...set, cards: [...set.cards, newCardWithId] }
           : set
       )
     );
@@ -167,7 +168,7 @@ export default function StudyPage() {
                     setNewSetName('');
                     setModalOpen('newSet');
                   }}
-                  className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm active:scale-95 transform transition-transform duration-75"
+                  className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-sm active:scale-95 transform transition-all duration-75"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -181,33 +182,35 @@ export default function StudyPage() {
                 {studySets.map(set => (
                   <div
                     key={set.id}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors ${
+                    className={`group relative flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors ${
                       selectedSetId === set.id 
                         ? 'bg-blue-50 text-blue-700' 
                         : 'hover:bg-gray-50'
                     }`}
                   >
-                    <button
-                      onClick={() => setSelectedSetId(set.id)}
-                      className="flex-1 text-left active:scale-95 transform transition-transform duration-75"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{set.name}</span>
-                        <span className="text-sm text-gray-500">{set.cards.length} cards</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingSetId(set.id);
-                        setNewSetName(set.name);
-                        setModalOpen('editSet');
-                      }}
-                      className="ml-2 p-1 text-gray-400 hover:text-blue-500 rounded active:scale-95 transform transition-transform duration-75"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
+                    <div className="flex-1 flex items-center justify-between">
+                      <button
+                        onClick={() => setSelectedSetId(set.id)}
+                        className="flex-1 text-left active:scale-95 transform transition-transform duration-75"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{set.name}</span>
+                          <span className="text-sm text-gray-500">{set.cards.length} cards</span>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingSetId(set.id);
+                          setNewSetName(set.name);
+                          setModalOpen('editSet');
+                        }}
+                        className="ml-2 p-1.5 text-gray-400 hover:text-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-gray-100"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -223,7 +226,7 @@ export default function StudyPage() {
                     setModalOpen('addCard');
                   }}
                   disabled={!selectedSetId}
-                  className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
+                  className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-sm active:scale-95 transform transition-all duration-75"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -234,21 +237,25 @@ export default function StudyPage() {
 
               {/* Flashcard Display */}
               {selectedSet?.cards.length ? (
-                <div className="relative min-h-[270px] mb-3">
+                <div 
+                  className="relative w-3/4 h-[270px] min-h-[270px] mx-auto mb-3 cursor-pointer select-none perspective-1000"
+                  onClick={() => setIsFlipped(!isFlipped)}
+                >
+                  {/* Front of card */} 
                   <div 
-                    className={`w-3/4 h-[270px] transition-transform duration-300 transform-gpu select-none mx-auto ${
-                      isFlipped ? 'rotate-y-180' : ''
+                    className={`absolute inset-0 bg-white border border-gray-200 rounded-lg flex items-center justify-center p-8 shadow-md transition-all duration-500 transform ${
+                      isFlipped ? 'opacity-0 -rotate-y-90' : 'opacity-100 rotate-y-0'
                     }`}
-                    onClick={() => setIsFlipped(!isFlipped)}
                   >
-                    {/* Front of card */}
-                    <div className="absolute w-full h-full bg-white border border-gray-200 rounded-lg flex items-center justify-center p-8 backface-hidden select-none">
-                      <p className="text-xl text-center select-none">{selectedSet?.cards[currentCard - 1]?.front}</p>
-                    </div>
-                    {/* Back of card */}
-                    <div className="absolute w-full h-full bg-white border border-gray-200 rounded-lg flex items-center justify-center p-8 backface-hidden rotate-y-180 select-none">
-                      <p className="text-xl text-center select-none">{selectedSet?.cards[currentCard - 1]?.back}</p>
-                    </div>
+                    <p className="text-xl text-center">{selectedSet?.cards[currentCard - 1]?.front}</p>
+                  </div>
+                  {/* Back of card */} 
+                  <div 
+                    className={`absolute inset-0 bg-white border border-gray-200 rounded-lg flex items-center justify-center p-8 shadow-md transition-all duration-500 transform ${
+                      isFlipped ? 'opacity-100 rotate-y-0' : 'opacity-0 rotate-y-90'
+                    }`}
+                  >
+                    <p className="text-xl text-center">{selectedSet?.cards[currentCard - 1]?.back}</p>
                   </div>
                 </div>
               ) : (
@@ -287,7 +294,7 @@ export default function StudyPage() {
                 <div className="flex justify-center">
                   <button 
                     onClick={() => handleDeleteCard(selectedSet.cards[currentCard - 1].id)}
-                    className="flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors text-sm active:scale-95 transform transition-transform duration-75"
+                    className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm active:scale-95 transform transition-all duration-75"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

@@ -1,0 +1,26 @@
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Remove Flip Card Animation - Start */
+/* .flip-card { ... } */
+/* .flip-card-inner { ... } */
+/* .flip-card.flipped .flip-card-inner { ... } */
+/* .flip-card-front, */
+/* .flip-card-back { ... } */
+/* .flip-card-front { ... } */
+/* .flip-card-back { ... } */
+/* Remove Flip Card Animation - End */ 
