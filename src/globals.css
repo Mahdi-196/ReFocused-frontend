@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+:root {
+  scroll-behavior: smooth;
+}
+
 /* scroll bar disabled*/
 body {
   /* overflow: hidden; */
