@@ -54,8 +54,8 @@ const Home = () => {
   return (
     <main className="container mx-auto p-6 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Daily Momentum - 1 column */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* Daily Momentum - 2 columns */}
+        <div className="lg:col-span-2">
           <div className="bg-blue-50 rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <span className="text-xl font-semibold">🎯 Daily Momentum</span>
@@ -159,9 +159,53 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Goal Tracker - 2 columns */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm min-h-[500px]">
+        {/* Quick Access - 1 column, square shape */}
+        <div className="lg:col-span-1">
+          <div className="flex flex-col gap-6">
+            <div className="bg-white rounded-xl p-6 shadow-sm aspect-square">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-xl font-semibold">⭕ Quick Access</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 h-[calc(100%-4rem)]">
+                <button className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
+                  <span className="text-3xl mb-3">📱</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    <span className="text-blue-500">|</span> Notes
+                  </span>
+                </button>
+                <button className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                  <span className="text-3xl mb-3">📚</span>
+                  <span className="text-sm font-medium text-gray-700">Study Sets</span>
+                </button>
+                <button className="flex flex-col items-center justify-center p-4 bg-red-50 rounded-xl hover:bg-red-100 transition-colors">
+                  <span className="text-3xl mb-3">❤️</span>
+                  <span className="text-sm font-medium text-gray-700">Affirmations</span>
+                </button>
+                <button className="flex flex-col items-center justify-center p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-colors">
+                  <span className="text-3xl mb-3">⏱️</span>
+                  <span className="text-sm font-medium text-gray-700">Breathing</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Vocabulary */}
+            <div className="bg-purple-50 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg font-semibold">📚 Word of the Day</span>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-purple-900">Ephemeral</h3>
+                <p className="text-sm text-gray-600 italic">/əˈfem(ə)rəl/</p>
+                <p className="text-sm text-gray-700">Lasting for a very short time; transitory; temporary.</p>
+                <p className="text-sm text-gray-600 mt-2">"The ephemeral nature of social media trends."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Goal Tracker */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl p-6 shadow-sm h-full">
             <div className="flex items-center gap-2 mb-6">
               <span className="text-xl font-semibold">✅ Goal Tracker</span>
             </div>
@@ -292,37 +336,77 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Quick Access - 1 column */}
+        {/* Mind Fuel */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="text-xl font-semibold">⭕ Quick Access</span>
+          <div className="bg-yellow-50 rounded-xl p-6 shadow-sm h-full">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xl font-semibold">💡 Mind Fuel</span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <button className="flex flex-col items-center justify-center p-6 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
-                <span className="text-2xl mb-2">📱</span>
-                <span className="text-sm font-medium text-gray-700">
-                  <span className="text-blue-500">|</span> Notes
-                </span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                <span className="text-2xl mb-2">📚</span>
-                <span className="text-sm font-medium text-gray-700">Study Sets</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-6 bg-red-50 rounded-xl hover:bg-red-100 transition-colors">
-                <span className="text-2xl mb-2">❤️</span>
-                <span className="text-sm font-medium text-gray-700">Affirmations</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-6 bg-green-50 rounded-xl hover:bg-green-100 transition-colors">
-                <span className="text-2xl mb-2">⏱️</span>
-                <span className="text-sm font-medium text-gray-700">Breathing</span>
-              </button>
+
+            <div className="space-y-6">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-medium text-sm">Daily Quote</span>
+                </div>
+                <blockquote className="text-sm italic text-gray-600 border-l-4 border-yellow-200 pl-3">
+                  "The only way to do great work is to love what you do."
+                  <footer className="text-xs text-gray-500 mt-1">— Steve Jobs</footer>
+                </blockquote>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-medium text-sm">Tip of the Day</span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Break large tasks into smaller, manageable chunks to maintain momentum.
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-medium text-sm">Brain Boost</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Serendipity</h4>
+                  <p className="text-xs text-gray-600">
+                    The occurrence of events by chance in a happy or beneficial way.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-medium text-sm">Weekly Focus</span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  "Embrace challenges as opportunities for growth and learning."
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-medium text-sm">Mindfulness Moment</span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Take 3 deep breaths and focus on the present moment.
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-medium text-sm">Productivity Hack</span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Use the 2-minute rule: If a task takes less than 2 minutes, do it now.
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Today's Progress - 1 column */}
-        <div className="lg:col-span-1">
+        {/* Today's Progress */}
+        <div className="lg:col-span-3">
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <span className="text-xl font-semibold">📊 Today's Progress</span>
@@ -357,10 +441,10 @@ const Home = () => {
                   85
                 </div>
               </div>
-              <span className="text-gray-600 text-sm">Productivity Score</span>
+              <span className="text-gray-600 text-sm mb-2">Productivity Score</span>
 
               {/* Stats Grid */}
-              <div className="w-full grid grid-cols-2 gap-8 mt-6 bg-gray-50 p-4 rounded-lg">
+              <div className="w-full grid grid-cols-2 gap-4 mt-2 bg-gray-50 p-3 rounded-lg">
                 <div className="text-center">
                   <div className="text-2xl font-semibold">4</div>
                   <div className="text-sm text-gray-600">Tasks Done</div>
@@ -372,7 +456,7 @@ const Home = () => {
               </div>
 
               {/* Points Breakdown */}
-              <div className="w-full mt-4 space-y-2">
+              <div className="w-full mt-2 space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">+1 point per task</span>
                   <span className="font-medium">+4</span>
@@ -385,51 +469,9 @@ const Home = () => {
                   <span className="text-gray-600">-1 skipped habit</span>
                   <span className="font-medium text-red-500">-1</span>
                 </div>
-                <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                <div className="flex justify-between text-sm pt-1 border-t border-gray-200">
                   <span className="font-medium">Total today</span>
                   <span className="font-medium">7 pts</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mind Fuel - more compact, 1 column */}
-        <div className="lg:col-span-1">
-          <div className="bg-yellow-50 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl font-semibold">💡 Mind Fuel</span>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium text-sm">Daily Quote</span>
-                </div>
-                <blockquote className="text-sm italic text-gray-600 border-l-4 border-yellow-200 pl-3">
-                  "The only way to do great work is to love what you do."
-                  <footer className="text-xs text-gray-500 mt-1">— Steve Jobs</footer>
-                </blockquote>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium text-sm">Tip of the Day</span>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Break large tasks into smaller, manageable chunks to maintain momentum.
-                </p>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium text-sm">Brain Boost</span>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Serendipity</h4>
-                  <p className="text-xs text-gray-600">
-                    The occurrence of events by chance in a happy or beneficial way.
-                  </p>
                 </div>
               </div>
             </div>
