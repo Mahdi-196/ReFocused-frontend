@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MdNotifications, MdPersonOutline } from "react-icons/md";
+import { MdNotifications } from "react-icons/md";
 import DevTools from "./devTools";
+import AuthButton from "./AuthButton";
+import { useState } from "react";
 
 const Header = () => {
   const pathname = usePathname();
 
   return (
-    <header className="bg-white shadow py-4">
+    <header className="bg-white shadow py-4 relative">
       <div className="container mx-auto flex items-center justify-between px-4">
         {/* Logo */}
         <div className="flex items-center space-x-2">
@@ -72,14 +74,12 @@ const Header = () => {
             </li>
           </ul>
         </nav>
-        {/* Icons */}
+        {/* Auth and Notifications */}
         <div className="flex items-center space-x-4">
           <button aria-label="Notifications">
             <MdNotifications className="text-2xl text-gray-700 hover:text-blue-500" />
           </button>
-          <button aria-label="Profile">
-            <MdPersonOutline className="text-2xl text-gray-700 hover:text-blue-500" />
-          </button>
+          <AuthButton />
         </div>
       </div>
     </header>

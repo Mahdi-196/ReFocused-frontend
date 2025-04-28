@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DailyMomentum from './homeComponents/DailyMomentum';
 import QuickAccess from './homeComponents/QuickAccess';
 import WordOfTheDay from './homeComponents/WordOfTheDay';
@@ -8,6 +8,7 @@ import GoalTracker, { Goal, GoalView } from './homeComponents/GoalTracker';
 import MindFuel from './homeComponents/MindFuel';
 import ProductivityScore from './homeComponents/ProductivityScore';
 import { Task } from './homeComponents/TaskList';
+import client from '@/api/client';
 
 const Home = () => {
   const [activeGoalView, setActiveGoalView] = useState<GoalView>('sprint');
@@ -18,15 +19,38 @@ const Home = () => {
     { id: 3, text: 'Update sprint board', completed: false },
   ]);
 
-  const [sprintGoals, setSprintGoals] = useState<Goal[]>([
-    { id: 201, name: 'Implement new features', progress: 45 },
-    { id: 202, name: 'Code refactoring', progress: 80 },
-  ]);
-  const [visionGoals, setVisionGoals] = useState<Goal[]>([
-    { id: 301, name: 'Launch MVP', progress: 25 },
-    { id: 302, name: 'Grow user base', progress: 15 },
-  ]);
+  const [sprintGoals, setSprintGoals] = useState<Goal[]>([]);
+  const [visionGoals, setVisionGoals] = useState<Goal[]>([]);
   const [newGoalName, setNewGoalName] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch goals from the API
+  useEffect(() => {
+    const fetchGoals = async () => {
+      setIsLoading(true);
+
+      try {
+        const res = await client.get<Goal[]>("/goals");
+        setSprintGoals(res.data.filter(g => g.type === "sprint" || g.category === "sprint"));
+        setVisionGoals(res.data.filter(g => g.type === "vision" || g.category === "long_term"));
+      } catch (error) {
+        console.error("Error fetching goals:", error);
+        // Fallback to default goals if API fails
+        setSprintGoals([
+          { id: 201, name: 'Implement new features', progress: 45, type: 'sprint', category: 'sprint' },
+          { id: 202, name: 'Code refactoring', progress: 80, type: 'sprint', category: 'sprint' },
+        ]);
+        setVisionGoals([
+          { id: 301, name: 'Launch MVP', progress: 25, type: 'vision', category: 'long_term' },
+          { id: 302, name: 'Grow user base', progress: 15, type: 'vision', category: 'long_term' },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchGoals();
+  }, []);
 
   const [isEditGoalModalOpen, setIsEditGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal & { type: 'sprint' | 'vision' } | null>(null);
@@ -40,16 +64,45 @@ const Home = () => {
     }
   };
 
-  const handleAddGoal = (e: React.FormEvent) => {
+  const handleAddGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGoalName.trim()) return;
-    const newGoal: Goal = { id: Date.now(), name: newGoalName.trim(), progress: 0 };
-    if (activeGoalView === 'sprint') {
-      setSprintGoals([...sprintGoals, newGoal]);
-    } else {
-      setVisionGoals([...visionGoals, newGoal]);
+    
+    const category = activeGoalView === 'sprint' ? 'sprint' : 'long_term';
+    
+    try {
+      const response = await client.post('/goals', {
+        category, 
+        goal_text: newGoalName.trim()
+      });
+      
+      const newGoal = response.data;
+      
+      if (category === 'sprint') {
+        setSprintGoals([...sprintGoals, newGoal]);
+      } else {
+        setVisionGoals([...visionGoals, newGoal]);
+      }
+      
+      setNewGoalName('');
+    } catch (error) {
+      console.error('Error adding goal:', error);
+      // Fallback to local-only logic if API fails
+      const localGoal: Goal = { 
+        id: Date.now(), 
+        name: newGoalName.trim(), 
+        progress: 0,
+        type: category === 'sprint' ? 'sprint' : 'vision',
+        category
+      };
+      
+      if (category === 'sprint') {
+        setSprintGoals([...sprintGoals, localGoal]);
+      } else {
+        setVisionGoals([...visionGoals, localGoal]);
+      }
+      setNewGoalName('');
     }
-    setNewGoalName('');
   };
 
   const handleOpenEditGoalModal = (goal: Goal, type: 'sprint' | 'vision') => {
@@ -58,22 +111,66 @@ const Home = () => {
     setIsEditGoalModalOpen(true);
   };
 
-  const handleUpdateGoal = () => {
+  const handleUpdateGoal = async () => {
     if (!editingGoal) return;
-    const updatedGoal = { ...editingGoal, progress: editedGoalProgress };
-    const { type, ...goalToUpdate } = updatedGoal;
-
-    if (editingGoal.type === 'sprint') {
-      setSprintGoals(sprintGoals.map(g => g.id === editingGoal.id ? goalToUpdate : g));
-    } else {
-      setVisionGoals(visionGoals.map(g => g.id === editingGoal.id ? goalToUpdate : g));
+    
+    // Convert UI type to API category
+    const category = editingGoal.type === 'sprint' ? 'sprint' : 'long_term';
+    
+    try {
+      const response = await client.patch(`/goals/${editingGoal.id}`, {
+        goal_text: editingGoal.name,
+        completed: editedGoalProgress === 100,
+        progress: editedGoalProgress,
+        category
+      });
+      
+      const updatedGoal = response.data;
+      
+      if (editingGoal.type === 'sprint') {
+        setSprintGoals(sprintGoals.map(g => g.id === updatedGoal.id ? updatedGoal : g));
+      } else {
+        setVisionGoals(visionGoals.map(g => g.id === updatedGoal.id ? updatedGoal : g));
+      }
+    } catch (error) {
+      console.error('Error updating goal:', error);
+      // Fallback to local-only logic if API fails
+      const localGoalUpdate: Goal = {
+        id: editingGoal.id,
+        name: editingGoal.name,
+        progress: editedGoalProgress,
+        type: editingGoal.type,
+        category: editingGoal.type === 'sprint' ? 'sprint' : 'long_term'
+      };
+      
+      if (editingGoal.type === 'sprint') {
+        setSprintGoals(sprintGoals.map(g => g.id === editingGoal.id ? localGoalUpdate : g));
+      } else {
+        setVisionGoals(visionGoals.map(g => g.id === editingGoal.id ? localGoalUpdate : g));
+      }
+    } finally {
+      setIsEditGoalModalOpen(false);
+      setEditingGoal(null);
     }
-    setIsEditGoalModalOpen(false);
-    setEditingGoal(null);
   };
 
   const handleDeleteTask = (taskId: number) => {
     setTasks(tasks.filter(task => task.id !== taskId));
+  };
+
+  const handleDeleteGoal = async (id: number, type: 'sprint' | 'vision') => {
+    try {
+      await client.delete(`/goals/${id}`);
+      
+      // On success, filter out the deleted goal from state
+      if (type === 'sprint') {
+        setSprintGoals(sprintGoals.filter(goal => goal.id !== id));
+      } else {
+        setVisionGoals(visionGoals.filter(goal => goal.id !== id));
+      }
+    } catch (error) {
+      console.error(`Error deleting goal with id ${id}:`, error);
+    }
   };
 
   return (
@@ -104,6 +201,7 @@ const Home = () => {
           setNewGoalName={setNewGoalName}
           handleAddGoal={handleAddGoal}
           handleOpenEditGoalModal={handleOpenEditGoalModal}
+          handleDeleteGoal={handleDeleteGoal}
         />
 
         <MindFuel />
