@@ -18,7 +18,10 @@ client.interceptors.request.use(
     return config;
   },
   error => {
-    console.error('Request error:', error);
+    // Don't log mock errors as real errors
+    if (!error.isAxiosMockError) {
+      console.error('Request error:', error);
+    }
     return Promise.reject(error);
   }
 );
@@ -27,13 +30,16 @@ client.interceptors.request.use(
 client.interceptors.response.use(
   response => response,
   error => {
-    // Handle network errors
-    if (error.message === 'Network Error') {
-      console.error('Network error - server may be unavailable');
+    // Don't log mock errors as real errors
+    if (!error.isAxiosMockError) {
+      // Handle network errors
+      if (error.message === 'Network Error') {
+        console.error('Network error - server may be unavailable');
+      }
+      
+      // Log all API errors (except mock ones)
+      console.error('API Error:', error.config?.url, error.message);
     }
-    
-    // Log all API errors
-    console.error('API Error:', error.config?.url, error.message);
     
     return Promise.reject(error);
   }
@@ -51,23 +57,60 @@ export const initializeAuth = () => {
 
 // Mock data for development
 let mockGoals = [
-  { id: 201, name: 'Implement new features', progress: 45, type: 'sprint', category: 'sprint' },
-  { id: 202, name: 'Code refactoring', progress: 80, type: 'sprint', category: 'sprint' },
-  { id: 301, name: 'Launch MVP', progress: 25, type: 'vision', category: 'long_term' },
-  { id: 302, name: 'Grow user base', progress: 15, type: 'vision', category: 'long_term' },
+  { 
+    id: 201, 
+    user_id: 1,
+    goal_text: 'Implement new features', 
+    progress: 45, 
+    category: 'sprint' as const,
+    completed: false,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  { 
+    id: 202, 
+    user_id: 1,
+    goal_text: 'Code refactoring', 
+    progress: 80, 
+    category: 'sprint' as const,
+    completed: false,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  { 
+    id: 301, 
+    user_id: 1,
+    goal_text: 'Launch MVP', 
+    progress: 25, 
+    category: 'long_term' as const,
+    completed: false,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  { 
+    id: 302, 
+    user_id: 1,
+    goal_text: 'Grow user base', 
+    progress: 15, 
+    category: 'long_term' as const,
+    completed: false,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
 ];
 
 // ALWAYS use mock API regardless of environment variable
 // Mock API interceptor for development
 client.interceptors.request.use(
   async (config) => {
+    // Always use mock for development
     const mockResponse = await handleMockRequest(config);
     if (mockResponse) {
-      // Return a mock response directly
-      return Promise.reject({
-        isAxiosMockError: true,
-        response: mockResponse
-      });
+      // Return a mock response directly by throwing an axios mock error
+      const mockError = new Error('Mock response') as any;
+      mockError.isAxiosMockError = true;
+      mockError.response = mockResponse;
+      return Promise.reject(mockError);
     }
     return config;
   },
@@ -145,6 +188,31 @@ async function handleMockRequest(config: {
     }
   }
   
+  // Google OAuth endpoint
+  if (url === '/auth/google' && method === 'post') {
+    const body = typeof data === 'string' ? JSON.parse(data) : data;
+    if (body.token) {
+      return {
+        data: {
+          access_token: 'mock-google-jwt-token-for-testing',
+          user: {
+            id: 999,
+            email: 'googleuser@example.com',
+            username: 'googleuser',
+            name: 'Google User',
+            google_id: 'mock-google-id-123'
+          }
+        },
+        status: 200
+      };
+    } else {
+      return {
+        data: { message: 'Invalid Google token' },
+        status: 400
+      };
+    }
+  }
+  
   // GET /goals - List all goals
   if (url === '/goals' && method === 'get') {
     return {
@@ -158,10 +226,13 @@ async function handleMockRequest(config: {
     const body = typeof data === 'string' ? JSON.parse(data) : data;
     const newGoal = {
       id: Date.now(),
-      name: body.goal_text,
+      user_id: 1,
+      goal_text: body.goal_text,
       progress: 0,
-      type: body.category,
-      category: body.category
+      category: body.category,
+      completed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
     mockGoals.push(newGoal);
     return {
@@ -185,8 +256,11 @@ async function handleMockRequest(config: {
     
     mockGoals[goalIndex] = {
       ...mockGoals[goalIndex],
-      name: body.goal_text || mockGoals[goalIndex].name,
+      goal_text: body.goal_text || mockGoals[goalIndex].goal_text,
       progress: typeof body.progress === 'number' ? body.progress : mockGoals[goalIndex].progress,
+      completed: typeof body.completed === 'boolean' ? body.completed : mockGoals[goalIndex].completed,
+      category: body.category || mockGoals[goalIndex].category,
+      updated_at: new Date().toISOString()
     };
     
     return {

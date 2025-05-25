@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import client from '@/api/client';
+import GoogleSignInButton from './GoogleSignInButton';
 
 interface LoginProps {
   onLogin?: () => void;
@@ -12,6 +13,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleGoogleSuccess = (_token: string) => {
+    setError('');
+    if (onLogin) {
+      onLogin();
+    }
+  };
+
+  const handleGoogleError = (errorMessage: string) => {
+    setError(errorMessage);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,16 +86,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (onLogin) {
         onLogin();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
       
       // Handle different error types
-      if (err.name === 'AbortError') {
-        setError('Network error: Request timed out. Please try again later.');
-      } else if (err.message === 'Network Error' || err.name === 'TypeError') {
-        setError('Network error: Unable to connect to the server. Please check your connection or try again later.');
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError('Network error: Request timed out. Please try again later.');
+        } else if (err.message === 'Network Error' || err.name === 'TypeError') {
+          setError('Network error: Unable to connect to the server. Please check your connection or try again later.');
+        } else {
+          setError(err.message || 'Failed to login. Please check your credentials and try again.');
+        }
       } else {
-        setError(err.message || 'Failed to login. Please check your credentials and try again.');
+        setError('Failed to login. Please check your credentials and try again.');
       }
     } finally {
       setIsLoading(false);
@@ -145,6 +161,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
       </form>
+
+      <div className="mt-6">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <GoogleSignInButton
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            className="w-full"
+          />
+        </div>
+      </div>
     </div>
   );
 };

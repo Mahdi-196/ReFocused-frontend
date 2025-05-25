@@ -2,27 +2,17 @@
 
 import React from 'react';
 import client from '@/api/client';
-
-// Define types locally or import from a shared types file
-export type Goal = {
-  id: number;
-  name: string;
-  progress: number; // Percentage 0-100
-  type?: 'sprint' | 'vision'; // Type of goal for UI
-  category?: 'sprint' | 'long_term'; // Category field from API
-};
-
-export type GoalView = 'sprint' | 'vision';
+import { UIGoal, GoalView } from '@/types/goal';
 
 type GoalTrackerProps = {
-  sprintGoals: Goal[];
-  visionGoals: Goal[];
+  sprintGoals: UIGoal[];
+  visionGoals: UIGoal[];
   activeGoalView: GoalView;
   setActiveGoalView: (view: GoalView) => void;
   newGoalName: string;
   setNewGoalName: (name: string) => void;
   handleAddGoal: (e: React.FormEvent) => void;
-  handleOpenEditGoalModal: (goal: Goal, type: 'sprint' | 'vision') => void;
+  handleOpenEditGoalModal: (goal: UIGoal, type: 'sprint' | 'vision') => void;
   handleDeleteGoal: (id: number, type: 'sprint' | 'vision') => Promise<void>;
 };
 
