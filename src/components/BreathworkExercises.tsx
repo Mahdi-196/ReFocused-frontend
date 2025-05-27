@@ -1,8 +1,18 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain } from 'lucide-react';
+import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain, ChevronRight, X } from 'lucide-react';
 import MeditationTimer from './MeditationTimer';
+import BoxBreathing from './breathing/BoxBreathing';
+import StarBreathing from './breathing/StarBreathing';
+import LazyEightBreathing from './breathing/LazyEightBreathing';
+import BreatheThroughAnxiety from './breathing/BreatheThroughAnxiety';
+import BreatheInRelaxation from './breathing/BreatheInRelaxation';
+import AlternateNostrilBreathing from './breathing/AlternateNostrilBreathing';
+import BellyBreathing from './breathing/BellyBreathing';
+import ExtendedExhaleBreathing from './breathing/ExtendedExhaleBreathing';
+import DeepBreathing from './breathing/DeepBreathing';
+import FiveBreathCounting from './breathing/FiveBreathCounting';
 
 export interface Technique {
   key: string;
@@ -44,7 +54,7 @@ const BREATHING_TECHNIQUES: Technique[] = [
   },
   {
     key: 'anxiety',
-    label: 'Breathe Through Anxiety',
+    label: 'Soft Breathing',
     description: '5 min "Mindful Activity" specifically for anxiety relief',
     icon: <Heart className="w-5 h-5" />,
     pattern: 'Gentle, calming breath pattern',
@@ -83,7 +93,7 @@ const BREATHING_TECHNIQUES: Technique[] = [
     label: 'Extended Exhale',
     description: '3 min "Workout" with longer exhalations than inhales',
     icon: <Brain className="w-5 h-5" />,
-    pattern: 'Inhale 4s, exhale 6s',
+    pattern: 'Inhale 4s, exhale 8s',
     durationSec: 180, // 3 min
     category: 'breathing'
   },
@@ -118,6 +128,8 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
   const [timeLeft, setTimeLeft] = useState(0);
   const [progress, setProgress] = useState(0);
   const [breathPhase, setBreathPhase] = useState<'inhale' | 'hold' | 'exhale' | 'hold2'>('inhale');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTechnique, setModalTechnique] = useState<Technique | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Box breathing phases timing
@@ -131,7 +143,8 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
   useEffect(() => {
     if (isPlaying && selectedTechnique?.key === 'box') {
       const totalCycleTime = BOX_PHASES.inhale + BOX_PHASES.hold + BOX_PHASES.exhale + BOX_PHASES.hold2;
-      const cycleProgress = (selectedTechnique.durationSec - timeLeft) % totalCycleTime;
+      const elapsed = selectedTechnique.durationSec - timeLeft;
+      const cycleProgress = elapsed % totalCycleTime;
       
       if (cycleProgress < BOX_PHASES.inhale) {
         setBreathPhase('inhale');
@@ -172,6 +185,20 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
     }
   }, [timeLeft, selectedTechnique]);
 
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isModalOpen]);
+
   const handleCategorySelect = (category: 'meditation' | 'breathing') => {
     setSelectedCategory(category);
     setSelectedTechnique(null);
@@ -201,6 +228,26 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
   const handleMeditationComplete = () => {
     // Future: Implement completion tracking
     // Could track meditation sessions, update streaks, etc.
+  };
+
+  const openFocusedSession = (technique: Technique) => {
+    setModalTechnique(technique);
+    setSelectedTechnique(technique);
+    setTimeLeft(technique.durationSec);
+    setIsPlaying(false);
+    setProgress(0);
+    setBreathPhase('inhale');
+    setIsModalOpen(true);
+  };
+
+  const closeFocusedSession = () => {
+    setIsModalOpen(false);
+    setModalTechnique(null);
+    setSelectedTechnique(null);
+    setIsPlaying(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
   };
 
   return (
@@ -242,27 +289,35 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
             {techniques
               .filter(t => t.category === 'breathing')
               .map((technique) => (
-                <button
+                <div
                   key={technique.key}
-                  onClick={() => handleTechniqueSelect(technique)}
-                  className={`group p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                  className={`group p-4 rounded-2xl border-2 transition-all duration-200 bg-white hover:border-blue-200 hover:shadow-md hover:scale-[1.01] ${
                     selectedTechnique?.key === technique.key
                       ? 'border-blue-500 bg-blue-50 shadow-lg scale-[1.02]'
-                      : 'border-gray-200 bg-white hover:border-blue-200 hover:shadow-md hover:scale-[1.01]'
+                      : 'border-gray-200'
                   }`}
                 >
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                        selectedTechnique?.key === technique.key
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
-                      }`}>
-                        {technique.icon}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                          selectedTechnique?.key === technique.key
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
+                        }`}>
+                          {technique.icon}
+                        </div>
+                        <h3 className="font-semibold text-gray-900 group-hover:text-blue-900">
+                          {technique.label}
+                        </h3>
                       </div>
-                      <h3 className="font-semibold text-gray-900 group-hover:text-blue-900">
-                        {technique.label}
-                      </h3>
+                      <button
+                        onClick={() => openFocusedSession(technique)}
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors opacity-0 group-hover:opacity-100"
+                        aria-label={`Start focused ${technique.label} session`}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
                     <p className="text-sm text-gray-600 line-clamp-2">
                       {technique.description}
@@ -278,7 +333,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
                       </span>
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
           </div>
 
@@ -372,10 +427,171 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
                 </div>
               </div>
             </div>
-          )}
+                    )}
         </div>
 
+        {/* Focused Breathing Session Modal */}
+        {isModalOpen && modalTechnique && (
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl border border-white border-opacity-30">
+              {/* Close Button */}
+              <button
+                onClick={closeFocusedSession}
+                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors z-10"
+                aria-label="Close focused session"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
 
+              {/* Technique Header */}
+              <div className="text-center mb-8 pt-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  {modalTechnique.icon}
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                  {modalTechnique.label}
+                </h2>
+                <p className="text-gray-600 text-sm max-w-md mx-auto">
+                  {modalTechnique.pattern}
+                </p>
+              </div>
+
+              {/* Breathing Visualizations */}
+              {modalTechnique.key === 'box' ? (
+                <BoxBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'star' ? (
+                <StarBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'lazy-eight' ? (
+                <LazyEightBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'anxiety' ? (
+                <BreatheThroughAnxiety 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'relaxation' ? (
+                <BreatheInRelaxation 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'alternate-nostril' ? (
+                <AlternateNostrilBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'belly' ? (
+                <BellyBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'extended-exhale' ? (
+                <ExtendedExhaleBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'deep' ? (
+                <DeepBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'five-count' ? (
+                <FiveBreathCounting 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : (
+                <div className="relative w-48 h-48 mx-auto mb-8">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle
+                      className="text-gray-200"
+                      strokeWidth="6"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="44"
+                      cx="50"
+                      cy="50"
+                    />
+                    <circle
+                      className="text-blue-500 transition-all duration-1000 ease-linear"
+                      strokeWidth="6"
+                      strokeDasharray={`${progress * 2.76} 276`}
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="44"
+                      cx="50"
+                      cy="50"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl font-bold text-gray-900 mb-2">
+                      {formatTime(timeLeft)}
+                    </span>
+                    <button
+                      onClick={togglePlayPause}
+                      className="w-16 h-16 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                      aria-label={`${isPlaying ? 'Pause' : 'Start'} ${modalTechnique.label}`}
+                    >
+                      {isPlaying ? (
+                        <Pause className="w-7 h-7 text-white" />
+                      ) : (
+                        <Play className="w-7 h-7 text-white ml-1" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Breathing Phase Indicator */}
+              {modalTechnique.key === 'box' && isPlaying && (
+                <div className="bg-blue-50 rounded-xl p-6 mb-8 text-center">
+                  <p className="text-sm text-blue-700 font-medium mb-2">Current Phase</p>
+                  <p className="text-2xl font-bold text-blue-900 capitalize">
+                    {breathPhase === 'hold2' ? 'Hold (Empty)' : breathPhase}
+                  </p>
+                </div>
+              )}
+
+              {/* Session Info */}
+              <div className="text-center mt-8 pt-4">
+                <div className="flex justify-center items-center text-sm text-gray-600">
+                  <span className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {Math.round(modalTechnique.durationSec / 60)} min session
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
