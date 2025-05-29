@@ -1,21 +1,46 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clock } from 'lucide-react';
 
 interface MeditationTimerProps {
-  durationSec: number;
   onComplete: () => void;
   style?: React.CSSProperties;
+  initialDuration?: number; // Duration in seconds, optional for backward compatibility
 }
 
-export default function MeditationTimer({ durationSec, onComplete, style }: MeditationTimerProps) {
-  const [timeLeft, setTimeLeft] = useState(durationSec);
+// Duration options for the slider interface
+const ALL_DURATIONS = [
+  { label: '1 min', value: 60, description: 'Micro-meditation' },
+  { label: '2 min', value: 120, description: 'Quick reset' },
+  { label: '3 min', value: 180, description: 'Breath break' },
+  { label: '5 min', value: 300, description: 'Morning ritual' },
+  { label: '10 min', value: 600, description: 'Standard session' },
+  { label: '15 min', value: 900, description: 'Deep focus' },
+  { label: '20 min', value: 1200, description: 'Extended practice' },
+  { label: '25 min', value: 1500, description: 'Focused session' },
+  { label: '30 min', value: 1800, description: 'Deep meditation' },
+  { label: '45 min', value: 2700, description: 'Extended retreat' },
+  { label: '60 min', value: 3600, description: 'Full hour practice' },
+];
+
+export default function MeditationTimer({ onComplete, style, initialDuration = 300 }: MeditationTimerProps) {
+  const [selectedDuration, setSelectedDuration] = useState(initialDuration);
+  const [timeLeft, setTimeLeft] = useState(initialDuration);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const [showDurationSelector, setShowDurationSelector] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastAnnouncementRef = useRef(0);
+
+  // Find the closest duration index for slider
+  const getCurrentDurationIndex = () => {
+    const index = ALL_DURATIONS.findIndex(d => d.value === selectedDuration);
+    return index >= 0 ? index : 2; // Default to 3 min if not found
+  };
+
+  const [sliderIndex, setSliderIndex] = useState(getCurrentDurationIndex());
 
   useEffect(() => {
     if (isPlaying) {
@@ -42,8 +67,8 @@ export default function MeditationTimer({ durationSec, onComplete, style }: Medi
   }, [isPlaying, onComplete]);
 
   useEffect(() => {
-    setProgress((1 - timeLeft / durationSec) * 360);
-  }, [timeLeft, durationSec]);
+    setProgress((1 - timeLeft / selectedDuration) * 360);
+  }, [timeLeft, selectedDuration]);
 
   useEffect(() => {
     // Announce time every 30 seconds
@@ -62,11 +87,24 @@ export default function MeditationTimer({ durationSec, onComplete, style }: Medi
 
   const resetTimer = () => {
     setIsPlaying(false);
-    setTimeLeft(durationSec);
+    setTimeLeft(selectedDuration);
     setProgress(0);
     setIsComplete(false);
     if (timerRef.current) {
       clearInterval(timerRef.current);
+    }
+  };
+
+
+
+  const handleSliderChange = (index: number) => {
+    setSliderIndex(index);
+    const newDuration = ALL_DURATIONS[index].value;
+    if (!isPlaying) {
+      setSelectedDuration(newDuration);
+      setTimeLeft(newDuration);
+      setProgress(0);
+      setIsComplete(false);
     }
   };
 
@@ -76,10 +114,22 @@ export default function MeditationTimer({ durationSec, onComplete, style }: Medi
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatDurationLabel = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    if (mins >= 60) {
+      const hours = Math.floor(mins / 60);
+      const remainingMins = mins % 60;
+      return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+    }
+    return `${mins}m`;
+  };
+
+
+
   return (
     <div 
       className={`bg-white rounded-xl shadow-sm p-6 relative overflow-hidden transition-all duration-300 ${
-        isComplete ? 'border-2 border-primary animate-pulse' : ''
+        isComplete ? 'border-2 border-purple-500 animate-pulse' : ''
       }`}
       style={style}
     >
@@ -92,8 +142,90 @@ export default function MeditationTimer({ durationSec, onComplete, style }: Medi
         <RotateCcw className="w-5 h-5 text-gray-500" />
       </button>
 
+      {/* Duration Selector Button */}
+      <button
+        onClick={() => setShowDurationSelector(!showDurationSelector)}
+        disabled={isPlaying}
+        className={`absolute top-2 left-2 p-2 rounded-full transition-colors ${
+          isPlaying 
+            ? 'text-gray-300 cursor-not-allowed' 
+            : 'hover:bg-gray-100 text-gray-500'
+        }`}
+        aria-label="Change duration"
+      >
+        <Clock className="w-5 h-5" />
+      </button>
+
+      {/* Enhanced Duration Selector */}
+      {showDurationSelector && !isPlaying && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => setShowDurationSelector(false)}
+          />
+          
+          <div className="absolute top-12 left-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-20 min-w-[210px] max-w-[240px]">
+          {/* Header */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-gray-800 mb-1">Choose Your Session</h4>
+            <p className="text-xs text-gray-600">Select the perfect duration</p>
+          </div>
+
+          {/* Slider View */}
+          <div className="space-y-4">
+            {/* Current Selection Display */}
+            <div className="text-center p-2.5 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+              <div className="text-lg font-bold text-purple-700 mb-0.5">
+                {ALL_DURATIONS[sliderIndex].label}
+              </div>
+              <div className="text-xs text-purple-600">
+                {ALL_DURATIONS[sliderIndex].description}
+              </div>
+            </div>
+
+            {/* Visual Duration Slider */}
+            <div className="relative">
+              <input
+                type="range"
+                min="0"
+                max={ALL_DURATIONS.length - 1}
+                value={sliderIndex}
+                onChange={(e) => handleSliderChange(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb"
+                style={{
+                  background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${(sliderIndex / (ALL_DURATIONS.length - 1)) * 100}%, #e5e7eb ${(sliderIndex / (ALL_DURATIONS.length - 1)) * 100}%, #e5e7eb 100%)`
+                }}
+              />
+              
+              {/* Duration Markers */}
+              <div className="flex justify-between mt-1.5 px-1">
+                {[0, Math.floor(ALL_DURATIONS.length / 3), Math.floor(2 * ALL_DURATIONS.length / 3), ALL_DURATIONS.length - 1].map((index) => (
+                  <div key={index} className="text-xs text-gray-500 text-center">
+                    <div className={`w-0.5 h-0.5 mx-auto mb-0.5 rounded-full ${
+                      sliderIndex >= index ? 'bg-purple-500' : 'bg-gray-300'
+                    }`} />
+                    <span className="text-xs">{ALL_DURATIONS[index].label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+        </>
+      )}
+
       {/* Timer Display */}
       <div className="flex flex-col items-center justify-center">
+        {/* Duration Label */}
+        <div className="mb-4">
+          <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            {formatDurationLabel(selectedDuration)} session
+          </span>
+        </div>
+
         <div className="relative w-48 h-48 flex items-center justify-center">
           {/* Progress Ring */}
           <svg className="w-full h-full absolute" viewBox="0 0 100 100">
@@ -107,7 +239,7 @@ export default function MeditationTimer({ durationSec, onComplete, style }: Medi
               cy="50"
             />
             <circle
-              className="text-primary transition-all duration-1000 ease-linear"
+              className="text-purple-500 transition-all duration-1000 ease-linear"
               strokeWidth="8"
               strokeDasharray={`${progress * 2.51} 251`}
               strokeLinecap="round"
@@ -121,18 +253,28 @@ export default function MeditationTimer({ durationSec, onComplete, style }: Medi
           </svg>
           
           {/* Time Display */}
-          <span className="text-4xl font-bold">{formatTime(timeLeft)}</span>
+          <span className="text-4xl font-bold text-gray-800">{formatTime(timeLeft)}</span>
         </div>
 
         {/* Play/Pause Button */}
         <button
           onClick={() => setIsPlaying(!isPlaying)}
-          className="mt-6 p-3 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors"
+          className="mt-6 p-4 rounded-full bg-purple-500 text-white hover:bg-purple-600 transition-colors shadow-lg"
           aria-label={isPlaying ? 'Pause meditation' : 'Start meditation'}
         >
           {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
         </button>
       </div>
+
+      {/* Completion Message */}
+      {isComplete && (
+        <div className="mt-6 text-center">
+          <div className="bg-purple-50 rounded-lg p-4">
+            <p className="text-purple-700 font-medium">🎉 Session Complete!</p>
+            <p className="text-purple-600 text-sm mt-1">Great job on completing your {formatDurationLabel(selectedDuration)} meditation</p>
+          </div>
+        </div>
+      )}
 
       {/* ARIA Live Region */}
       <div
@@ -140,6 +282,30 @@ export default function MeditationTimer({ durationSec, onComplete, style }: Medi
         aria-live="polite"
         className="sr-only"
       />
+
+      {/* Custom slider styles */}
+      <style jsx>{`
+        .slider-thumb::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #8b5cf6;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3);
+          border: 2px solid white;
+        }
+        
+        .slider-thumb::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #8b5cf6;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3);
+          border: 2px solid white;
+        }
+      `}</style>
     </div>
   );
 } 

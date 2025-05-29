@@ -22,20 +22,25 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
   handleDeleteTask,
   setTasks,
 }) => (
-  <div className="lg:col-span-2">
+  <section 
+    className="lg:col-span-2" 
+    aria-labelledby="daily-momentum"
+  >
     <div className="bg-blue-50 rounded-xl p-6 shadow-sm">
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-xl font-semibold">🎯 Daily Momentum</span>
-      </div>
+      <h2 id="daily-momentum" className="flex items-center gap-2 mb-6 text-xl font-semibold text-gray-800">
+        🎯 Daily Momentum
+      </h2>
 
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="font-medium">Today's Focus Goal</span>
-        </div>
+        <label htmlFor="daily-goal" className="flex items-center gap-2 mb-2 font-medium text-gray-700">
+          Today's Focus Goal
+        </label>
         <input
+          id="daily-goal"
           type="text"
           placeholder="Set your main goal for today..."
           className="w-full p-2 bg-transparent text-lg font-semibold text-gray-800 placeholder-gray-500 focus:outline-none focus:border-b-2 focus:border-blue-300"
+          aria-label="Enter your daily mantra or focus goal"
         />
       </div>
 
@@ -50,7 +55,7 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
         setTasks={setTasks}
       />
     </div>
-  </div>
+  </section>
 );
 
 export default DailyMomentum; 

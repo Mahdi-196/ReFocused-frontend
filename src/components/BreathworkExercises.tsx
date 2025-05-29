@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain, ChevronRight, X } from 'lucide-react';
-import MeditationTimer from './MeditationTimer';
 import BoxBreathing from './breathing/BoxBreathing';
 import StarBreathing from './breathing/StarBreathing';
 import LazyEightBreathing from './breathing/LazyEightBreathing';

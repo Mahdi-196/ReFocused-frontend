@@ -18,6 +18,15 @@
     ],
     "no-inline-styles": "off",
     "typescript-config/consistent-casing": "off",
-    "typescript-config/is-valid": "off"
+    "typescript-config/is-valid": "off",
+    "apple-touch-icons": "off",
+    "compat-api/html": [
+      "default",
+      {
+        "ignore": [
+          "meta[name=theme-color]"
+        ]
+      }
+    ]
   }
 }

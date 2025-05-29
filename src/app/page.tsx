@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import DailyMomentum from './homeComponents/DailyMomentum';
-import QuickAccess from './homeComponents/QuickAccess';
+import QuoteOfTheDay from './homeComponents/QuickAccess';
 import WordOfTheDay from './homeComponents/WordOfTheDay';
 import GoalTracker from './homeComponents/GoalTracker';
 import MindFuel from './homeComponents/MindFuel';
@@ -23,13 +23,10 @@ const Home = () => {
   const [sprintGoals, setSprintGoals] = useState<UIGoal[]>([]);
   const [visionGoals, setVisionGoals] = useState<UIGoal[]>([]);
   const [newGoalName, setNewGoalName] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch goals from the API
   useEffect(() => {
     const fetchGoals = async () => {
-      setIsLoading(true);
-
       try {
         const res = await client.get<Goal[]>("/goals");
         const uiGoals = res.data.map(goalToUIGoal);
@@ -90,8 +87,6 @@ const Home = () => {
             updated_at: new Date().toISOString()
           },
         ]);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -230,6 +225,8 @@ const Home = () => {
 
   return (
     <main className="container mx-auto p-6 max-w-7xl">
+      <h1 className="sr-only">ReFocused Dashboard - Daily Productivity and Mindfulness</h1>
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <DailyMomentum
           tasks={tasks}
@@ -242,7 +239,7 @@ const Home = () => {
 
         <div className="lg:col-span-1">
           <div className="flex flex-col gap-6">
-            <QuickAccess />
+            <QuoteOfTheDay />
             <WordOfTheDay />
           </div>
         </div>

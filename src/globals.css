@@ -35,6 +35,15 @@ body {
   animation: fade-in 1s ease-out forwards;
 }
 
+/* Card hover states */
+.card {
+  transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+  @apply ring-2 ring-blue-200 transform scale-105;
+}
+
 /* Line clamp utility for text truncation */
 .line-clamp-2 {
   overflow: hidden;
