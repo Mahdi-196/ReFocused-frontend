@@ -1,8 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain } from 'lucide-react';
-import MeditationTimer from './MeditationTimer';
+import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain, ChevronRight, X } from 'lucide-react';
+import BoxBreathing from './breathing/BoxBreathing';
+import StarBreathing from './breathing/StarBreathing';
+import LazyEightBreathing from './breathing/LazyEightBreathing';
+import BreatheThroughAnxiety from './breathing/BreatheThroughAnxiety';
+import BreatheInRelaxation from './breathing/BreatheInRelaxation';
+import AlternateNostrilBreathing from './breathing/AlternateNostrilBreathing';
+import BellyBreathing from './breathing/BellyBreathing';
+import ExtendedExhaleBreathing from './breathing/ExtendedExhaleBreathing';
+import DeepBreathing from './breathing/DeepBreathing';
+import FiveBreathCounting from './breathing/FiveBreathCounting';
 
 export interface Technique {
   key: string;
@@ -44,7 +53,7 @@ const BREATHING_TECHNIQUES: Technique[] = [
   },
   {
     key: 'anxiety',
-    label: 'Breathe Through Anxiety',
+    label: 'Soft Breathing',
     description: '5 min "Mindful Activity" specifically for anxiety relief',
     icon: <Heart className="w-5 h-5" />,
     pattern: 'Gentle, calming breath pattern',
@@ -83,7 +92,7 @@ const BREATHING_TECHNIQUES: Technique[] = [
     label: 'Extended Exhale',
     description: '3 min "Workout" with longer exhalations than inhales',
     icon: <Brain className="w-5 h-5" />,
-    pattern: 'Inhale 4s, exhale 6s',
+    pattern: 'Inhale 4s, exhale 8s',
     durationSec: 180, // 3 min
     category: 'breathing'
   },
@@ -118,6 +127,8 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
   const [timeLeft, setTimeLeft] = useState(0);
   const [progress, setProgress] = useState(0);
   const [breathPhase, setBreathPhase] = useState<'inhale' | 'hold' | 'exhale' | 'hold2'>('inhale');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTechnique, setModalTechnique] = useState<Technique | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Box breathing phases timing
@@ -131,7 +142,8 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
   useEffect(() => {
     if (isPlaying && selectedTechnique?.key === 'box') {
       const totalCycleTime = BOX_PHASES.inhale + BOX_PHASES.hold + BOX_PHASES.exhale + BOX_PHASES.hold2;
-      const cycleProgress = (selectedTechnique.durationSec - timeLeft) % totalCycleTime;
+      const elapsed = selectedTechnique.durationSec - timeLeft;
+      const cycleProgress = elapsed % totalCycleTime;
       
       if (cycleProgress < BOX_PHASES.inhale) {
         setBreathPhase('inhale');
@@ -172,6 +184,20 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
     }
   }, [timeLeft, selectedTechnique]);
 
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isModalOpen]);
+
   const handleCategorySelect = (category: 'meditation' | 'breathing') => {
     setSelectedCategory(category);
     setSelectedTechnique(null);
@@ -199,125 +225,372 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
   };
 
   const handleMeditationComplete = () => {
-    console.log('Meditation completed!');
+    // Future: Implement completion tracking
+    // Could track meditation sessions, update streaks, etc.
+  };
+
+  const openFocusedSession = (technique: Technique) => {
+    setModalTechnique(technique);
+    setSelectedTechnique(technique);
+    setTimeLeft(technique.durationSec);
+    setIsPlaying(false);
+    setProgress(0);
+    setBreathPhase('inhale');
+    setIsModalOpen(true);
+  };
+
+  const closeFocusedSession = () => {
+    setIsModalOpen(false);
+    setModalTechnique(null);
+    setSelectedTechnique(null);
+    setIsPlaying(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4">
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        {/* Category Selector */}
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => handleCategorySelect('meditation')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-              selectedCategory === 'meditation'
-                ? 'bg-primary/10 border-2 border-primary'
-                : 'border-2 border-transparent hover:bg-gray-100'
-            }`}
-            aria-label="Select meditation"
-          >
-            <Clock className="w-5 h-5" />
-            <span className="font-medium">Meditation</span>
-          </button>
-          <button
-            onClick={() => handleCategorySelect('breathing')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-              selectedCategory === 'breathing'
-                ? 'bg-primary/10 border-2 border-primary'
-                : 'border-2 border-transparent hover:bg-gray-100'
-            }`}
-            aria-label="Select breathing exercises"
-          >
-            <Activity className="w-5 h-5" />
-            <span className="font-medium">Breathing Exercises</span>
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header Section */}
+        <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Mindful Breathing</h1>
+                <p className="text-gray-600">Focus on your breath and find inner peace</p>
+              </div>
+            </div>
+            <button className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+              ℹ️ Learn More
+            </button>
+          </div>
+          
+          <p className="text-gray-700 leading-relaxed">
+            This week, we focus on cultivating mindfulness through conscious breathing. 
+            Select a technique that resonates with your current needs and state of mind.
+          </p>
         </div>
 
-        {/* Technique Selector */}
-        {selectedCategory === 'breathing' && (
-          <div className="flex flex-wrap gap-4 mb-6 overflow-x-auto pb-2">
+        {/* Main Content */}
+        <div className="space-y-8">
+          {/* Technique Selection Header */}
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your Practice</h2>
+            <p className="text-gray-600">Select a breathing technique that suits your needs</p>
+          </div>
+
+          {/* Breathing Techniques Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
             {techniques
               .filter(t => t.category === 'breathing')
               .map((technique) => (
-                <button
+                <div
                   key={technique.key}
-                  onClick={() => handleTechniqueSelect(technique)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  className={`group p-4 rounded-2xl border-2 transition-all duration-200 bg-white hover:border-blue-200 hover:shadow-md hover:scale-[1.01] ${
                     selectedTechnique?.key === technique.key
-                      ? 'bg-primary/10 border-2 border-primary'
-                      : 'border-2 border-transparent hover:bg-gray-100'
+                      ? 'border-blue-500 bg-blue-50 shadow-lg scale-[1.02]'
+                      : 'border-gray-200'
                   }`}
-                  aria-label={`Select ${technique.label}`}
                 >
-                  {technique.icon}
-                  <span className="font-medium">{technique.label}</span>
-                </button>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                          selectedTechnique?.key === technique.key
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
+                        }`}>
+                          {technique.icon}
+                        </div>
+                        <h3 className="font-semibold text-gray-900 group-hover:text-blue-900">
+                          {technique.label}
+                        </h3>
+                      </div>
+                      <button
+                        onClick={() => openFocusedSession(technique)}
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors opacity-0 group-hover:opacity-100"
+                        aria-label={`Start focused ${technique.label} session`}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {technique.description}
+                    </p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {Math.round(technique.durationSec / 60)} min
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Activity className="w-3 h-3" />
+                        {technique.pattern.split(',')[0]}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               ))}
           </div>
-        )}
 
-        {/* Detail Panel */}
-        <div className="flex flex-col md:flex-row gap-6 items-center">
-          {selectedCategory === 'meditation' ? (
-            <MeditationTimer
-              durationSec={300}
-              onComplete={handleMeditationComplete}
-            />
-          ) : selectedTechnique ? (
-            <>
-              {/* Timer and Progress Ring */}
-              <div className="relative w-32 h-32 flex items-center justify-center">
-                <svg className="w-full h-full" viewBox="0 0 100 100">
-                  <circle
-                    className="text-gray-200"
-                    strokeWidth="8"
-                    stroke="currentColor"
-                    fill="transparent"
-                    r="40"
-                    cx="50"
-                    cy="50"
-                  />
-                  <circle
-                    className="text-primary transition-all duration-1000 ease-linear"
-                    strokeWidth="8"
-                    strokeDasharray={`${progress * 2.51} 251`}
-                    strokeLinecap="round"
-                    stroke="currentColor"
-                    fill="transparent"
-                    r="40"
-                    cx="50"
-                    cy="50"
-                  />
-                </svg>
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-2xl font-bold">{formatTime(timeLeft)}</span>
-                  <button
-                    onClick={togglePlayPause}
-                    className="mt-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    aria-label={`${isPlaying ? 'Pause' : 'Start'} ${selectedTechnique.label}`}
-                  >
-                    {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                  </button>
+          {/* Practice Session - Only shows when technique is selected */}
+          {selectedTechnique && (
+            <div className="max-w-md mx-auto">
+              <div className="bg-white rounded-2xl shadow-sm p-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    {selectedTechnique.label}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-6">
+                    {selectedTechnique.pattern}
+                  </p>
+
+                  {/* Enhanced Timer Circle */}
+                  <div className="relative w-40 h-40 mx-auto mb-6">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        className="text-gray-200"
+                        strokeWidth="6"
+                        stroke="currentColor"
+                        fill="transparent"
+                        r="44"
+                        cx="50"
+                        cy="50"
+                      />
+                      <circle
+                        className="text-blue-500 transition-all duration-1000 ease-linear"
+                        strokeWidth="6"
+                        strokeDasharray={`${progress * 2.76} 276`}
+                        strokeLinecap="round"
+                        stroke="currentColor"
+                        fill="transparent"
+                        r="44"
+                        cx="50"
+                        cy="50"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-bold text-gray-900 mb-1">
+                        {formatTime(timeLeft)}
+                      </span>
+                      <button
+                        onClick={togglePlayPause}
+                        className="w-14 h-14 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                        aria-label={`${isPlaying ? 'Pause' : 'Start'} ${selectedTechnique.label}`}
+                      >
+                        {isPlaying ? (
+                          <Pause className="w-6 h-6 text-white" />
+                        ) : (
+                          <Play className="w-6 h-6 text-white ml-1" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Breathing Phase Indicator */}
+                  {selectedTechnique.key === 'box' && isPlaying && (
+                    <div className="bg-blue-50 rounded-xl p-4 mb-4">
+                      <p className="text-sm text-blue-700 font-medium mb-2">Current Phase</p>
+                      <p className="text-lg font-bold text-blue-900 capitalize">
+                        {breathPhase === 'hold2' ? 'Hold (Empty)' : breathPhase}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Progress Stats */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Duration</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {Math.round(selectedTechnique.durationSec / 60)} minutes
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-sm text-gray-600">Progress</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {Math.round(progress)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-gray-600">Status</span>
+                      <span className={`text-sm font-medium ${
+                        isPlaying ? 'text-green-600' : 'text-gray-500'
+                      }`}>
+                        {isPlaying ? 'Active' : 'Paused'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Description */}
-              <div className="flex-1">
-                <p className="text-gray-600">{selectedTechnique.description}</p>
-                <p className="mt-2 text-sm text-gray-500">Pattern: {selectedTechnique.pattern}</p>
-                {selectedTechnique.key === 'box' && isPlaying && (
-                  <p className="mt-2 text-sm font-medium text-primary">
-                    Current Phase: {breathPhase.charAt(0).toUpperCase() + breathPhase.slice(1)}
-                  </p>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="w-full text-center text-gray-500">
-              Select a breathing technique to begin
             </div>
-          )}
+                    )}
         </div>
+
+        {/* Focused Breathing Session Modal */}
+        {isModalOpen && modalTechnique && (
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl border border-white border-opacity-30">
+              {/* Close Button */}
+              <button
+                onClick={closeFocusedSession}
+                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors z-10"
+                aria-label="Close focused session"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+
+              {/* Technique Header */}
+              <div className="text-center mb-8 pt-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  {modalTechnique.icon}
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                  {modalTechnique.label}
+                </h2>
+                <p className="text-gray-600 text-sm max-w-md mx-auto">
+                  {modalTechnique.pattern}
+                </p>
+              </div>
+
+              {/* Breathing Visualizations */}
+              {modalTechnique.key === 'box' ? (
+                <BoxBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'star' ? (
+                <StarBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'lazy-eight' ? (
+                <LazyEightBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'anxiety' ? (
+                <BreatheThroughAnxiety 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'relaxation' ? (
+                <BreatheInRelaxation 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'alternate-nostril' ? (
+                <AlternateNostrilBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'belly' ? (
+                <BellyBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'extended-exhale' ? (
+                <ExtendedExhaleBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'deep' ? (
+                <DeepBreathing 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : modalTechnique.key === 'five-count' ? (
+                <FiveBreathCounting 
+                  isPlaying={isPlaying}
+                  timeLeft={timeLeft}
+                  durationSec={modalTechnique.durationSec}
+                  onTogglePlay={togglePlayPause}
+                />
+              ) : (
+                <div className="relative w-48 h-48 mx-auto mb-8">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle
+                      className="text-gray-200"
+                      strokeWidth="6"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="44"
+                      cx="50"
+                      cy="50"
+                    />
+                    <circle
+                      className="text-blue-500 transition-all duration-1000 ease-linear"
+                      strokeWidth="6"
+                      strokeDasharray={`${progress * 2.76} 276`}
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="44"
+                      cx="50"
+                      cy="50"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl font-bold text-gray-900 mb-2">
+                      {formatTime(timeLeft)}
+                    </span>
+                    <button
+                      onClick={togglePlayPause}
+                      className="w-16 h-16 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                      aria-label={`${isPlaying ? 'Pause' : 'Start'} ${modalTechnique.label}`}
+                    >
+                      {isPlaying ? (
+                        <Pause className="w-7 h-7 text-white" />
+                      ) : (
+                        <Play className="w-7 h-7 text-white ml-1" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Breathing Phase Indicator */}
+              {modalTechnique.key === 'box' && isPlaying && (
+                <div className="bg-blue-50 rounded-xl p-6 mb-8 text-center">
+                  <p className="text-sm text-blue-700 font-medium mb-2">Current Phase</p>
+                  <p className="text-2xl font-bold text-blue-900 capitalize">
+                    {breathPhase === 'hold2' ? 'Hold (Empty)' : breathPhase}
+                  </p>
+                </div>
+              )}
+
+              {/* Session Info */}
+              <div className="text-center mt-8 pt-4">
+                <div className="flex justify-center items-center text-sm text-gray-600">
+                  <span className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {Math.round(modalTechnique.durationSec / 60)} min session
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

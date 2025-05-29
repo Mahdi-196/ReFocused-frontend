@@ -1,33 +1,134 @@
 "use client";
 
-const QuickAccess = () => (
-  <div className="lg:col-span-1">
-    <div className="bg-white rounded-xl p-6 shadow-sm aspect-square">
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-xl font-semibold">⭕ Quick Access</span>
-      </div>
-      <div className="grid grid-cols-2 gap-4 h-[calc(100%-4rem)]">
-        <button className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
-          <span className="text-3xl mb-3">📱</span>
-          <span className="text-sm font-medium text-gray-700">
-            <span className="text-blue-500">|</span> Notes
-          </span>
-        </button>
-        <button className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-          <span className="text-3xl mb-3">📚</span>
-          <span className="text-sm font-medium text-gray-700">Study Sets</span>
-        </button>
-        <button className="flex flex-col items-center justify-center p-4 bg-red-50 rounded-xl hover:bg-red-100 transition-colors">
-          <span className="text-3xl mb-3">❤️</span>
-          <span className="text-sm font-medium text-gray-700">Affirmations</span>
-        </button>
-        <button className="flex flex-col items-center justify-center p-4 bg-green-50 rounded-xl hover:bg-green-100 transition-colors">
-          <span className="text-3xl mb-3">⏱️</span>
-          <span className="text-sm font-medium text-gray-700">Breathing</span>
-        </button>
-      </div>
-    </div>
-  </div>
-);
+import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw } from 'lucide-react';
 
-export default QuickAccess; 
+interface Quote {
+  text: string;
+  author: string;
+}
+
+const INSPIRATIONAL_QUOTES: Quote[] = [
+  {
+    text: "The only way to do great work is to love what you do.",
+    author: "Steve Jobs"
+  },
+  {
+    text: "Life is what happens when you're busy making other plans.",
+    author: "John Lennon"
+  },
+  {
+    text: "The journey of a thousand miles begins with one step.",
+    author: "Lao Tzu"
+  },
+  {
+    text: "Be the change you wish to see in the world.",
+    author: "Mahatma Gandhi"
+  },
+  {
+    text: "Happiness is not something ready made. It comes from your own actions.",
+    author: "Dalai Lama"
+  },
+  {
+    text: "The present moment is filled with joy and happiness. If you are attentive, you will see it.",
+    author: "Thich Nhat Hanh"
+  },
+  {
+    text: "Peace comes from within. Do not seek it without.",
+    author: "Buddha"
+  },
+  {
+    text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+    author: "Winston Churchill"
+  },
+  {
+    text: "The mind is everything. What you think you become.",
+    author: "Buddha"
+  },
+  {
+    text: "Focus on being productive instead of busy.",
+    author: "Tim Ferriss"
+  }
+];
+
+const QuoteOfTheDay = () => {
+  const [quote, setQuote] = useState<Quote>(INSPIRATIONAL_QUOTES[0]);
+  const [isFading, setIsFading] = useState(false);
+
+  const getRandomQuote = useCallback(() => {
+    const currentIndex = INSPIRATIONAL_QUOTES.findIndex(q => q.text === quote.text);
+    let randomIndex;
+    do {
+      randomIndex = Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length);
+    } while (randomIndex === currentIndex && INSPIRATIONAL_QUOTES.length > 1);
+    return INSPIRATIONAL_QUOTES[randomIndex];
+  }, [quote.text]);
+
+  const refreshQuote = useCallback(() => {
+    setIsFading(true);
+    setTimeout(() => {
+      setQuote(getRandomQuote());
+      setIsFading(false);
+    }, 300);
+  }, [getRandomQuote]);
+
+  useEffect(() => {
+    // Set initial random quote
+    setQuote(INSPIRATIONAL_QUOTES[Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length)]);
+    
+    // Auto-refresh every 24 hours
+    const interval = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length);
+      setQuote(INSPIRATIONAL_QUOTES[randomIndex]);
+    }, 24 * 60 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array - only run once on mount
+
+  return (
+    <section 
+      className="lg:col-span-1" 
+      aria-labelledby="daily-quote"
+    >
+      <article className="bg-white rounded-xl p-8 shadow-sm h-80 flex flex-col justify-between">
+        <div>
+          <header className="flex items-center justify-between mb-4">
+            <h2 id="daily-quote" className="text-lg font-semibold text-gray-800">
+              💭 Quote of the Day
+            </h2>
+            <button
+              onClick={refreshQuote}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Get a new inspirational quote"
+              title="Refresh Quote"
+            >
+              <RefreshCw className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isFading ? 'rotate-180' : ''}`} />
+            </button>
+          </header>
+          
+          <div className={`transition-all duration-300 ${isFading ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'}`}>
+            <blockquote 
+              className="text-xl italic leading-relaxed text-gray-700 mb-6 flex-grow flex items-center"
+              cite="Daily Inspiration"
+            >
+              <span className="text-center w-full">"{quote.text}"</span>
+            </blockquote>
+            <footer className="text-right">
+              <cite className="text-lg font-medium text-gray-600 not-italic">
+                — {quote.author}
+              </cite>
+            </footer>
+          </div>
+        </div>
+        
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="text-xs text-gray-500 text-center">
+            Daily motivation for your productivity journey
+          </p>
+        </div>
+      </article>
+    </section>
+  );
+};
+
+export default QuoteOfTheDay; 

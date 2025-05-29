@@ -1,11 +1,14 @@
 "use client";
 
 const MindFuel = () => (
-  <div className="lg:col-span-1">
+  <section 
+    className="lg:col-span-1" 
+    aria-labelledby="mind-fuel"
+  >
     <div className="bg-yellow-50 rounded-xl p-6 shadow-sm h-full">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-xl font-semibold">💡 Mind Fuel</span>
-      </div>
+      <h2 id="mind-fuel" className="flex items-center gap-2 mb-4 text-xl font-semibold text-gray-800">
+        💡 Mind Fuel
+      </h2>
 
       <div className="space-y-6">
         <div>
@@ -67,7 +70,7 @@ const MindFuel = () => (
         </div>
       </div>
     </div>
-  </div>
+  </section>
 );
 
 export default MindFuel; 
