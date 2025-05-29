@@ -1,6 +1,7 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
 import Header from '@/components/Header';
+import AnimatedLayout from '@/components/AnimatedLayout';
 import { inter } from './fonts';
 import '../globals.css';
 
@@ -67,11 +68,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
       { url: '/favicon.svg', type: 'image/svg+xml' },
-    ],
-    apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   manifest: '/site.webmanifest',
@@ -85,7 +82,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#3B82F6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -138,11 +134,13 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen bg-[#ECEFF1]">
+      <body className="min-h-screen pt-20" suppressHydrationWarning={true}>
         <Header />
-        <main className="container mx-auto px-4 py-8">
-          {children}
-        </main>
+        <AnimatedLayout>
+          <main className="container mx-auto px-4 py-8">
+            {children}
+          </main>
+        </AnimatedLayout>
       </body>
     </html>
   );

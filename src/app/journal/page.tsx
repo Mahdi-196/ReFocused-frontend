@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Edit, Calendar, Lock, FileText, X } from "lucide-react";
 import { useCollections, Entry, Collection } from "./collection";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import DropdownMenu from "@/components/DropdownMenu";
+import PageTransition from '@/components/PageTransition';
 
 function getTimeAgo(isoString: string | undefined): string {
   if (!isoString) return "Never";
@@ -33,16 +34,17 @@ const Modal = ({ isOpen, onClose, onSubmit, title, children }: {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="absolute inset-0 bg-white/10 backdrop-blur-[2px]" aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" aria-hidden="true" />
       <div 
-        className="bg-white rounded-lg shadow-xl w-[400px] p-6 border border-gray-200 relative"
+        className="bg-gray-800 text-white rounded-lg shadow-xl w-[400px] p-6 border border-gray-600 relative transition-all duration-300 transform animate-in fade-in slide-in-from-bottom-4"
         onClick={e => e.stopPropagation()}
+        style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 transition-colors"
+            className="text-gray-400 hover:text-gray-300 transition-colors transform hover:scale-110"
           >
             <X size={20} />
           </button>
@@ -53,13 +55,13 @@ const Modal = ({ isOpen, onClose, onSubmit, title, children }: {
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 rounded-md transition-all duration-200 transform hover:scale-105 active:scale-95"
           >
             Cancel
           </button>
           <button
             onClick={onSubmit}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 active:scale-95"
           >
             Create
           </button>
@@ -264,311 +266,341 @@ const Journal: React.FC = () => {
      || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8 font-sans">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-1 border border-gray-300 rounded-md p-1 bg-white overflow-x-auto max-w-[calc(100%-200px)]">
-            {collections.map(col => (
-              <div
-                key={col.id}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-md flex items-center gap-1.5 text-sm font-medium transition-colors duration-150 ease-in-out cursor-pointer relative ${
-                  selectedCollectionId === col.id
-                    ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
-                    : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                onClick={() => handleCollectionSelect(col.id)}
-              >
-                <div className="flex items-center gap-1.5 pointer-events-none">
-                  {col.isPrivate ? <Lock size={16} /> : <FileText size={16} />}
-                  <span className="truncate max-w-[150px]">{col.name}</span>
-                </div>
-                {col.name !== "My Notes" && (
-                  <div className="ml-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log(`<<< CLICK Collection Edit Icon for: ${col.name} (${col.id}) >>>`);
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const nextState = openDropdown?.id === col.id ? null : { type: 'collection' as const, id: col.id, rect: rect, collection: col };
-                        console.log(`<<< Setting openDropdown to:`, nextState);
-                        setOpenDropdown(nextState);
-                      }}
-                      className="text-gray-400 hover:text-blue-500 transition-colors p-1 rounded-full hover:bg-gray-200"
-                      title="Edit Collection"
-                    >
-                      <Edit size={14} />
-                    </button>
+    <PageTransition>
+      <div 
+        className="min-h-screen py-8"
+        style={{ backgroundColor: "#1A2537" }}
+      >
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-white mb-2">Journal</h1>
+            <p className="text-gray-300">Record your thoughts, experiences, and insights</p>
+          </div>
+          <div className="mb-8">
+            <div 
+              className="flex items-center justify-between mb-4 p-4 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg"
+              style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+            >
+              <div className="flex items-center space-x-1 border border-gray-600 rounded-md p-1 bg-gray-700/50 overflow-x-auto max-w-[calc(100%-200px)]">
+                {collections.map(col => (
+                  <div
+                    key={col.id}
+                    className={`flex-shrink-0 px-4 py-1.5 rounded-md flex items-center gap-1.5 text-sm font-medium transition-all duration-200 ease-in-out cursor-pointer relative transform hover:scale-105 ${
+                      selectedCollectionId === col.id
+                        ? 'bg-blue-500/20 text-blue-300 ring-1 ring-blue-400/50'
+                        : 'text-gray-300 hover:bg-gray-600/50'
+                      }`}
+                    onClick={() => handleCollectionSelect(col.id)}
+                  >
+                    <div className="flex items-center gap-1.5 pointer-events-none">
+                      {col.isPrivate ? <Lock size={16} /> : <FileText size={16} />}
+                      <span className="truncate max-w-[150px]">{col.name}</span>
+                    </div>
+                    {col.name !== "My Notes" && (
+                      <div className="ml-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log(`<<< CLICK Collection Edit Icon for: ${col.name} (${col.id}) >>>`);
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const nextState = openDropdown?.id === col.id ? null : { type: 'collection' as const, id: col.id, rect: rect, collection: col };
+                            console.log(`<<< Setting openDropdown to:`, nextState);
+                            setOpenDropdown(nextState);
+                          }}
+                          className="text-gray-400 hover:text-blue-400 transition-all duration-200 p-1 rounded-full hover:bg-gray-600/50 transform hover:scale-110"
+                          title="Edit Collection"
+                        >
+                          <Edit size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
+                ))}
+                {collections.length === 0 && (
+                  <span className="px-4 py-1.5 text-sm text-gray-400 italic">No collections yet.</span>
                 )}
               </div>
-            ))}
-            {collections.length === 0 && (
-              <span className="px-4 py-1.5 text-sm text-gray-500 italic">No collections yet.</span>
-            )}
-          </div>
 
-          <button
-            onClick={handleAddNewCollection}
-            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors duration-150 ease-in-out"
-            title="Add New Collection"
-          >
-            <Plus size={16} /> Add a Collection
-          </button>
-        </div>
+              <button
+                onClick={handleAddNewCollection}
+                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 border-2 border-dashed border-gray-500 rounded-md text-gray-300 hover:border-gray-400 hover:text-white transition-all duration-200 ease-in-out transform hover:scale-105"
+                title="Add New Collection"
+              >
+                <Plus size={16} /> Add a Collection
+              </button>
+            </div>
 
-        <div className="flex items-center justify-between">
-          <div className="relative w-1/3 min-w-[200px]">
-            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder={`Search in ${selectedCollection?.name || 'all notes'}...`}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors duration-150 ease-in-out"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={!selectedCollection}
-            />
-          </div>
-
-          <button
-            onClick={handleAddNewEntry}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Add New Entry"
-            disabled={!selectedCollectionId}
-          >
-            <Plus size={18} /> New Entry
-          </button>
-        </div>
-      </div>
-
-      {/* Update Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setNewCollectionName("");
-          setIsPrivate(false);
-          setPassword("");
-          setCurrentPassword("");
-          setPasswordError("");
-          setEditingCollection(null);
-        }}
-        onSubmit={handleCreateCollection}
-        title={editingCollection ? "Edit Collection" : "Create New Collection"}
-      >
-        <div>
-          <label htmlFor="collectionName" className="block text-sm font-medium text-gray-700 mb-2">
-            Collection Name
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              id="collectionName"
-              value={newCollectionName}
-              onChange={(e) => setNewCollectionName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newCollectionName.trim() && !checkNameExists(newCollectionName.trim(), editingCollection?.id)) {
-                  handleCreateCollection();
-                }
-              }}
-              placeholder="Enter collection name..."
-              className={`w-full pl-3 pr-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-150 ${
-                newCollectionName.trim() && checkNameExists(newCollectionName.trim(), editingCollection?.id)
-                  ? 'border-red-300 focus:ring-red-500'
-                  : 'border-gray-300'
-              }`}
-              autoFocus
-            />
-            <button
-              type="button"
-              onClick={() => setIsPrivate(!isPrivate)}
-              className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors duration-150 ${
-                isPrivate 
-                  ? 'text-blue-600 hover:text-blue-700 bg-blue-50'
-                  : 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
-              }`}
-              title={isPrivate ? "Private Collection" : "Public Collection"}
+            <div 
+              className="flex items-center justify-between p-4 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg"
+              style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
             >
-              <Lock size={16} />
-            </button>
+              <div className="relative w-1/3 min-w-[200px]">
+                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder={`Search in ${selectedCollection?.name || 'all notes'}...`}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-600 bg-gray-700/50 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all duration-200 ease-in-out"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={!selectedCollection}
+                />
+              </div>
+
+              <button
+                onClick={handleAddNewEntry}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
+                title="Add New Entry"
+                disabled={!selectedCollectionId}
+              >
+                <Plus size={18} /> New Entry
+              </button>
+            </div>
           </div>
-          {editingCollection?.isPrivate && (
-            <div className="mt-4">
-              <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                Current Password
+
+          {/* Update Modal */}
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setNewCollectionName("");
+              setIsPrivate(false);
+              setPassword("");
+              setCurrentPassword("");
+              setPasswordError("");
+              setEditingCollection(null);
+            }}
+            onSubmit={handleCreateCollection}
+            title={editingCollection ? "Edit Collection" : "Create New Collection"}
+          >
+            <div>
+              <label htmlFor="collectionName" className="block text-sm font-medium text-gray-300 mb-2">
+                Collection Name
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="collectionName"
+                  value={newCollectionName}
+                  onChange={(e) => setNewCollectionName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newCollectionName.trim() && !checkNameExists(newCollectionName.trim(), editingCollection?.id)) {
+                      handleCreateCollection();
+                    }
+                  }}
+                  placeholder="Enter collection name..."
+                  className={`w-full pl-3 pr-10 py-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                    newCollectionName.trim() && checkNameExists(newCollectionName.trim(), editingCollection?.id)
+                      ? 'border-red-400 focus:ring-red-500'
+                      : 'border-gray-600'
+                  }`}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsPrivate(!isPrivate)}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-all duration-200 transform hover:scale-110 ${
+                    isPrivate 
+                      ? 'text-blue-400 hover:text-blue-300 bg-blue-500/20'
+                      : 'text-gray-400 hover:text-gray-300 hover:bg-gray-600/50'
+                  }`}
+                  title={isPrivate ? "Private Collection" : "Public Collection"}
+                >
+                  <Lock size={16} />
+                </button>
+              </div>
+              {editingCollection?.isPrivate && (
+                <div className="mt-4">
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    id="currentPassword"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password..."
+                    className="w-full pl-3 pr-4 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+              )}
+              {isPrivate && (
+                <div className="mt-4">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                    {editingCollection ? "New Password (leave blank to keep current)" : "Password"}
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={editingCollection ? "Enter new password..." : "Enter password..."}
+                    className="w-full pl-3 pr-4 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+              )}
+              {passwordError && (
+                <p className="mt-2 text-sm text-red-400">
+                  {passwordError}
+                </p>
+              )}
+              {/* Validation Message */}
+              {newCollectionName.trim() && checkNameExists(newCollectionName.trim(), editingCollection?.id) && (
+                <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+                  <span className="inline-block w-1 h-1 rounded-full bg-red-400"></span>
+                  This collection name already exists
+                </p>
+              )}
+              {/* Privacy Info */}
+              <p className="mt-2 text-xs text-gray-400">
+                {isPrivate 
+                  ? "This collection will be private and password protected (letters and numbers only)"
+                  : "This collection will be visible to everyone"}
+              </p>
+            </div>
+          </Modal>
+
+          {/* Password Prompt Modal */}
+          <Modal
+            isOpen={!!passwordPrompt}
+            onClose={() => {
+              setPasswordPrompt(null);
+              setEnteredPassword("");
+            }}
+            onSubmit={handlePasswordSubmit}
+            title={`Enter Password for ${passwordPrompt?.name}`}
+          >
+            <div>
+              <label htmlFor="collectionPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                Password
               </label>
               <input
                 type="password"
-                id="currentPassword"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password..."
-                className="w-full pl-3 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                id="collectionPassword"
+                value={enteredPassword}
+                onChange={(e) => setEnteredPassword(e.target.value)}
+                placeholder="Enter password..."
+                className="w-full pl-3 pr-4 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                  }
+                }}
+              />
+            </div>
+          </Modal>
+
+          {/* Add delete confirmation dialog */}
+          <ConfirmationDialog
+            isOpen={!!deleteConfirmation}
+            onClose={() => setDeleteConfirmation(null)}
+            onConfirm={confirmDelete}
+            title={`Delete ${deleteConfirmation?.type === 'entry' ? 'Note' : 'Collection'}`}
+            message={`Are you sure you want to delete "${deleteConfirmation?.name}"? This action cannot be undone.`}
+          />
+
+          {/* RENDER DROPDOWN OUTSIDE the scroll container */}
+          {openDropdown && openDropdown.rect && (
+            <div
+              className="fixed z-[1000]"
+              style={{
+                left: `${openDropdown.rect.left}px`,
+                top: `${openDropdown.rect.bottom + window.scrollY + 4}px`,
+              }}
+            >
+              <DropdownMenu
+                onEdit={(e) => {
+                  e?.stopPropagation(); 
+                  if (openDropdown.type === 'collection' && openDropdown.collection) {
+                    handleEditCollection(openDropdown.collection);
+                  } else if (openDropdown.type === 'entry' && openDropdown.entry) {
+                    handleEditEntry(openDropdown.id);
+                  }
+                  setOpenDropdown(null);
+                }}
+                onDelete={(e) => {
+                  e?.stopPropagation();
+                  if (openDropdown.type === 'collection') {
+                    handleDeleteCollection(openDropdown.id);
+                  } else if (openDropdown.type === 'entry') {
+                    handleDeleteEntry(openDropdown.id);
+                  }
+                  setOpenDropdown(null);
+                }}
+                className="shadow-xl"
               />
             </div>
           )}
-          {isPrivate && (
-            <div className="mt-4">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                {editingCollection ? "New Password (leave blank to keep current)" : "Password"}
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={editingCollection ? "Enter new password..." : "Enter password..."}
-                className="w-full pl-3 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          )}
-          {passwordError && (
-            <p className="mt-2 text-sm text-red-600">
-              {passwordError}
-            </p>
-          )}
-          {/* Validation Message */}
-          {newCollectionName.trim() && checkNameExists(newCollectionName.trim(), editingCollection?.id) && (
-            <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-              <span className="inline-block w-1 h-1 rounded-full bg-red-600"></span>
-              This collection name already exists
-            </p>
-          )}
-          {/* Privacy Info */}
-          <p className="mt-2 text-xs text-gray-500">
-            {isPrivate 
-              ? "This collection will be private and password protected (letters and numbers only)"
-              : "This collection will be visible to everyone"}
-          </p>
-        </div>
-      </Modal>
 
-      {/* Password Prompt Modal */}
-      <Modal
-        isOpen={!!passwordPrompt}
-        onClose={() => {
-          setPasswordPrompt(null);
-          setEnteredPassword("");
-        }}
-        onSubmit={handlePasswordSubmit}
-        title={`Enter Password for ${passwordPrompt?.name}`}
-      >
-        <div>
-          <label htmlFor="collectionPassword" className="block text-sm font-medium text-gray-700 mb-2">
-            Password
-          </label>
-          <input
-            type="password"
-            id="collectionPassword"
-            value={enteredPassword}
-            onChange={(e) => setEnteredPassword(e.target.value)}
-            placeholder="Enter password..."
-            className="w-full pl-3 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handlePasswordSubmit();
-              }
-            }}
-          />
-        </div>
-      </Modal>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {displayedEntries.map((entry) => {
+              const previewText = typeof entry.content === 'string' ? entry.content.replace(/<[^>]+>/g, '').substring(0, 150) + (entry.content.length > 150 ? '...' : '') : 'No content preview available';
+              const entryDate = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'No date';
 
-      {/* Add delete confirmation dialog */}
-      <ConfirmationDialog
-        isOpen={!!deleteConfirmation}
-        onClose={() => setDeleteConfirmation(null)}
-        onConfirm={confirmDelete}
-        title={`Delete ${deleteConfirmation?.type === 'entry' ? 'Note' : 'Collection'}`}
-        message={`Are you sure you want to delete "${deleteConfirmation?.name}"? This action cannot be undone.`}
-      />
-
-      {/* RENDER DROPDOWN OUTSIDE the scroll container */}
-      {openDropdown && openDropdown.rect && (
-        <div
-          className="fixed z-[1000]"
-          style={{
-            left: `${openDropdown.rect.left}px`,
-            top: `${openDropdown.rect.bottom + window.scrollY + 4}px`,
-          }}
-        >
-          <DropdownMenu
-            onEdit={(e) => {
-              e?.stopPropagation(); 
-              if (openDropdown.type === 'collection' && openDropdown.collection) {
-                handleEditCollection(openDropdown.collection);
-              } else if (openDropdown.type === 'entry' && openDropdown.entry) {
-                handleEditEntry(openDropdown.id);
-              }
-              setOpenDropdown(null);
-            }}
-            onDelete={(e) => {
-              e?.stopPropagation();
-              if (openDropdown.type === 'collection') {
-                handleDeleteCollection(openDropdown.id);
-              } else if (openDropdown.type === 'entry') {
-                handleDeleteEntry(openDropdown.id);
-              }
-              setOpenDropdown(null);
-            }}
-            className="shadow-xl"
-          />
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {displayedEntries.map((entry) => {
-          const previewText = typeof entry.content === 'string' ? entry.content.replace(/<[^>]+>/g, '').substring(0, 150) + (entry.content.length > 150 ? '...' : '') : 'No content preview available';
-          const entryDate = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'No date';
-
-          return (
-            <div key={entry.id} className="bg-white p-5 rounded-lg shadow border border-gray-200 flex flex-col justify-between transition-shadow hover:shadow-md">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-gray-800 break-words">{entry.title || "Untitled"}</h3>
-                  <div className="relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenDropdown(openDropdown?.id === entry.id ? null : { type: 'entry' as const, id: entry.id, rect: e.currentTarget.getBoundingClientRect(), collection: selectedCollection, entry: entry });
-                      }}
-                      className="text-gray-400 hover:text-blue-500 transition-colors duration-150 ease-in-out"
-                      title="Edit Entry"
-                    >
-                      <Edit size={16} />
-                    </button>
+              return (
+                <div 
+                  key={entry.id} 
+                  className="p-5 rounded-lg shadow-md border border-gray-600 flex flex-col justify-between transition-all duration-300 hover:shadow-lg transform hover:scale-105 cursor-pointer"
+                  style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+                >
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold text-white break-words">{entry.title || "Untitled"}</h3>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenDropdown(openDropdown?.id === entry.id ? null : { type: 'entry' as const, id: entry.id, rect: e.currentTarget.getBoundingClientRect(), collection: selectedCollection, entry: entry });
+                          }}
+                          className="text-gray-400 hover:text-blue-400 transition-all duration-200 ease-in-out transform hover:scale-110"
+                          title="Edit Entry"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-300 mb-4 break-words " style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                      {previewText}
+                    </p>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-400 mt-auto pt-3 border-t border-gray-600">
+                    <Calendar size={14} className="mr-1.5 flex-shrink-0" />
+                    <span>{entryDate}</span>
+                    <span className="ml-auto text-xs text-gray-500">{getTimeAgo(entry.lastSavedAt)}</span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-4 break-words " style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                  {previewText}
-                </p>
-              </div>
-              <div className="flex items-center text-xs text-gray-500 mt-auto pt-3 border-t border-gray-100">
-                <Calendar size={14} className="mr-1.5 flex-shrink-0" />
-                <span>{entryDate}</span>
-                <span className="ml-auto text-xs text-gray-400">{getTimeAgo(entry.lastSavedAt)}</span>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
 
-        {selectedCollectionId && displayedEntries.length === 0 && (
-          <div className="col-span-full text-center text-gray-500 py-16 bg-white rounded-lg shadow border border-gray-200">
-            <p className="text-lg mb-2">This collection is empty{searchQuery ? ' for your current search' : ''}.</p>
-            <p>Click "New Entry" to add a note!</p>
+            {selectedCollectionId && displayedEntries.length === 0 && (
+              <div 
+                className="col-span-full text-center text-gray-300 py-16 rounded-lg shadow-md border border-gray-600 transition-all duration-300 hover:shadow-lg"
+                style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+              >
+                <p className="text-lg mb-2">This collection is empty{searchQuery ? ' for your current search' : ''}.</p>
+                <p>Click "New Entry" to add a note!</p>
+              </div>
+            )}
+            {!selectedCollectionId && collections.length > 0 && (
+               <div 
+                 className="col-span-full text-center text-gray-300 py-16 rounded-lg shadow-md border border-gray-600 transition-all duration-300 hover:shadow-lg"
+                 style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+               >
+                  <p className="text-lg">Select a collection from the tabs above to view entries.</p>
+               </div>
+            )}
+            {collections.length === 0 && (
+               <div 
+                 className="col-span-full text-center text-gray-300 py-16 rounded-lg shadow-md border border-gray-600 transition-all duration-300 hover:shadow-lg"
+                 style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+               >
+                  <p className="text-lg mb-2">You don't have any collections yet.</p>
+                  <p>Click "Add a Collection" to get started!</p>
+               </div>
+            )}
           </div>
-        )}
-        {!selectedCollectionId && collections.length > 0 && (
-           <div className="col-span-full text-center text-gray-500 py-16 bg-white rounded-lg shadow border border-gray-200">
-              <p className="text-lg">Select a collection from the tabs above to view entries.</p>
-           </div>
-        )}
-        {collections.length === 0 && (
-           <div className="col-span-full text-center text-gray-500 py-16 bg-white rounded-lg shadow border border-gray-200">
-              <p className="text-lg mb-2">You don't have any collections yet.</p>
-              <p>Click "Add a Collection" to get started!</p>
-           </div>
-        )}
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import Pomodoro from "@/components/pomodoro";
 import QuickNotes from "@/components/QuickNotes";
+import PageTransition from '@/components/PageTransition';
 
 type Card = {
   id: string;
@@ -32,24 +33,40 @@ export default function StudyPage() {
     front: '',
     back: ''
   });
+  const [isClient, setIsClient] = useState(false);
+
+  // Initialize client-side rendering flag
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Load study sets from localStorage on mount and save whenever they change
   useEffect(() => {
-    const savedSets = localStorage.getItem('studySets');
-    if (savedSets) {
-      const parsed = JSON.parse(savedSets);
-      setStudySets(parsed);
-      if (parsed.length > 0 && !selectedSetId) {
-        setSelectedSetId(parsed[0].id);
+    if (!isClient) return;
+    
+    try {
+      const savedSets = localStorage.getItem('studySets');
+      if (savedSets) {
+        const parsed = JSON.parse(savedSets);
+        setStudySets(parsed);
+        if (parsed.length > 0 && !selectedSetId) {
+          setSelectedSetId(parsed[0].id);
+        }
       }
+    } catch (error) {
+      console.error('Failed to load study sets from localStorage:', error);
     }
-  }, []);
+  }, [isClient, selectedSetId]);
 
   useEffect(() => {
-    if (studySets.length > 0) {
+    if (!isClient || studySets.length === 0) return;
+    
+    try {
       localStorage.setItem('studySets', JSON.stringify(studySets));
+    } catch (error) {
+      console.error('Failed to save study sets to localStorage:', error);
     }
-  }, [studySets]);
+  }, [studySets, isClient]);
 
   const selectedSet = studySets.find(set => set.id === selectedSetId);
 
@@ -80,6 +97,29 @@ export default function StudyPage() {
           : set
       )
     );
+    
+    setNewSetName('');
+    setEditingSetId(null);
+    setModalOpen(null);
+  };
+
+  // Function to handle deleting a study set
+  const handleDeleteSet = () => {
+    if (!editingSetId) return;
+    
+    const updatedSets = studySets.filter(set => set.id !== editingSetId);
+    setStudySets(updatedSets);
+    
+    // If we're deleting the currently selected set, select the first available set or clear selection
+    if (selectedSetId === editingSetId) {
+      if (updatedSets.length > 0) {
+        setSelectedSetId(updatedSets[0].id);
+      } else {
+        setSelectedSetId(null);
+      }
+      setCurrentCard(1);
+      setIsFlipped(false);
+    }
     
     setNewSetName('');
     setEditingSetId(null);
@@ -144,356 +184,390 @@ export default function StudyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 relative z-50">
-      <div className="container mx-auto px-4 relative z-50">
-        {/* Pomodoro Timer Section */}
-        <section className="mb-12">
-          <Pomodoro />
-        </section>
+    <PageTransition>
+      <div 
+        className="min-h-screen py-8"
+        style={{ backgroundColor: "#1A2537" }}
+      >
+        <div className="container mx-auto px-4">
+          {/* Pomodoro Timer Section */}
+          <section className="mb-12">
+            <Pomodoro />
+          </section>
 
-        {/* Quick Notes Section */}
-        <section className="mb-12">
-          <QuickNotes />
-        </section>
+          {/* Quick Notes Section */}
+          <section className="mb-12">
+            <QuickNotes />
+          </section>
 
-        {/* Study Tools Section */}
-        <section className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Study Sets Panel */}
-            <div className="bg-white rounded-lg p-4 shadow-md">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Study Sets</h2>
-                <button 
-                  onClick={() => {
-                    setNewSetName('');
-                    setModalOpen('newSet');
-                  }}
-                  className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-sm active:scale-95 transform transition-all duration-75"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  New Set
-                </button>
-              </div>
-              
-              {/* Study Sets List */}
-              <div className="space-y-2">
-                {studySets.map(set => (
-                  <div
-                    key={set.id}
-                    className={`group relative flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors ${
-                      selectedSetId === set.id 
-                        ? 'bg-blue-50 text-blue-700' 
-                        : 'hover:bg-gray-50'
-                    }`}
+          {/* Study Tools Section */}
+          <section className="mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Study Sets Panel */}
+              <div 
+                className="rounded-lg p-4 shadow-md"
+                style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-semibold text-white">Study Sets</h2>
+                  <button 
+                    onClick={() => {
+                      setNewSetName('');
+                      setModalOpen('newSet');
+                    }}
+                    className="flex items-center gap-1 px-3 py-1 border border-gray-600 rounded-lg hover:bg-gray-700 text-sm active:scale-95 transform transition-all duration-75 text-white"
                   >
-                    <div className="flex-1 flex items-center justify-between">
-                      <button
-                        onClick={() => setSelectedSetId(set.id)}
-                        className="flex-1 text-left active:scale-95 transform transition-transform duration-75"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>{set.name}</span>
-                          <span className="text-sm text-gray-500">{set.cards.length} cards</span>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingSetId(set.id);
-                          setNewSetName(set.name);
-                          setModalOpen('editSet');
-                        }}
-                        className="ml-2 p-1.5 text-gray-400 hover:text-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-gray-100"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Set
+                  </button>
+                </div>
+                
+                {/* Study Sets List */}
+                <div className="space-y-2">
+                  {studySets.map(set => (
+                    <div
+                      key={set.id}
+                      className={`group relative flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors ${
+                        selectedSetId === set.id 
+                          ? 'bg-blue-50 text-blue-700' 
+                          : 'hover:bg-gray-50 text-gray-300'
+                      }`}
+                    >
+                      <div className="flex-1 flex items-center justify-between">
+                        <button
+                          onClick={() => setSelectedSetId(set.id)}
+                          className="flex-1 text-left active:scale-95 transform transition-transform duration-75"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-black">{set.name}</span>
+                            <span className="text-sm text-black">{set.cards.length} cards</span>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingSetId(set.id);
+                            setNewSetName(set.name);
+                            setModalOpen('editSet');
+                          }}
+                          className="ml-2 p-1.5 text-gray-400 hover:text-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-gray-100"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Flashcards Display */}
+              <div 
+                className="col-span-2 rounded-lg p-4 shadow-md"
+                style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-lg font-semibold text-white">{selectedSet?.name || 'Select a Set'}</h2>
+                  <button 
+                    onClick={() => {
+                      setNewCard({ front: '', back: '' });
+                      setModalOpen('addCard');
+                    }}
+                    disabled={!selectedSetId}
+                    className="flex items-center gap-1 px-3 py-1 border border-gray-600 rounded-lg hover:bg-gray-700 text-sm active:scale-95 transform transition-all duration-75 text-white disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Card
+                  </button>
+                </div>
+
+                {/* Flashcard Display */}
+                {selectedSet?.cards.length ? (
+                  <div 
+                    className="relative w-3/4 h-[270px] min-h-[270px] mx-auto mb-3 cursor-pointer select-none perspective-1000"
+                    onClick={() => setIsFlipped(!isFlipped)}
+                  >
+                    {/* Front of card */} 
+                    <div 
+                      className={`absolute inset-0 border border-gray-200 rounded-lg flex items-center justify-center p-8 shadow-md transition-all duration-500 transform ${
+                        isFlipped ? 'opacity-0 -rotate-y-90' : 'opacity-100 rotate-y-0'
+                      }`}
+                    >
+                      <p className="text-xl text-center text-gray-300">{selectedSet?.cards[currentCard - 1]?.front}</p>
+                    </div>
+                    {/* Back of card */} 
+                    <div 
+                      className={`absolute inset-0 border border-gray-200 rounded-lg flex items-center justify-center p-8 shadow-md transition-all duration-500 transform ${
+                        isFlipped ? 'opacity-100 rotate-y-0' : 'opacity-0 rotate-y-90'
+                      }`}
+                    >
+                      <p className="text-xl text-center text-gray-300">{selectedSet?.cards[currentCard - 1]?.back}</p>
                     </div>
                   </div>
-                ))}
+                ) : (
+                  <div className="min-h-[270px] border border-gray-200 rounded-lg mb-3 flex items-center justify-center">
+                    <p className="text-white">No cards yet. Click "Add Card" to get started!</p>
+                  </div>
+                )}
+
+                {/* Navigation */}
+                <div className="flex justify-between items-center mb-3">
+                  <button 
+                    className="p-1.5 text-gray-300 hover:text-gray-100 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
+                    disabled={!selectedSet?.cards.length}
+                    onClick={handlePrevCard}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <p className="text-sm text-blue-300">
+                    {selectedSet?.cards.length ? `${currentCard} of ${selectedSet.cards.length}` : '0 cards'}
+                  </p>
+                  <button 
+                    className="p-1.5 text-gray-300 hover:text-gray-100 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
+                    disabled={!selectedSet?.cards.length}
+                    onClick={handleNextCard}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Delete Button */}
+                {selectedSet?.cards.length ? (
+                  <div className="flex justify-center">
+                    <button 
+                      onClick={() => handleDeleteCard(selectedSet.cards[currentCard - 1].id)}
+                      className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm active:scale-95 transform transition-all duration-75"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete Card
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          {/* Summary Cards Section */}
+          <section>
+            {/* Time Period Toggle */}
+            <div className="flex mb-4">
+              <div className="inline-flex rounded-lg border border-gray-200 p-1">
+                <button 
+                  onClick={() => setTimeFilter('D')}
+                  className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                    timeFilter === 'D' ? 'bg-blue-100 text-blue-600' : 'text-gray-300 hover:text-blue-600'
+                  }`}
+                >
+                  D
+                </button>
+                <button 
+                  onClick={() => setTimeFilter('W')}
+                  className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                    timeFilter === 'W' ? 'bg-blue-100 text-blue-600' : 'text-gray-300 hover:text-blue-600'
+                  }`}
+                >
+                  W
+                </button>
+                <button 
+                  onClick={() => setTimeFilter('M')}
+                  className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                    timeFilter === 'M' ? 'bg-blue-100 text-blue-600' : 'text-gray-300 hover:text-blue-600'
+                  }`}
+                >
+                  M
+                </button>
               </div>
             </div>
 
-            {/* Flashcards Display */}
-            <div className="col-span-2 bg-white rounded-lg p-4 shadow-md">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-semibold">{selectedSet?.name || 'Select a Set'}</h2>
-                <button 
-                  onClick={() => {
-                    setNewCard({ front: '', back: '' });
-                    setModalOpen('addCard');
-                  }}
-                  disabled={!selectedSetId}
-                  className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-sm active:scale-95 transform transition-all duration-75"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Focus Time Card */}
+              <div 
+                className="shadow-md rounded-lg p-4 text-center hover:shadow-lg transition-shadow"
+                style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+              >
+                <div className="text-blue-600 mb-2">
+                  <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Add Card
-                </button>
+                </div>
+                <h4 className="text-sm text-gray-300 mb-1">Focus Time</h4>
+                <p className="text-2xl font-bold text-white">0h 0m</p>
               </div>
 
-              {/* Flashcard Display */}
-              {selectedSet?.cards.length ? (
-                <div 
-                  className="relative w-3/4 h-[270px] min-h-[270px] mx-auto mb-3 cursor-pointer select-none perspective-1000"
-                  onClick={() => setIsFlipped(!isFlipped)}
-                >
-                  {/* Front of card */} 
-                  <div 
-                    className={`absolute inset-0 bg-white border border-gray-200 rounded-lg flex items-center justify-center p-8 shadow-md transition-all duration-500 transform ${
-                      isFlipped ? 'opacity-0 -rotate-y-90' : 'opacity-100 rotate-y-0'
-                    }`}
-                  >
-                    <p className="text-xl text-center">{selectedSet?.cards[currentCard - 1]?.front}</p>
-                  </div>
-                  {/* Back of card */} 
-                  <div 
-                    className={`absolute inset-0 bg-white border border-gray-200 rounded-lg flex items-center justify-center p-8 shadow-md transition-all duration-500 transform ${
-                      isFlipped ? 'opacity-100 rotate-y-0' : 'opacity-0 rotate-y-90'
-                    }`}
-                  >
-                    <p className="text-xl text-center">{selectedSet?.cards[currentCard - 1]?.back}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="min-h-[270px] border border-gray-200 rounded-lg mb-3 flex items-center justify-center">
-                  <p className="text-gray-500">No cards yet. Click "Add Card" to get started!</p>
-                </div>
-              )}
-
-              {/* Navigation */}
-              <div className="flex justify-between items-center mb-3">
-                <button 
-                  className="p-1.5 text-gray-500 hover:text-gray-700 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
-                  disabled={!selectedSet?.cards.length}
-                  onClick={handlePrevCard}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              {/* Sessions Card */}
+              <div 
+                className="shadow-md rounded-lg p-4 text-center hover:shadow-lg transition-shadow"
+                style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+              >
+                <div className="text-blue-600 mb-2">
+                  <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
-                </button>
-                <p className="text-sm text-gray-600">
-                  {selectedSet?.cards.length ? `${currentCard} of ${selectedSet.cards.length}` : '0 cards'}
-                </p>
-                <button 
-                  className="p-1.5 text-gray-500 hover:text-gray-700 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
-                  disabled={!selectedSet?.cards.length}
-                  onClick={handleNextCard}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                </div>
+                <h4 className="text-sm text-gray-300 mb-1">Sessions</h4>
+                <p className="text-2xl font-bold text-white">0</p>
               </div>
 
-              {/* Delete Button */}
-              {selectedSet?.cards.length ? (
-                <div className="flex justify-center">
-                  <button 
-                    onClick={() => handleDeleteCard(selectedSet.cards[currentCard - 1].id)}
-                    className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm active:scale-95 transform transition-all duration-75"
+              {/* Tasks Done Card */}
+              <div 
+                className="shadow-md rounded-lg p-4 text-center hover:shadow-lg transition-shadow"
+                style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+              >
+                <div className="text-blue-600 mb-2">
+                  <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                </div>
+                <h4 className="text-sm text-gray-300 mb-1">Tasks Done</h4>
+                <p className="text-2xl font-bold text-white">0</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Modals */}
+          {modalOpen === 'newSet' && (
+            <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
+              <div className="bg-gray-800 text-white rounded-lg p-6 w-96 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4">Create New Set</h3>
+                <input
+                  type="text"
+                  placeholder="Enter set name"
+                  value={newSetName}
+                  onChange={(e) => setNewSetName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md mb-4"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSet()}
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setModalOpen(null)}
+                    className="px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-md active:scale-95 transform transition-transform duration-75"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddSet}
+                    disabled={!newSetName.trim()}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
+                  >
+                    Create
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {modalOpen === 'editSet' && (
+            <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
+              <div className="bg-gray-800 text-white rounded-lg p-6 w-96 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4">Edit Set Name</h3>
+                <input
+                  type="text"
+                  placeholder="Enter new name"
+                  value={newSetName}
+                  onChange={(e) => setNewSetName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md mb-4"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleEditSet()}
+                />
+                <div className="flex justify-between">
+                  {/* Delete button on the left */}
+                  <button
+                    onClick={handleDeleteSet}
+                    className="flex items-center gap-1 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-md active:scale-95 transform transition-all duration-75"
+                    title="Delete study set"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                    Delete Card
+                  </button>
+                  
+                  {/* Cancel and Save buttons on the right */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setModalOpen(null);
+                        setEditingSetId(null);
+                      }}
+                      className="px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-md active:scale-95 transform transition-transform duration-75"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleEditSet}
+                      disabled={!newSetName.trim()}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {modalOpen === 'addCard' && (
+            <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
+              <div className="bg-gray-800 text-white rounded-lg p-6 w-96 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4">Add New Card</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Front
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter front side text"
+                      value={newCard.front}
+                      onChange={(e) => setNewCard(prev => ({ ...prev, front: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      Back
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter back side text"
+                      value={newCard.back}
+                      onChange={(e) => setNewCard(prev => ({ ...prev, back: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCard()}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    onClick={() => setModalOpen(null)}
+                    className="px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-md active:scale-95 transform transition-transform duration-75"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddCard}
+                    disabled={!newCard.front.trim()}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
+                  >
+                    Add Card
                   </button>
                 </div>
-              ) : null}
-            </div>
-          </div>
-        </section>
-
-        {/* Summary Cards Section */}
-        <section>
-          {/* Time Period Toggle */}
-          <div className="flex mb-4">
-            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
-              <button 
-                onClick={() => setTimeFilter('D')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  timeFilter === 'D' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                D
-              </button>
-              <button 
-                onClick={() => setTimeFilter('W')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  timeFilter === 'W' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                W
-              </button>
-              <button 
-                onClick={() => setTimeFilter('M')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  timeFilter === 'M' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                M
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Focus Time Card */}
-            <div className="bg-white shadow-md rounded-lg p-4 text-center hover:shadow-lg transition-shadow">
-              <div className="text-blue-600 mb-2">
-                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h4 className="text-sm text-gray-600 mb-1">Focus Time</h4>
-              <p className="text-2xl font-bold">0h 0m</p>
-            </div>
-
-            {/* Sessions Card */}
-            <div className="bg-white shadow-md rounded-lg p-4 text-center hover:shadow-lg transition-shadow">
-              <div className="text-blue-600 mb-2">
-                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <h4 className="text-sm text-gray-600 mb-1">Sessions</h4>
-              <p className="text-2xl font-bold">0</p>
-            </div>
-
-            {/* Tasks Done Card */}
-            <div className="bg-white shadow-md rounded-lg p-4 text-center hover:shadow-lg transition-shadow">
-              <div className="text-blue-600 mb-2">
-                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <h4 className="text-sm text-gray-600 mb-1">Tasks Done</h4>
-              <p className="text-2xl font-bold">0</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Modals */}
-        {modalOpen === 'newSet' && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-              <h3 className="text-lg font-semibold mb-4">Create New Set</h3>
-              <input
-                type="text"
-                placeholder="Enter set name"
-                value={newSetName}
-                onChange={(e) => setNewSetName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md mb-4"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSet()}
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setModalOpen(null)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md active:scale-95 transform transition-transform duration-75"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddSet}
-                  disabled={!newSetName.trim()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
-                >
-                  Create
-                </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {modalOpen === 'editSet' && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-              <h3 className="text-lg font-semibold mb-4">Edit Set Name</h3>
-              <input
-                type="text"
-                placeholder="Enter new name"
-                value={newSetName}
-                onChange={(e) => setNewSetName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md mb-4"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleEditSet()}
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => {
-                    setModalOpen(null);
-                    setEditingSetId(null);
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md active:scale-95 transform transition-transform duration-75"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleEditSet}
-                  disabled={!newSetName.trim()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {modalOpen === 'addCard' && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-              <h3 className="text-lg font-semibold mb-4">Add New Card</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Front
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter front side text"
-                    value={newCard.front}
-                    onChange={(e) => setNewCard(prev => ({ ...prev, front: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded-md"
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Back
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter back side text"
-                    value={newCard.back}
-                    onChange={(e) => setNewCard(prev => ({ ...prev, back: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded-md"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddCard()}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  onClick={() => setModalOpen(null)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md active:scale-95 transform transition-transform duration-75"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddCard}
-                  disabled={!newCard.front.trim()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
-                >
-                  Add Card
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }

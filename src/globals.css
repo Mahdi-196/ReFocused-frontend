@@ -2,11 +2,20 @@
 
 :root {
   scroll-behavior: smooth;
+  --color-background-main: #1A2537;
+  --color-header: #10182B;
 }
 
-/* scroll bar disabled*/
+/* scroll bar disabled + background color */
 body {
+  background-color: #1A2537;
   /* overflow: hidden; */
+}
+
+/* Fixed header with backdrop blur effect */
+header {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 /* global.css or App.css */

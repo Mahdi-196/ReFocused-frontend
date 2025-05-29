@@ -88,8 +88,8 @@ export default function BreatheInRelaxation({ isPlaying, timeLeft, durationSec, 
             strokeWidth="6"
             opacity="0.8"
             transform={`scale(${scale})`}
-            transformOrigin="100 100"
             style={{
+              transformOrigin: '100px 100px',
               transition: 'transform 0.5s ease-in-out'
             }}
           />

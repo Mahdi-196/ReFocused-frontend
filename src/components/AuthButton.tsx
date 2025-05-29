@@ -76,9 +76,9 @@ const AuthButton = () => {
         <>
           <button 
             onClick={() => setShowDropdown(!showDropdown)}
-            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+            className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
           >
-            <User size={20} className="text-gray-600" />
+            <User size={20} className="text-gray-700" />
           </button>
           
           {showDropdown && (

@@ -81,13 +81,19 @@ function EntryContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8 font-sans">
+    <div 
+      className="min-h-screen p-8 font-sans"
+      style={{ backgroundColor: "#1A2537" }}
+    >
       <div className="max-w-4xl mx-auto">
         {/* Back button and collection selector */}
-        <div className="flex items-center justify-between mb-6">
+        <div 
+          className="flex items-center justify-between mb-6 p-4 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg"
+          style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+        >
           <button
             onClick={() => router.push("/journal")}
-            className="inline-flex items-center text-gray-600 hover:text-gray-900"
+            className="inline-flex items-center text-gray-300 hover:text-white transition-all duration-200 transform hover:scale-105"
           >
             <ChevronLeft className="w-5 h-5 mr-1" />
             Back to Journal
@@ -95,7 +101,7 @@ function EntryContent() {
           <select
             value={selectedCollectionId || ""}
             onChange={(e) => setSelectedCollectionId(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-1.5 border border-gray-600 bg-gray-700 text-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
           >
             <option value="" disabled>Select Collection</option>
             {collections.map(col => (
@@ -106,10 +112,13 @@ function EntryContent() {
           </select>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div 
+          className="rounded-lg shadow-md border border-gray-600 p-8 transition-all duration-300 hover:shadow-lg"
+          style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+        >
           {/* Header with date */}
           <div className="flex justify-end mb-6">
-            <div className="inline-flex items-center px-3 py-1 rounded-md bg-gray-100 text-gray-600 text-sm">
+            <div className="inline-flex items-center px-3 py-1 rounded-md bg-gray-700/50 text-gray-300 text-sm">
               <span>{formattedDate}</span>
             </div>
           </div>
@@ -120,7 +129,7 @@ function EntryContent() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Entry title"
-            className="w-full text-3xl font-bold mb-8 border-none focus:outline-none focus:ring-0 placeholder-gray-300"
+            className="w-full text-3xl font-bold mb-8 border-none bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-0 transition-all duration-200"
             autoFocus
           />
 
@@ -137,7 +146,7 @@ function EntryContent() {
             <button
               onClick={handleSave}
               disabled={!selectedCollectionId || isSaving}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
             >
               {isSaving ? "Saving..." : "Save Entry"}
             </button>

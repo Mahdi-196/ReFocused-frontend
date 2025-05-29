@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import NumberMood from '../../components/NumberMood';
+import NumberMood from '@/components/NumberMood';
+import PageTransition from '@/components/PageTransition';
 
 interface DayData {
   mood: {
@@ -72,6 +73,7 @@ export default function TrackPage() {
     { name: 'Read', streak: 0 }
   ]);
   const [newHabit, setNewHabit] = useState('');
+  const [habitError, setHabitError] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [activeTab, setActiveTab] = useState<TabType>('Summary');
@@ -99,10 +101,25 @@ export default function TrackPage() {
   };
 
   const handleAddHabit = () => {
-    if (newHabit.trim()) {
-      setHabits([...habits, { name: newHabit, streak: 0 }]);
-      setNewHabit('');
+    if (!newHabit.trim()) {
+      setHabitError('Please enter a habit name');
+      return;
     }
+    
+    // Check for duplicate habit names (case-insensitive)
+    const habitExists = habits.some(habit => 
+      habit.name.toLowerCase() === newHabit.trim().toLowerCase()
+    );
+    
+    if (habitExists) {
+      setHabitError('This habit already exists');
+      return;
+    }
+    
+    // Add the new habit and clear error
+    setHabits([...habits, { name: newHabit.trim(), streak: 0 }]);
+    setNewHabit('');
+    setHabitError('');
   };
 
   const getDayClass = (dateStr: string) => {
@@ -151,9 +168,9 @@ export default function TrackPage() {
     const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
     days.push(
-      <div key="weekdays" className="grid grid-cols-7 gap-2 mb-2">
+      <div key="weekdays" className="grid grid-cols-7 gap-1.5 mb-1.5">
         {weekDays.map(day => (
-          <div key={day} className="text-center text-sm font-medium text-gray-500 p-2">
+          <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
             {day}
           </div>
         ))}
@@ -171,7 +188,7 @@ export default function TrackPage() {
     for (let i = 0; i < firstDayOfWeek; i++) {
       const date = daysInPreviousMonth - firstDayOfWeek + i + 1;
       currentRow.push(
-        <div key={`prev-${date}`} className="aspect-square flex items-center justify-center text-gray-400 bg-gray-50 rounded">
+        <div key={`prev-${date}`} className="aspect-square flex items-center justify-center text-gray-400 bg-gray-50 rounded text-xs">
           {date}
         </div>
       );
@@ -184,7 +201,7 @@ export default function TrackPage() {
       currentRow.push(
         <div
           key={date}
-          className={`aspect-square flex items-center justify-center cursor-pointer rounded border transition-all ${
+          className={`aspect-square flex items-center justify-center cursor-pointer rounded border transition-all text-xs ${
             dayClass
           } ${
             selectedDate === dateStr ? 'bg-black text-white border-black' : ''
@@ -197,7 +214,7 @@ export default function TrackPage() {
 
       if (currentRow.length === 7) {
         dateRows.push(
-          <div key={`row-${dateRows.length}`} className="grid grid-cols-7 gap-2">
+          <div key={`row-${dateRows.length}`} className="grid grid-cols-7 gap-1.5">
             {currentRow}
           </div>
         );
@@ -209,13 +226,13 @@ export default function TrackPage() {
     if (remainingCells < 7) {
       for (let i = 1; i <= remainingCells; i++) {
         currentRow.push(
-          <div key={`next-${i}`} className="aspect-square flex items-center justify-center text-gray-400 bg-gray-50 rounded">
+          <div key={`next-${i}`} className="aspect-square flex items-center justify-center text-gray-400 bg-gray-50 rounded text-xs">
             {i}
           </div>
         );
       }
       dateRows.push(
-        <div key={`row-${dateRows.length}`} className="grid grid-cols-7 gap-2">
+        <div key={`row-${dateRows.length}`} className="grid grid-cols-7 gap-1.5">
           {currentRow}
         </div>
       );
@@ -231,7 +248,7 @@ export default function TrackPage() {
 
   const renderDayDetails = () => {
     if (!selectedDate || !mockDayData[selectedDate]) {
-      return <p className="text-center text-gray-500 py-8">No tracking data for this date</p>;
+      return <p className="text-center text-gray-500 py-8 text-sm">Click a date to view details</p>;
     }
 
     const data = mockDayData[selectedDate];
@@ -347,143 +364,167 @@ export default function TrackPage() {
     };
 
     return (
-      <div className="p-6 border-t border-gray-200">
-        <h3 className="text-xl font-medium text-gray-800 mb-6">{formattedDate}</h3>
-        
-        <div className="flex gap-2 mb-6 bg-gray-100 rounded-lg p-1">
-          {(['Summary', 'Mood', 'Habits'] as TabType[]).map((tab) => (
-            <div
-              key={tab}
-              className={`flex-1 text-center py-2 rounded cursor-pointer transition-colors ${
-                activeTab === tab ? 'bg-white text-gray-800 font-medium shadow-sm' : 'text-gray-600'
-              }`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
+      <div className="p-4">
+        {!selectedDate || !mockDayData[selectedDate] ? (
+          <p className="text-center text-gray-500 py-8 text-sm">Click a date to view details</p>
+        ) : (
+          <>
+            <h3 className="text-lg font-medium text-gray-800 mb-4">{formattedDate}</h3>
+            
+            <div className="flex flex-col gap-1 mb-4 bg-gray-100 rounded-lg p-1">
+              {(['Summary', 'Mood', 'Habits'] as TabType[]).map((tab) => (
+                <div
+                  key={tab}
+                  className={`text-center py-2 rounded cursor-pointer transition-colors text-sm ${
+                    activeTab === tab ? 'bg-white text-gray-800 font-medium shadow-sm' : 'text-gray-600'
+                  }`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div className="text-gray-700">
-          {renderTabContent()}
-        </div>
+            <div className="text-gray-700 text-sm">
+              {renderTabContent()}
+            </div>
+          </>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 font-sans">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Tracking Dashboard</h1>
-        <p className="text-gray-600">Monitor your mood, habits, and daily progress</p>
-      </header>
+    <PageTransition>
+      <div className="max-w-6xl mx-auto p-6 font-sans">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Tracking Dashboard</h1>
+          <p className="text-white">Monitor your mood, habits, and daily progress</p>
+        </header>
 
-      {/* Habit Tracking Section */}
-      <section className="bg-white rounded-xl p-6 mb-8 shadow-sm">
-        <h2 className="text-2xl text-gray-800 mb-4">Habit Tracking</h2>
-        <div className="bg-white rounded-lg p-6">
-          <h3 className="text-xl font-medium text-gray-800 mb-2">Habit Tracker</h3>
-          <p className="text-gray-600 mb-4">Track your daily habits and build streaks</p>
-          
-          <div className="flex gap-2 mb-6">
-            <input
-              type="text"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Add a new habit..."
-              value={newHabit}
-              onChange={(e) => setNewHabit(e.target.value)}
-            />
-            <button 
-              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-              onClick={handleAddHabit}
-            >
-              Add
-            </button>
-          </div>
+        {/* Habit Tracking Section */}
+        <section className="bg-white rounded-xl p-6 mb-8 shadow-sm">
+          <h2 className="text-2xl text-gray-800 mb-4">Habit Tracking</h2>
+          <div className="bg-white rounded-lg p-6">
+            <h3 className="text-xl font-medium text-gray-800 mb-2">Habit Tracker</h3>
+            <p className="text-gray-600 mb-4">Track your daily habits and build streaks</p>
+            
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  habitError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Add a new habit..."
+                value={newHabit}
+                onChange={(e) => {
+                  setNewHabit(e.target.value);
+                  if (habitError) setHabitError(''); // Clear error when typing
+                }}
+              />
+              <button 
+                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                onClick={handleAddHabit}
+              >
+                Add
+              </button>
+            </div>
+            
+            {habitError && (
+              <div className="mb-4 text-red-600 text-sm">{habitError}</div>
+            )}
 
-          <div className="space-y-3">
-            {habits.map((habit, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <input 
-                    type="checkbox" 
-                    className="w-5 h-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    id={`habit-${index}`} 
-                  />
-                  <label htmlFor={`habit-${index}`} className="text-gray-800">{habit.name}</label>
+            <div className="space-y-3">
+              {habits.map((habit, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      id={`habit-${index}`} 
+                    />
+                    <label htmlFor={`habit-${index}`} className="text-gray-800">{habit.name}</label>
+                  </div>
+                  <span className="text-gray-600">{habit.streak} days</span>
                 </div>
-                <span className="text-gray-600">{habit.streak} days</span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Mood Tracking Section */}
+        <NumberMood />
+
+        {/* Rate Your Day Section */}
+        <section className="bg-white rounded-xl p-6 mb-8 shadow-sm">
+          <h2 className="text-2xl text-gray-800 mb-4">Rate Your Day</h2>
+          <div className="max-w-xl mx-auto">
+            <h3 className="text-xl font-medium text-gray-800 mb-2">Rate Your Day</h3>
+            <p className="text-gray-600 mb-4">How would you rate your overall day on a scale of 1-10?</p>
+            <input 
+              type="range" 
+              className="w-full my-4" 
+              min="1" 
+              max="10" 
+              defaultValue="5" 
+              onChange={(e) => {
+                const rating = e.target.value;
+                const ratingElement = e.target.nextElementSibling?.nextElementSibling;
+                if (ratingElement) {
+                  ratingElement.setAttribute('data-rating', rating);
+                  ratingElement.textContent = `${rating}/10`;
+                }
+              }}
+            />
+            <div className="flex justify-between text-gray-600 mt-2">
+              <span>1</span>
+              <span>5</span>
+              <span>10</span>
+            </div>
+            <div className={`text-center py-2 rounded mt-4 text-white font-medium ${getRatingColor(5)}`}>
+              5/10
+            </div>
+          </div>
+        </section>
+
+        {/* Calendar Section */}
+        <section className="bg-white rounded-xl mb-8 shadow-sm overflow-hidden max-w-7xl mx-auto">
+          <h2 className="text-xl text-gray-800 px-6 py-4 border-b border-gray-200">Calendar Overview</h2>
+          <div className="flex">
+            {/* Calendar Grid Section */}
+            <div 
+              className="flex-1 select-none"
+              ref={calendarRef}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div className="flex justify-between items-center px-6 py-3 border-b border-gray-200">
+                <button 
+                  className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors text-base"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}
+                >
+                  ←
+                </button>
+                <h3 className="text-lg font-medium text-gray-800">
+                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h3>
+                <button 
+                  className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors text-base"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}
+                >
+                  →
+                </button>
               </div>
-            ))}
+              {renderCalendar()}
+            </div>
+            
+            {/* Day Details Section */}
+            <div className="w-80 border-l border-gray-200">
+              {renderDayDetails()}
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Mood Tracking Section */}
-      <NumberMood />
-
-      {/* Rate Your Day Section */}
-      <section className="bg-white rounded-xl p-6 mb-8 shadow-sm">
-        <h2 className="text-2xl text-gray-800 mb-4">Rate Your Day</h2>
-        <div className="max-w-xl mx-auto">
-          <h3 className="text-xl font-medium text-gray-800 mb-2">Rate Your Day</h3>
-          <p className="text-gray-600 mb-4">How would you rate your overall day on a scale of 1-10?</p>
-          <input 
-            type="range" 
-            className="w-full my-4" 
-            min="1" 
-            max="10" 
-            defaultValue="5" 
-            onChange={(e) => {
-              const rating = e.target.value;
-              const ratingElement = e.target.nextElementSibling?.nextElementSibling;
-              if (ratingElement) {
-                ratingElement.setAttribute('data-rating', rating);
-                ratingElement.textContent = `${rating}/10`;
-              }
-            }}
-          />
-          <div className="flex justify-between text-gray-600 mt-2">
-            <span>1</span>
-            <span>5</span>
-            <span>10</span>
-          </div>
-          <div className={`text-center py-2 rounded mt-4 text-white font-medium ${getRatingColor(5)}`}>
-            5/10
-          </div>
-        </div>
-      </section>
-
-      {/* Calendar Section */}
-      <section className="bg-white rounded-xl mb-8 shadow-sm overflow-hidden">
-        <h2 className="text-2xl text-gray-800 p-6">Calendar Overview</h2>
-        <div 
-          className="select-none"
-          ref={calendarRef}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-            <button 
-              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors"
-              onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}
-            >
-              ←
-            </button>
-            <h3 className="text-xl font-medium text-gray-800">
-              {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </h3>
-            <button 
-              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors"
-              onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}
-            >
-              →
-            </button>
-          </div>
-          {renderCalendar()}
-          {renderDayDetails()}
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </PageTransition>
   );
 }

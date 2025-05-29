@@ -31,82 +31,100 @@ const Pomodoro = () => {
   // === Additional State ===
   // Determines whether the stored settings have finished loading.
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   // Settings Modal Visibility
   const [showSettings, setShowSettings] = useState(false);
 
+  // Initialize client-side rendering flag
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // === ASYNC LOAD PERSISTENT SETTINGS ===
   useEffect(() => {
+    if (!isClient) return;
+    
     async function loadSettings() {
-      // Using await with Promise.resolve to simulate asynchronous retrieval
-      const storedPomodoroTime = await Promise.resolve(localStorage.getItem("pomodoroTime"));
-      if (storedPomodoroTime) {
-        setPomodoroTime(parseInt(storedPomodoroTime, 10));
+      try {
+        // Using await with Promise.resolve to simulate asynchronous retrieval
+        const storedPomodoroTime = await Promise.resolve(localStorage.getItem("pomodoroTime"));
+        if (storedPomodoroTime) {
+          setPomodoroTime(parseInt(storedPomodoroTime, 10));
+        }
+        const storedShortBreakTime = await Promise.resolve(localStorage.getItem("shortBreakTime"));
+        if (storedShortBreakTime) {
+          setShortBreakTime(parseInt(storedShortBreakTime, 10));
+        }
+        const storedLongBreakTime = await Promise.resolve(localStorage.getItem("longBreakTime"));
+        if (storedLongBreakTime) {
+          setLongBreakTime(parseInt(storedLongBreakTime, 10));
+        }
+        const storedLongBreakInterval = await Promise.resolve(localStorage.getItem("longBreakInterval"));
+        if (storedLongBreakInterval) {
+          setLongBreakInterval(parseInt(storedLongBreakInterval, 10));
+        }
+        const storedAutoStartBreaks = await Promise.resolve(localStorage.getItem("autoStartBreaks"));
+        if (storedAutoStartBreaks) {
+          setAutoStartBreaks(storedAutoStartBreaks === "true");
+        }
+        const storedAutoStartPomodoros = await Promise.resolve(localStorage.getItem("autoStartPomodoros"));
+        if (storedAutoStartPomodoros) {
+          setAutoStartPomodoros(storedAutoStartPomodoros === "true");
+        }
+        const storedSoundOn = await Promise.resolve(localStorage.getItem("soundOn"));
+        if (storedSoundOn) {
+          setSoundOn(storedSoundOn === "true");
+        }
+        // Load persistent timer state
+        const storedMode = await Promise.resolve(localStorage.getItem("pomodoroMode"));
+        if (storedMode) {
+          setMode(storedMode as "pomodoro" | "short" | "long");
+        }
+        const storedRounds = await Promise.resolve(localStorage.getItem("pomodoroRounds"));
+        if (storedRounds) {
+          setRounds(parseInt(storedRounds, 10));
+        }
+        const storedTimeLeft = await Promise.resolve(localStorage.getItem("pomodoroTimeLeft"));
+        if (storedTimeLeft) {
+          setTimeLeft(parseFloat(storedTimeLeft));
+        }
+        const storedIsRunning = await Promise.resolve(localStorage.getItem("pomodoroIsRunning"));
+        const storedTargetTime = await Promise.resolve(localStorage.getItem("pomodoroTargetTime"));
+        if (storedIsRunning === "true" && storedTargetTime) {
+          const targetTime = parseInt(storedTargetTime, 10);
+          const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
+          setTimeLeft(newTimeLeft);
+          setIsRunning(newTimeLeft > 0);
+        }
+      } catch (error) {
+        console.error('Failed to load pomodoro settings from localStorage:', error);
+      } finally {
+        // Indicate that the settings have finished loading
+        setIsLoaded(true);
       }
-      const storedShortBreakTime = await Promise.resolve(localStorage.getItem("shortBreakTime"));
-      if (storedShortBreakTime) {
-        setShortBreakTime(parseInt(storedShortBreakTime, 10));
-      }
-      const storedLongBreakTime = await Promise.resolve(localStorage.getItem("longBreakTime"));
-      if (storedLongBreakTime) {
-        setLongBreakTime(parseInt(storedLongBreakTime, 10));
-      }
-      const storedLongBreakInterval = await Promise.resolve(localStorage.getItem("longBreakInterval"));
-      if (storedLongBreakInterval) {
-        setLongBreakInterval(parseInt(storedLongBreakInterval, 10));
-      }
-      const storedAutoStartBreaks = await Promise.resolve(localStorage.getItem("autoStartBreaks"));
-      if (storedAutoStartBreaks) {
-        setAutoStartBreaks(storedAutoStartBreaks === "true");
-      }
-      const storedAutoStartPomodoros = await Promise.resolve(localStorage.getItem("autoStartPomodoros"));
-      if (storedAutoStartPomodoros) {
-        setAutoStartPomodoros(storedAutoStartPomodoros === "true");
-      }
-      const storedSoundOn = await Promise.resolve(localStorage.getItem("soundOn"));
-      if (storedSoundOn) {
-        setSoundOn(storedSoundOn === "true");
-      }
-      // Load persistent timer state
-      const storedMode = await Promise.resolve(localStorage.getItem("pomodoroMode"));
-      if (storedMode) {
-        setMode(storedMode as "pomodoro" | "short" | "long");
-      }
-      const storedRounds = await Promise.resolve(localStorage.getItem("pomodoroRounds"));
-      if (storedRounds) {
-        setRounds(parseInt(storedRounds, 10));
-      }
-      const storedTimeLeft = await Promise.resolve(localStorage.getItem("pomodoroTimeLeft"));
-      if (storedTimeLeft) {
-        setTimeLeft(parseFloat(storedTimeLeft));
-      }
-      const storedIsRunning = await Promise.resolve(localStorage.getItem("pomodoroIsRunning"));
-      const storedTargetTime = await Promise.resolve(localStorage.getItem("pomodoroTargetTime"));
-      if (storedIsRunning === "true" && storedTargetTime) {
-        const targetTime = parseInt(storedTargetTime, 10);
-        const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
-        setTimeLeft(newTimeLeft);
-        setIsRunning(newTimeLeft > 0);
-      }
-      // Indicate that the settings have finished loading
-      setIsLoaded(true);
     }
     loadSettings();
-  }, []);
+  }, [isClient]);
 
   // === PERSIST STATE ON CHANGES ===
   useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem("pomodoroMode", mode);
-    localStorage.setItem("pomodoroRounds", rounds.toString());
-    localStorage.setItem("pomodoroTimeLeft", timeLeft.toString());
-    localStorage.setItem("pomodoroIsRunning", isRunning.toString());
-    if (isRunning) {
-      const targetTime = Date.now() + timeLeft * 1000;
-      localStorage.setItem("pomodoroTargetTime", targetTime.toString());
-    } else {
-      localStorage.removeItem("pomodoroTargetTime");
+    if (!isLoaded || !isClient) return;
+    
+    try {
+      localStorage.setItem("pomodoroMode", mode);
+      localStorage.setItem("pomodoroRounds", rounds.toString());
+      localStorage.setItem("pomodoroTimeLeft", timeLeft.toString());
+      localStorage.setItem("pomodoroIsRunning", isRunning.toString());
+      if (isRunning) {
+        const targetTime = Date.now() + timeLeft * 1000;
+        localStorage.setItem("pomodoroTargetTime", targetTime.toString());
+      } else {
+        localStorage.removeItem("pomodoroTargetTime");
+      }
+    } catch (error) {
+      console.error('Failed to save pomodoro state to localStorage:', error);
     }
-  }, [mode, rounds, timeLeft, isRunning, isLoaded]);
+  }, [mode, rounds, timeLeft, isRunning, isLoaded, isClient]);
 
   // === UPDATE timeLeft WHEN mode OR PREFERENCES CHANGE ===
   useEffect(() => {
@@ -202,8 +220,11 @@ const Pomodoro = () => {
 
   return (
     <div
-      className="w-full md:max-w-3xl mx-auto bg-white rounded-2xl shadow-md p-6 relative"
-      style={{ minHeight: "450px" }}
+      className="w-full md:max-w-5xl mx-auto rounded-2xl shadow-md p-6 relative"
+      style={{ 
+        minHeight: "450px", 
+        background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" 
+      }}
     >
       {/* Settings Icon (top-right) */}
       <div className="absolute top-4 right-4">
@@ -214,12 +235,19 @@ const Pomodoro = () => {
       </div>
 
       {/* Title */}
-      <h1 className="text-2xl font-bold text-center mb-6">Pomodoro Timer</h1>
+      <h1 className="text-2xl font-bold text-center mb-6 text-white">
+        Pomodoro Timer
+      </h1>
 
       {/* Timer Display Section with Clock Animation */}
       <div className="flex flex-col items-center justify-center">
-        <div className="relative w-40 h-40 flex items-center justify-center mb-2">
-          <svg width="100%" height="100%" viewBox="0 0 100 100" className="absolute inset-0">
+        <div className="relative w-56 h-56 flex items-center justify-center mb-2">
+          <svg
+            width="100%"
+            height="100%"
+            viewBox="0 0 100 100"
+            className="absolute inset-0"
+          >
             {/* Background Circle (light gray) with thinner line */}
             <circle
               cx="50"
@@ -247,15 +275,15 @@ const Pomodoro = () => {
             />
           </svg>
           <div className="z-10 text-center">
-            <span className="text-3xl font-semibold text-gray-800">
+            <span className="text-5xl font-semibold text-white">
               {formatTime(timeLeft)}
             </span>
-            <div className="text-sm text-gray-500">
+            <div className="text-base text-gray-300">
               {mode === "pomodoro"
                 ? "Focus"
                 : mode === "short"
-                  ? "Short Break"
-                  : "Long Break"}
+                ? "Short Break"
+                : "Long Break"}
             </div>
           </div>
         </div>
@@ -265,15 +293,19 @@ const Pomodoro = () => {
           {Array.from({ length: longBreakInterval }).map((_, i) => (
             <div
               key={i}
-              className={`w-3 h-3 rounded-full ${i < sessionProgressValue ? "bg-blue-500" : "bg-gray-300"
-                }`}
+              className={`w-3 h-3 rounded-full ${
+                i < sessionProgressValue ? "bg-blue-500" : "bg-gray-300"
+              }`}
             />
           ))}
         </div>
 
         {/* Control Buttons */}
         <div className="flex items-center justify-center space-x-6 mt-2 mb-4">
-          <button onClick={handleReset} className="p-2 rounded-full hover:bg-gray-100 text-gray-600">
+          <button
+            onClick={handleReset}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-600"
+          >
             <RotateCw className="w-5 h-5" />
           </button>
           {isRunning ? (
@@ -293,7 +325,10 @@ const Pomodoro = () => {
               <Play className="w-6 h-6" />
             </button>
           )}
-          <button onClick={handleSkip} className="p-2 rounded-full hover:bg-gray-100 text-gray-600">
+          <button
+            onClick={handleSkip}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-600"
+          >
             <ChevronsRight className="w-5 h-5" />
           </button>
         </div>
@@ -302,22 +337,31 @@ const Pomodoro = () => {
         <div className="flex space-x-2 my-2">
           <button
             onClick={() => changeMode("pomodoro")}
-            className={`px-3 py-1 rounded ${mode === "pomodoro" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
-              }`}
+            className={`px-3 py-1 rounded ${
+              mode === "pomodoro"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 text-gray-700"
+            }`}
           >
             Pomodoro
           </button>
           <button
             onClick={() => changeMode("short")}
-            className={`px-3 py-1 rounded ${mode === "short" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
-              }`}
+            className={`px-3 py-1 rounded ${
+              mode === "short"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 text-gray-700"
+            }`}
           >
             Short Break
           </button>
           <button
             onClick={() => changeMode("long")}
-            className={`px-3 py-1 rounded ${mode === "long" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
-              }`}
+            className={`px-3 py-1 rounded ${
+              mode === "long"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 text-gray-700"
+            }`}
           >
             Long Break
           </button>
@@ -327,7 +371,10 @@ const Pomodoro = () => {
       {/* Settings Modal (Small Centered Modal) */}
       {showSettings && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black opacity-30" onClick={() => setShowSettings(false)}></div>
+          <div
+            className="absolute inset-0 bg-black opacity-30"
+            onClick={() => setShowSettings(false)}
+          ></div>
           <div className="bg-white rounded-lg shadow-lg p-6 z-50 w-80">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Settings</h2>
@@ -337,7 +384,9 @@ const Pomodoro = () => {
             </div>
             {/* Work Duration */}
             <div className="mb-5">
-              <label className="block font-semibold mb-1">Work Duration: {pomodoroTime} min</label>
+              <label className="block font-semibold mb-1">
+                Work Duration: {pomodoroTime} min
+              </label>
               <input
                 type="range"
                 min={1}
@@ -349,19 +398,25 @@ const Pomodoro = () => {
             </div>
             {/* Short Break */}
             <div className="mb-5">
-              <label className="block font-semibold mb-1">Short Break: {shortBreakTime} min</label>
+              <label className="block font-semibold mb-1">
+                Short Break: {shortBreakTime} min
+              </label>
               <input
                 type="range"
                 min={1}
                 max={30}
                 value={shortBreakTime}
-                onChange={(e) => setShortBreakTime(parseInt(e.target.value, 10))}
+                onChange={(e) =>
+                  setShortBreakTime(parseInt(e.target.value, 10))
+                }
                 className="w-full"
               />
             </div>
             {/* Long Break */}
             <div className="mb-5">
-              <label className="block font-semibold mb-1">Long Break: {longBreakTime} min</label>
+              <label className="block font-semibold mb-1">
+                Long Break: {longBreakTime} min
+              </label>
               <input
                 type="range"
                 min={5}
@@ -373,13 +428,17 @@ const Pomodoro = () => {
             </div>
             {/* Sessions Before Long Break */}
             <div className="mb-5">
-              <label className="block font-semibold mb-1">Sessions Before Long Break: {longBreakInterval}</label>
+              <label className="block font-semibold mb-1">
+                Sessions Before Long Break: {longBreakInterval}
+              </label>
               <input
                 type="range"
                 min={1}
                 max={10}
                 value={longBreakInterval}
-                onChange={(e) => setLongBreakInterval(parseInt(e.target.value, 10))}
+                onChange={(e) =>
+                  setLongBreakInterval(parseInt(e.target.value, 10))
+                }
                 className="w-full"
               />
             </div>
@@ -410,13 +469,40 @@ const Pomodoro = () => {
             </div>
             <button
               onClick={() => {
-                localStorage.setItem("pomodoroTime", pomodoroTime.toString());
-                localStorage.setItem("shortBreakTime", shortBreakTime.toString());
-                localStorage.setItem("longBreakTime", longBreakTime.toString());
-                localStorage.setItem("longBreakInterval", longBreakInterval.toString());
-                localStorage.setItem("autoStartBreaks", autoStartBreaks.toString());
-                localStorage.setItem("autoStartPomodoros", autoStartPomodoros.toString());
-                localStorage.setItem("soundOn", soundOn.toString());
+                if (isClient) {
+                  try {
+                    localStorage.setItem(
+                      "pomodoroTime",
+                      pomodoroTime.toString()
+                    );
+                    localStorage.setItem(
+                      "shortBreakTime",
+                      shortBreakTime.toString()
+                    );
+                    localStorage.setItem(
+                      "longBreakTime",
+                      longBreakTime.toString()
+                    );
+                    localStorage.setItem(
+                      "longBreakInterval",
+                      longBreakInterval.toString()
+                    );
+                    localStorage.setItem(
+                      "autoStartBreaks",
+                      autoStartBreaks.toString()
+                    );
+                    localStorage.setItem(
+                      "autoStartPomodoros",
+                      autoStartPomodoros.toString()
+                    );
+                    localStorage.setItem("soundOn", soundOn.toString());
+                  } catch (error) {
+                    console.error(
+                      "Failed to save pomodoro settings to localStorage:",
+                      error
+                    );
+                  }
+                }
                 setShowSettings(false);
               }}
               className="block w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"

@@ -16,6 +16,10 @@ export default {
           1: 'var(--color-secondary1)',
           2: 'var(--color-secondary2)',
         },
+        background: {
+          main: '#1A2537',
+        },
+        header: '#10182B',
       },
     },
   },
