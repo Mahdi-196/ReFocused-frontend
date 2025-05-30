@@ -68,100 +68,102 @@ export default function StarBreathing({ isPlaying, timeLeft, durationSec, onTogg
   };
 
   return (
-    <div className="flex flex-col items-center justify-between mx-auto mb-4 min-h-[264px]">
-      {/* Star Breathing Visualization */}
-      <div className="relative w-full max-w-2xl h-32 mb-4 flex-shrink-0">
-        <svg className="w-full h-full" viewBox="0 0 200 200">
-          {/* Star base with simple styling */}
-          <path
-            d={createStarPath()}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth="6"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          
-          {/* Animated progress path */}
-          {(() => {
-            if (!isPlaying) return null;
+    <div className="flex flex-col items-center justify-center min-h-[400px] mx-auto">
+      <div className="flex flex-col items-center justify-center space-y-8 max-w-2xl w-full">
+        {/* Star Breathing Visualization */}
+        <div className="relative w-full h-48 flex items-center justify-center">
+          <svg className="w-full h-full max-w-md" viewBox="0 0 200 200">
+            {/* Star base with simple styling */}
+            <path
+              d={createStarPath()}
+              fill="none"
+              stroke="#e5e7eb"
+              strokeWidth="6"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
             
-            const elapsed = durationSec - timeLeft;
-            const cycleProgress = (elapsed % 20) / 20; // 20 seconds for star breathing cycle
-            
-            // Complete star path
-            const completePath = createStarPath();
-            
-            // Approximate total path length (perimeter of star)
-            let totalLength = 0;
-            for (let i = 0; i < starPoints.length; i++) {
-              const current = starPoints[i];
-              const next = starPoints[(i + 1) % starPoints.length];
-              const distance = Math.sqrt(Math.pow(next.x - current.x, 2) + Math.pow(next.y - current.y, 2));
-              totalLength += distance;
-            }
-            
-            // Calculate visible length based on progress
-            const visibleLength = cycleProgress < 0.99 ? cycleProgress * totalLength : 0;
-            
-            return (
-              <path
-                d={completePath}
-                fill="none"
-                stroke="#eab308"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray={totalLength}
-                strokeDashoffset={totalLength - visibleLength}
-                style={{ 
-                  transition: 'stroke-dashoffset 0.2s ease-out'
-                }}
-              />
-            );
-          })()}
-        </svg>
-      </div>
+            {/* Animated progress path */}
+            {(() => {
+              if (!isPlaying) return null;
+              
+              const elapsed = durationSec - timeLeft;
+              const cycleProgress = (elapsed % 20) / 20; // 20 seconds for star breathing cycle
+              
+              // Complete star path
+              const completePath = createStarPath();
+              
+              // Approximate total path length (perimeter of star)
+              let totalLength = 0;
+              for (let i = 0; i < starPoints.length; i++) {
+                const current = starPoints[i];
+                const next = starPoints[(i + 1) % starPoints.length];
+                const distance = Math.sqrt(Math.pow(next.x - current.x, 2) + Math.pow(next.y - current.y, 2));
+                totalLength += distance;
+              }
+              
+              // Calculate visible length based on progress
+              const visibleLength = cycleProgress < 0.99 ? cycleProgress * totalLength : 0;
+              
+              return (
+                <path
+                  d={completePath}
+                  fill="none"
+                  stroke="#eab308"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={totalLength}
+                  strokeDashoffset={totalLength - visibleLength}
+                  style={{ 
+                    transition: 'stroke-dashoffset 0.2s ease-out'
+                  }}
+                />
+              );
+            })()}
+          </svg>
+        </div>
 
-      {/* Middle section with timer and instructions */}
-      <div className="flex flex-col items-center space-y-3 flex-grow justify-center">
-        {/* Timer display */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg shadow-amber-500/10 border border-white/20">
-          <span className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
-            {formatTime(timeLeft)}
-          </span>
+        {/* Timer and instructions - centered group */}
+        <div className="flex flex-col items-center justify-center space-y-4">
+          {/* Timer display */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg shadow-amber-500/10 border border-white/20">
+            <span className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+              {formatTime(timeLeft)}
+            </span>
+          </div>
+          
+          {/* Breathing instruction */}
+          <div className={`bg-gradient-to-r from-amber-100/90 to-yellow-100/90 backdrop-blur-sm rounded-full px-6 py-3 border border-amber-200/50 shadow-lg transition-all duration-500 ${
+            isPlaying ? 'animate-pulse shadow-amber-500/20' : 'shadow-amber-500/10'
+          }`}>
+            <span className="text-sm font-semibold bg-gradient-to-r from-amber-700 to-yellow-700 bg-clip-text text-transparent">
+              {getBreathingPhase()}
+            </span>
+          </div>
         </div>
         
-        {/* Breathing instruction */}
-        <div className={`bg-gradient-to-r from-amber-100/90 to-yellow-100/90 backdrop-blur-sm rounded-full px-4 py-2 border border-amber-200/50 shadow-lg transition-all duration-500 ${
-          isPlaying ? 'animate-pulse shadow-amber-500/20' : 'shadow-amber-500/10'
-        }`}>
-          <span className="text-sm font-semibold bg-gradient-to-r from-amber-700 to-yellow-700 bg-clip-text text-transparent">
-            {getBreathingPhase()}
-          </span>
+        {/* Control section - centered */}
+        <div className="flex flex-col items-center justify-center space-y-4">
+          {/* Play/pause button */}
+          <button
+            onClick={onTogglePlay}
+            className="w-16 h-16 bg-yellow-500 hover:bg-yellow-600 rounded-full flex items-center justify-center transition-colors shadow-lg"
+            aria-label={`${isPlaying ? 'Pause' : 'Start'} star breathing`}
+          >
+            {isPlaying ? (
+              <Pause className="w-7 h-7 text-white fill-current" />
+            ) : (
+              <Play className="w-7 h-7 text-white fill-current ml-1" />
+            )}
+          </button>
+          
+          {/* Technique explanation */}
+          <div className="text-center text-sm text-gray-300 max-w-xs">
+            <p className="mb-2">Five-pointed star breathing pattern</p>
+            <p>Enhances focus and concentration</p>
+          </div>
         </div>
-      </div>
-      
-      {/* Bottom section */}
-      <div className="flex flex-col items-center space-y-3 flex-shrink-0 mt-6">
-        {/* Technique explanation */}
-        <div className="text-center text-xs text-gray-600 max-w-xs">
-          <p className="mb-3">Five-pointed star breathing pattern</p>
-          <p>Enhances focus and concentration</p>
-        </div>
-        
-        {/* Play/pause button */}
-        <button
-          onClick={onTogglePlay}
-          className="w-14 h-14 bg-yellow-500 hover:bg-yellow-600 rounded-full flex items-center justify-center transition-colors shadow-lg"
-          aria-label={`${isPlaying ? 'Pause' : 'Start'} star breathing`}
-        >
-          {isPlaying ? (
-            <Pause className="w-6 h-6 text-white fill-current" />
-          ) : (
-            <Play className="w-6 h-6 text-white fill-current ml-1" />
-          )}
-        </button>
       </div>
     </div>
   );

@@ -20,11 +20,129 @@ export type Collection = {
 const LOCAL_STORAGE_KEY = "jurnol_collections";
 const PASSWORD_STORAGE_KEY = "collection_passwords";
 
+// Generate seeded entries for "My Notes"
+const generateSeededEntries = (): Entry[] => {
+  const entries: Entry[] = [];
+  const now = new Date();
+  
+  const titles = [
+    "Morning Reflections", "Coffee Shop Thoughts", "Weekend Plans", "Book Notes", "Travel Dreams",
+    "Workout Progress", "Creative Ideas", "Life Goals", "Family Time", "Work Insights",
+    "Evening Gratitude", "Learning Notes", "Mindfulness Practice", "Daily Victories", "Nature Walk",
+    "Friendship Thoughts", "Career Reflections", "Health Journey", "Art Inspiration", "Music Discovery",
+    "Cooking Experiments", "Photography Session", "Reading List", "Dream Journal", "Weather Observations",
+    "Technology Thoughts", "Financial Planning", "Home Organization", "Garden Notes", "Pet Stories",
+    "Cultural Experiences", "Language Learning", "Volunteer Work", "Self-Care", "Time Management",
+    "Productivity Tips", "Relationship Notes", "Adventure Plans", "Skill Development", "Problem Solving",
+    "Creative Writing", "Memory Lane", "Future Visions", "Daily Challenges", "Success Moments",
+    "Random Thoughts", "Inspiration Board", "Goal Setting", "Habit Tracking", "Weekly Review",
+    "Monthly Goals", "Project Ideas", "Business Thoughts", "Investment Notes", "Vacation Planning",
+    "Health Check-in", "Meditation Session", "Exercise Routine", "Nutrition Notes", "Sleep Patterns",
+    "Social Events", "Community Service", "Hobby Exploration", "Skill Practice", "Learning Outcomes",
+    "Emotional Check-in", "Stress Management", "Joy Moments", "Gratitude List", "Achievement Unlocked",
+    "New Discoveries", "Cultural Insights", "Historical Notes", "Science Wonders", "Philosophy Corner",
+    "Personal Growth", "Leadership Lessons", "Team Collaboration", "Innovation Ideas", "Problem Resolution",
+    "Creative Process", "Artistic Expression", "Musical Journey", "Literary Analysis", "Film Reviews",
+    "Technology Trends", "Social Media", "Digital Wellness", "Online Learning", "Virtual Connections",
+    "Environmental Notes", "Sustainability", "Climate Thoughts", "Conservation", "Green Living",
+    "Community Building", "Social Impact", "Volunteer Impact", "Charity Work", "Giving Back",
+    "Spiritual Journey", "Faith Reflections", "Inner Peace", "Mindful Living", "Present Moment",
+    "Past Memories", "Future Dreams", "Current Reality", "Life Balance", "Personal Values"
+  ];
+
+  const contentTemplates = [
+    "Today I spent some time thinking about {topic}. It's fascinating how {insight}. I want to explore this further by {action}.",
+    "Had an interesting conversation about {topic}. The key takeaway was {insight}. Planning to {action} next week.",
+    "Reflecting on {topic} today. I've realized that {insight}. My next step is to {action}.",
+    "Started reading about {topic} and discovered {insight}. This makes me want to {action}.",
+    "During my walk, I thought about {topic}. It struck me that {insight}. I should probably {action}.",
+    "Watched a documentary on {topic} and learned {insight}. Inspired to {action} soon.",
+    "Had a productive day working on {topic}. The main challenge was {insight}, but I managed to {action}.",
+    "Meeting with friends led to a discussion about {topic}. We concluded that {insight}. Decided to {action} together.",
+    "Weekend project involved {topic}. Discovered that {insight}. Next time I'll {action} differently.",
+    "Morning meditation brought clarity about {topic}. The realization was {insight}. Time to {action}."
+  ];
+
+  const topics = [
+    "personal productivity", "sustainable living", "creative writing", "fitness goals", "cooking techniques",
+    "travel planning", "career development", "relationships", "mindfulness", "learning new skills",
+    "financial planning", "home improvement", "gardening", "photography", "music production",
+    "reading habits", "time management", "healthy eating", "exercise routines", "sleep quality",
+    "stress management", "goal setting", "habit formation", "creative projects", "work-life balance",
+    "social connections", "family relationships", "community involvement", "volunteer work", "environmental impact",
+    "technology usage", "digital wellness", "online learning", "artistic expression", "cultural exploration",
+    "historical research", "scientific discoveries", "philosophical questions", "spiritual practices", "emotional intelligence",
+    "leadership skills", "communication", "problem-solving", "innovation", "collaboration",
+    "self-reflection", "personal growth", "life lessons", "memory keeping", "gratitude practice"
+  ];
+
+  const insights = [
+    "small changes can lead to big results", "consistency is more important than perfection", 
+    "learning never stops", "balance is key to happiness", "perspective shapes reality",
+    "relationships are everything", "health is true wealth", "creativity needs space to flourish",
+    "challenges lead to growth", "present moments are precious", "simplicity brings clarity",
+    "patience is a superpower", "authenticity attracts the right people", "failure is feedback",
+    "curiosity opens doors", "gratitude shifts everything", "boundaries are healthy",
+    "progress over perfection", "kindness costs nothing", "self-care isn't selfish"
+  ];
+
+  const actions = [
+    "practice daily meditation", "start a new project", "reach out to old friends",
+    "learn a new skill", "organize my space", "plan a weekend getaway", "read more books",
+    "exercise regularly", "cook healthier meals", "write in my journal", "take online courses",
+    "volunteer in my community", "practice gratitude", "set better boundaries", "be more mindful",
+    "declutter my belongings", "save more money", "spend time in nature", "create art",
+    "listen to podcasts", "attend workshops", "network with like-minded people", "start a blog",
+    "learn a language", "practice photography", "explore new places", "try new recipes",
+    "meditate longer", "sleep better", "drink more water", "reduce screen time"
+  ];
+
+  for (let i = 0; i < 100; i++) {
+    const daysAgo = Math.floor(Math.random() * 365); // Entries from the last year
+    const createdDate = new Date(now.getTime() - (daysAgo * 24 * 60 * 60 * 1000));
+    const lastSavedOffset = Math.floor(Math.random() * 60 * 60 * 1000); // Within an hour of creation
+    const lastSavedDate = new Date(createdDate.getTime() + lastSavedOffset);
+
+    const title = titles[i] || `Journal Entry ${i + 1}`;
+    const topic = topics[Math.floor(Math.random() * topics.length)];
+    const insight = insights[Math.floor(Math.random() * insights.length)];
+    const action = actions[Math.floor(Math.random() * actions.length)];
+    const template = contentTemplates[Math.floor(Math.random() * contentTemplates.length)];
+    
+    let content = template
+      .replace('{topic}', topic)
+      .replace('{insight}', insight)
+      .replace('{action}', action);
+
+    // Add some variety to content length
+    if (Math.random() > 0.7) {
+      content += ` Additionally, I've been thinking about how this connects to other areas of my life. It's interesting how everything is interconnected.`;
+    }
+
+    if (Math.random() > 0.8) {
+      content += ` \n\nQuote of the day: "The journey of a thousand miles begins with one step." - Lao Tzu`;
+    }
+
+    entries.push({
+      id: uuidv4(),
+      title,
+      content,
+      createdAt: createdDate.toISOString(),
+      lastSavedAt: lastSavedDate.toISOString(),
+    });
+  }
+
+  // Sort entries by creation date (newest first)
+  return entries.sort((a, b) => 
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+};
+
 const defaultCollectionsData: Collection[] = [
   {
     id: "default-my-notes",
     name: "My Notes",
-    entries: [],
+    entries: generateSeededEntries(),
   },
   {
     id: uuidv4(), // Keep generating potential ID for default private
@@ -64,10 +182,20 @@ export function useCollections() {
               const myNotes = parsed.splice(myNotesIndex, 1)[0];
               myNotes.id = "default-my-notes";
               myNotes.name = "My Notes";
+              // Add seeded entries if My Notes has fewer than 50 entries
+              if (myNotes.entries.length < 50) {
+                const seededEntries = generateSeededEntries();
+                myNotes.entries = [...seededEntries, ...myNotes.entries];
+              }
               parsed.unshift(myNotes);
             } else {
                parsed[0].id = "default-my-notes";
                parsed[0].name = "My Notes";
+               // Add seeded entries if My Notes has fewer than 50 entries
+               if (parsed[0].entries.length < 50) {
+                 const seededEntries = generateSeededEntries();
+                 parsed[0].entries = [...seededEntries, ...parsed[0].entries];
+               }
             }
             // Assign stable ID to default private collection if necessary (logic moved)
             const privateColIndex = parsed.findIndex(c => c.name === "Private" && c.isPrivate);

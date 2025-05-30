@@ -128,18 +128,18 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
 
   return (
     <div 
-      className={`bg-white rounded-xl shadow-sm p-6 relative overflow-hidden transition-all duration-300 ${
-        isComplete ? 'border-2 border-purple-500 animate-pulse' : ''
+      className={`bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 relative overflow-hidden transition-all duration-300 ${
+        isComplete ? 'border-2 border-purple-400 animate-pulse' : ''
       }`}
       style={style}
     >
       {/* Reset Button */}
       <button
         onClick={resetTimer}
-        className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
+        className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-700/50 transition-colors"
         aria-label="Reset timer"
       >
-        <RotateCcw className="w-5 h-5 text-gray-500" />
+        <RotateCcw className="w-5 h-5 text-gray-300" />
       </button>
 
       {/* Duration Selector Button */}
@@ -148,8 +148,8 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
         disabled={isPlaying}
         className={`absolute top-2 left-2 p-2 rounded-full transition-colors ${
           isPlaying 
-            ? 'text-gray-300 cursor-not-allowed' 
-            : 'hover:bg-gray-100 text-gray-500'
+            ? 'text-gray-500 cursor-not-allowed' 
+            : 'hover:bg-gray-700/50 text-gray-300'
         }`}
         aria-label="Change duration"
       >
@@ -165,21 +165,21 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
             onClick={() => setShowDurationSelector(false)}
           />
           
-          <div className="absolute top-12 left-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-20 min-w-[210px] max-w-[240px]">
+          <div className="absolute top-12 left-2 bg-gradient-to-br from-gray-800/95 to-slate-800/95 backdrop-blur-sm border border-gray-600/50 rounded-xl shadow-2xl p-4 z-20 min-w-[210px] max-w-[240px]">
           {/* Header */}
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-800 mb-1">Choose Your Session</h4>
-            <p className="text-xs text-gray-600">Select the perfect duration</p>
+            <h4 className="text-sm font-semibold text-white mb-1">Choose Your Session</h4>
+            <p className="text-xs text-gray-300">Select the perfect duration</p>
           </div>
 
           {/* Slider View */}
           <div className="space-y-4">
             {/* Current Selection Display */}
-            <div className="text-center p-2.5 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
-              <div className="text-lg font-bold text-purple-700 mb-0.5">
+            <div className="text-center p-2.5 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-lg">
+              <div className="text-lg font-bold text-purple-300 mb-0.5">
                 {ALL_DURATIONS[sliderIndex].label}
               </div>
-              <div className="text-xs text-purple-600">
+              <div className="text-xs text-purple-400">
                 {ALL_DURATIONS[sliderIndex].description}
               </div>
             </div>
@@ -192,18 +192,18 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
                 max={ALL_DURATIONS.length - 1}
                 value={sliderIndex}
                 onChange={(e) => handleSliderChange(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb"
+                className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider-thumb"
                 style={{
-                  background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${(sliderIndex / (ALL_DURATIONS.length - 1)) * 100}%, #e5e7eb ${(sliderIndex / (ALL_DURATIONS.length - 1)) * 100}%, #e5e7eb 100%)`
+                  background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${(sliderIndex / (ALL_DURATIONS.length - 1)) * 100}%, #4b5563 ${(sliderIndex / (ALL_DURATIONS.length - 1)) * 100}%, #4b5563 100%)`
                 }}
               />
               
               {/* Duration Markers */}
               <div className="flex justify-between mt-1.5 px-1">
                 {[0, Math.floor(ALL_DURATIONS.length / 3), Math.floor(2 * ALL_DURATIONS.length / 3), ALL_DURATIONS.length - 1].map((index) => (
-                  <div key={index} className="text-xs text-gray-500 text-center">
+                  <div key={index} className="text-xs text-gray-400 text-center">
                     <div className={`w-0.5 h-0.5 mx-auto mb-0.5 rounded-full ${
-                      sliderIndex >= index ? 'bg-purple-500' : 'bg-gray-300'
+                      sliderIndex >= index ? 'bg-purple-400' : 'bg-gray-500'
                     }`} />
                     <span className="text-xs">{ALL_DURATIONS[index].label}</span>
                   </div>
@@ -221,7 +221,7 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
       <div className="flex flex-col items-center justify-center">
         {/* Duration Label */}
         <div className="mb-4">
-          <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+          <span className="text-sm text-gray-300 bg-gray-700/50 border border-gray-600/50 px-3 py-1 rounded-full">
             {formatDurationLabel(selectedDuration)} session
           </span>
         </div>
@@ -230,7 +230,7 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
           {/* Progress Ring */}
           <svg className="w-full h-full absolute" viewBox="0 0 100 100">
             <circle
-              className="text-gray-200"
+              className="text-gray-600"
               strokeWidth="8"
               stroke="currentColor"
               fill="transparent"
@@ -239,7 +239,7 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
               cy="50"
             />
             <circle
-              className="text-purple-500 transition-all duration-1000 ease-linear"
+              className="text-purple-400 transition-all duration-1000 ease-linear"
               strokeWidth="8"
               strokeDasharray={`${progress * 2.51} 251`}
               strokeLinecap="round"
@@ -253,13 +253,13 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
           </svg>
           
           {/* Time Display */}
-          <span className="text-4xl font-bold text-gray-800">{formatTime(timeLeft)}</span>
+          <span className="text-4xl font-bold text-white">{formatTime(timeLeft)}</span>
         </div>
 
         {/* Play/Pause Button */}
         <button
           onClick={() => setIsPlaying(!isPlaying)}
-          className="mt-6 p-4 rounded-full bg-purple-500 text-white hover:bg-purple-600 transition-colors shadow-lg"
+          className="mt-6 p-4 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700 transition-all duration-200 shadow-lg transform hover:scale-105"
           aria-label={isPlaying ? 'Pause meditation' : 'Start meditation'}
         >
           {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
@@ -269,9 +269,9 @@ export default function MeditationTimer({ onComplete, style, initialDuration = 3
       {/* Completion Message */}
       {isComplete && (
         <div className="mt-6 text-center">
-          <div className="bg-purple-50 rounded-lg p-4">
-            <p className="text-purple-700 font-medium">🎉 Session Complete!</p>
-            <p className="text-purple-600 text-sm mt-1">Great job on completing your {formatDurationLabel(selectedDuration)} meditation</p>
+          <div className="bg-gradient-to-br from-purple-800/60 to-blue-800/60 border border-purple-600/50 rounded-lg p-4">
+            <p className="text-purple-200 font-medium">🎉 Session Complete!</p>
+            <p className="text-purple-300 text-sm mt-1">Great job on completing your {formatDurationLabel(selectedDuration)} meditation</p>
           </div>
         </div>
       )}
