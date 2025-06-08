@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Settings, Award, CreditCard, HelpCircle, Share2, LogOut, MessageSquare, X, Star, Camera, Palette } from 'lucide-react';
+import { User, Settings, LogOut, MessageSquare, X, Star, Camera, Volume2, VolumeX, Bell, Wind } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import AvatarSelector from '@/components/AvatarSelector';
+import { useSettings } from '@/hooks/useSettings';
 
 interface FeedbackData {
   rating: number;
@@ -25,14 +26,15 @@ const Profile = () => {
     message: '',
     contact: ''
   });
+  const [appSettingsActiveSection, setAppSettingsActiveSection] = useState('audio');
+  
+  // Settings hook
+  const { settings, updateSettings, isLoaded } = useSettings();
 
   const menuItems = [
     { id: 'profile', icon: <User size={18} />, label: 'Profile' },
     { id: 'settings', icon: <Settings size={18} />, label: 'Account Settings' },
-    // { id: 'badges', icon: <Award size={18} />, label: 'Badges' },
-    // { id: 'billing', icon: <CreditCard size={18} />, label: 'Billing & Subscription' },
-    { id: 'support', icon: <HelpCircle size={18} />, label: 'Help & Support' },
-    // { id: 'invite', icon: <Share2 size={18} />, label: 'Invite Friends' },
+    { id: 'app-settings', icon: <Volume2 size={18} />, label: 'Audio' },
   ];
 
   const feedbackCategories = [
@@ -50,10 +52,8 @@ const Profile = () => {
       return;
     }
     
-    // Here you would typically send the feedback to your backend
     console.log('Feedback submitted:', feedbackData);
     
-    // Reset form and close modal
     setFeedbackData({
       rating: 0,
       category: '',
@@ -62,9 +62,77 @@ const Profile = () => {
     });
     setIsFeedbackModalOpen(false);
     
-    // Show success message
     alert('Thank you for your feedback! We appreciate your input.');
   };
+
+  // Settings component helper functions
+  const VolumeSlider = ({ 
+    label, 
+    value, 
+    onChange, 
+    icon: Icon,
+    disabled = false 
+  }: {
+    label: string;
+    value: number;
+    onChange: (value: number) => void;
+    icon: React.ElementType;
+    disabled?: boolean;
+  }) => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Icon className={`w-5 h-5 ${disabled ? 'text-gray-500' : 'text-blue-400'}`} />
+          <span className={`text-sm font-medium ${disabled ? 'text-gray-500' : 'text-gray-200'}`}>
+            {label}
+          </span>
+        </div>
+        <span className={`text-sm ${disabled ? 'text-gray-500' : 'text-gray-400'}`}>
+          {value}%
+        </span>
+      </div>
+      <div className="relative">
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          disabled={disabled}
+          className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${
+            disabled ? 'opacity-50' : ''
+          }`}
+          style={{
+            background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${value}%, #374151 ${value}%, #374151 100%)`
+          }}
+        />
+      </div>
+    </div>
+  );
+
+  const ToggleSwitch = ({ 
+    enabled, 
+    onChange, 
+    disabled = false 
+  }: {
+    enabled: boolean;
+    onChange: (enabled: boolean) => void;
+    disabled?: boolean;
+  }) => (
+    <button
+      onClick={() => !disabled && onChange(!enabled)}
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+        enabled ? 'bg-blue-600' : 'bg-gray-600'
+      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+          enabled ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  );
 
   const FeedbackModal = () => {
     if (!isFeedbackModalOpen) return null;
@@ -77,7 +145,6 @@ const Profile = () => {
           exit={{ opacity: 0, scale: 0.95 }}
           className="bg-gradient-to-br from-gray-900/95 to-slate-900/95 backdrop-blur-sm border border-gray-700/50 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl"
         >
-          {/* Close Button */}
           <button
             onClick={() => setIsFeedbackModalOpen(false)}
             className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center transition-colors"
@@ -86,7 +153,6 @@ const Profile = () => {
             <X className="w-5 h-5 text-gray-300" />
           </button>
 
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <MessageSquare className="w-8 h-8 text-white" />
@@ -95,7 +161,6 @@ const Profile = () => {
             <p className="text-gray-300 text-sm">Help us improve ReFocused by sharing your thoughts and suggestions</p>
           </div>
 
-          {/* Rating Section */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
               Overall Experience <span className="text-red-400">*</span>
@@ -115,18 +180,8 @@ const Profile = () => {
                 </button>
               ))}
             </div>
-            {feedbackData.rating > 0 && (
-              <p className="text-center mt-2 text-sm text-gray-400">
-                {feedbackData.rating === 1 && 'Poor'}
-                {feedbackData.rating === 2 && 'Fair'}
-                {feedbackData.rating === 3 && 'Good'}
-                {feedbackData.rating === 4 && 'Very Good'}
-                {feedbackData.rating === 5 && 'Excellent'}
-              </p>
-            )}
           </div>
 
-          {/* Category Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
               Feedback Category <span className="text-red-400">*</span>
@@ -145,7 +200,6 @@ const Profile = () => {
             </select>
           </div>
 
-          {/* Message */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
               Your Message <span className="text-red-400">*</span>
@@ -157,13 +211,8 @@ const Profile = () => {
               rows={5}
               className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
             />
-            <div className="flex justify-between mt-2">
-              <span className="text-xs text-gray-400">Minimum 10 characters</span>
-              <span className="text-xs text-gray-400">{feedbackData.message.length}/1000</span>
-            </div>
           </div>
 
-          {/* Contact Information */}
           <div className="mb-8">
             <label className="block text-sm font-medium text-gray-300 mb-3">
               Contact Email (Optional)
@@ -177,7 +226,6 @@ const Profile = () => {
             />
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-4">
             <button
               onClick={() => setIsFeedbackModalOpen(false)}
@@ -197,71 +245,149 @@ const Profile = () => {
     );
   };
 
+  const renderAudioSettings = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center space-x-3">
+          <Bell className="w-5 h-5 text-blue-400" />
+          <span className="text-sm font-medium text-gray-200">Notification Sounds</span>
+        </div>
+        <ToggleSwitch
+          enabled={settings.audio.notificationSounds}
+          onChange={(enabled) => updateSettings('audio', { notificationSounds: enabled })}
+        />
+      </div>
+
+      <VolumeSlider
+        label="Master Volume"
+        value={settings.audio.masterVolume}
+        onChange={(value) => updateSettings('audio', { masterVolume: value })}
+        icon={settings.audio.masterVolume === 0 ? VolumeX : Volume2}
+      />
+
+      <VolumeSlider
+        label="Ambient Sounds"
+        value={settings.audio.ambientVolume}
+        onChange={(value) => updateSettings('audio', { ambientVolume: value })}
+        icon={Wind}
+        disabled={settings.audio.masterVolume === 0}
+      />
+
+      <VolumeSlider
+        label="Breathing Exercise Audio"
+        value={settings.audio.breathingVolume}
+        onChange={(value) => updateSettings('audio', { breathingVolume: value })}
+        icon={Wind}
+        disabled={settings.audio.masterVolume === 0}
+      />
+    </div>
+  );
+
+
+
+  const renderActiveAppSettingsSection = () => {
+    return renderAudioSettings();
+  };
+
+  const renderAppSettings = () => {
+    return (
+      <div className="bg-gradient-to-br from-gray-800/90 to-slate-800/90 backdrop-blur-lg border border-gray-700/60 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="p-6 border-b border-gray-700">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-600/20 rounded-lg">
+              <Volume2 className="w-6 h-6 text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">Audio Settings</h2>
+              <p className="text-gray-400 text-sm">Customize your audio settings and sound preferences</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <h3 className="text-xl font-semibold text-white mb-6">Audio</h3>
+          {renderActiveAppSettingsSection()}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'profile':
         return (
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
-              <h3 className="text-xl font-semibold text-white mb-4">Profile Information</h3>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-6">
-                  <div className="flex flex-col items-center space-y-3">
-                    <div 
-                      className="relative group cursor-pointer"
-                      onClick={() => setIsAvatarSelectorOpen(true)}
-                    >
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 group-hover:border-blue-400 transition-all duration-200">
-                        <img 
-                          src={currentAvatar} 
-                          alt="Profile Avatar" 
-                          className="w-full h-full object-cover group-hover:opacity-80 transition-opacity duration-200"
-                        />
+          <div className="space-y-8">
+            <div className="bg-gradient-to-br from-gray-800/90 to-slate-800/90 backdrop-blur-lg border border-gray-700/60 rounded-2xl p-8 shadow-2xl">
+              <div className="flex items-center space-x-3 mb-8">
+                <div className="p-2 bg-blue-600/20 rounded-xl">
+                  <User className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white">Profile Information</h3>
+                  <p className="text-gray-400 text-sm">Manage your personal details and preferences</p>
+                </div>
+              </div>
+              
+              <div className="space-y-8">
+                <div className="bg-gray-700/30 rounded-xl p-6 border border-gray-600/40">
+                  <div className="flex flex-col lg:flex-row items-center lg:items-start space-y-6 lg:space-y-0 lg:space-x-8">
+                    <div className="flex flex-col items-center space-y-4">
+                      <div 
+                        className="relative group cursor-pointer"
+                        onClick={() => setIsAvatarSelectorOpen(true)}
+                      >
+                        <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 group-hover:border-blue-500/50 transition-colors">
+                          <img 
+                            src={currentAvatar} 
+                            alt="Profile Avatar" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Camera className="w-6 h-6 text-white" />
+                        </div>
                       </div>
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                        <Camera size={24} className="text-white" />
+                      
+                      <button
+                        onClick={() => setIsAvatarSelectorOpen(true)}
+                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                      >
+                        Change Avatar
+                      </button>
+                    </div>
+
+                    <div className="flex-1 space-y-6 w-full lg:w-auto">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-3">
+                            <h4 className="text-xl font-semibold text-white">John Doe</h4>
+                            <svg className="w-4 h-4 text-gray-400 hover:text-blue-400 cursor-pointer transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </div>
+                          <p className="text-gray-300 text-sm">john@example.com</p>
+                          <p className="text-gray-400 text-sm">Member since January 2024</p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div className="bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/30 rounded-lg p-4">
+                            <h5 className="text-blue-400 font-medium mb-2">Current Streak</h5>
+                            <p className="text-2xl font-bold text-white">7 days</p>
+                            <p className="text-gray-400 text-sm">Keep it up! 🔥</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setIsAvatarSelectorOpen(true)}
-                      className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-                    >
-                      <Palette size={14} />
-                      <span>Change Avatar</span>
-                    </button>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-medium text-white">John Doe</h4>
-                    <p className="text-gray-400">john@example.com</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
-                    <input
-                      type="text"
-                      defaultValue="John Doe"
-                      className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                    <input
-                      type="email"
-                      defaultValue="john@example.com"
-                      className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
                   </div>
                 </div>
               </div>
             </div>
           </div>
         );
+
       case 'settings':
         return (
-          <div className="space-y-6">
-            {/* Account Security */}
+          <div className="space-y-8">
             <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
               <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
                 <Settings className="w-5 h-5 mr-2 text-blue-400" />
@@ -300,11 +426,9 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Email Subscription Management */}
             <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
               <h3 className="text-xl font-semibold text-white mb-4">Email Subscription</h3>
               <div className="space-y-6">
-                {/* Current Subscription Status */}
                 <div className={`p-4 rounded-lg ${isSubscribed ? 'bg-green-900/20 border border-green-800/50' : 'bg-red-900/20 border border-red-800/50'}`}>
                   <div className="flex items-center justify-between">
                     <div>
@@ -331,7 +455,6 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Data Management */}
             <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
               <h3 className="text-xl font-semibold text-white mb-4">Data Management</h3>
               <div className="space-y-4">
@@ -358,10 +481,12 @@ const Profile = () => {
                 </div>
               </div>
             </div>
-
-
           </div>
         );
+
+      case 'app-settings':
+        return renderAppSettings();
+
       default:
         return (
           <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-8 text-center">
@@ -379,17 +504,14 @@ const Profile = () => {
         style={{ backgroundColor: "#1A2537" }}
       >
         <div className="container mx-auto px-4 max-w-6xl">
-          {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">Profile Settings</h1>
             <p className="text-gray-400">Manage your account settings and preferences</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Sidebar */}
             <div className="lg:col-span-1">
               <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 sticky top-8">
-                {/* User Info */}
                 <div className="text-center mb-6 pb-6 border-b border-gray-700/50">
                   <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 mx-auto mb-3">
                     <img 
@@ -402,13 +524,12 @@ const Profile = () => {
                   <p className="text-sm text-gray-400">john@example.com</p>
                 </div>
 
-                {/* Menu Items */}
                 <nav className="space-y-2">
                   {menuItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                      className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left ${
                         activeTab === item.id
                           ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                           : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
@@ -419,17 +540,15 @@ const Profile = () => {
                     </button>
                   ))}
                   
-                  {/* Feedback Button */}
                   <button
                     onClick={() => setIsFeedbackModalOpen(true)}
-                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700/50 border-t border-gray-700/50 mt-4 pt-4"
+                    className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-gray-300 hover:text-white hover:bg-gray-700/50 border-t border-gray-700/50 mt-4 pt-4"
                   >
                     <MessageSquare size={18} />
                     <span className="text-sm font-medium">Give Feedback</span>
                   </button>
                   
-                  {/* Logout */}
-                  <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-red-400 hover:text-red-300 hover:bg-red-900/20">
+                  <button className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-red-400 hover:text-red-300 hover:bg-red-900/20">
                     <LogOut size={18} />
                     <span className="text-sm font-medium">Logout</span>
                   </button>
@@ -437,17 +556,14 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Main Content */}
             <div className="lg:col-span-3">
               {renderContent()}
             </div>
           </div>
         </div>
 
-        {/* Feedback Modal */}
         <FeedbackModal />
         
-        {/* Avatar Selector */}
         <AvatarSelector
           isOpen={isAvatarSelectorOpen}
           onClose={() => setIsAvatarSelectorOpen(false)}
@@ -456,6 +572,33 @@ const Profile = () => {
           userName="John Doe"
         />
       </div>
+      
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3B82F6;
+          cursor: pointer;
+          border: 2px solid #1E40AF;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3B82F6;
+          cursor: pointer;
+          border: 2px solid #1E40AF;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider::-moz-range-track {
+          background: transparent;
+        }
+      `}</style>
     </PageTransition>
   );
 };

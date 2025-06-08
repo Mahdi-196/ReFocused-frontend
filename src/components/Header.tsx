@@ -7,7 +7,7 @@ import { MdNotifications } from "react-icons/md";
 import { Menu, X, User } from "lucide-react";
 import DevTools from "./devTools";
 import AuthButton from "./AuthButton";
-import VolumeIndicator from "./VolumeIndicator";
+
 import { useState } from "react";
 
 const Header = () => {
@@ -20,7 +20,6 @@ const Header = () => {
     { href: "/study", label: "Study" },
     { href: "/journal", label: "Journal" },
     { href: "/relax", label: "Relax" },
-    { href: "/settings", label: "Settings" },
   ];
 
   const toggleMobileMenu = () => {
@@ -111,10 +110,7 @@ const Header = () => {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="flex items-center space-x-2 md:space-x-4"
           >
-            {/* Volume Indicator - Hidden on very small screens */}
-            <div className="hidden sm:block">
-              <VolumeIndicator size="sm" />
-            </div>
+
 
             {/* Notifications - Hidden on very small screens */}
             <motion.button 
