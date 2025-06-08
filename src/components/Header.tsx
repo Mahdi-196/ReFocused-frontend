@@ -29,7 +29,7 @@ const Header = () => {
   return (
     <>
       <motion.header 
-        className="fixed top-0 left-0 right-0 bg-[#10182B]/80 backdrop-blur-md shadow py-4 border-b border-gray-400 z-50"
+        className="fixed top-0 left-0 right-0 bg-[#10182B]/80 backdrop-blur-md shadow py-4 border-b border-gray-400/20 z-50"
       >
         <div className="w-full flex items-center justify-between px-4 md:px-6">
           {/* Left Side - Hamburger Menu (Mobile) / Logo (Desktop) */}
@@ -54,7 +54,7 @@ const Header = () => {
               className="hidden md:flex items-center space-x-2"
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" />
-              <span className="text-xl font-bold text-white">ReFocused</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)]">ReFocused</span>
               <DevTools />
             </motion.div>
           </div>
@@ -66,7 +66,7 @@ const Header = () => {
               className="md:hidden flex items-center space-x-2"
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-8 h-8" />
-              <span className="text-lg font-bold text-white">ReFocused</span>
+              <span className="text-lg font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)]">ReFocused</span>
             </motion.div>
 
             {/* Desktop Navigation - Centered */}
@@ -83,14 +83,14 @@ const Header = () => {
                         href={item.href}
                         className={`relative px-3 py-2 rounded-full transition-all duration-200 ${
                           pathname === item.href 
-                            ? "bg-blue-400/20 text-blue-400 font-medium" 
-                            : "text-gray-300 hover:text-blue-400 hover:bg-blue-400/10"
+                            ? "bg-gradient-to-r from-[#42b9e5]/20 to-[#4f83ed]/20 text-[#42b9e5] font-medium" 
+                            : "text-gray-300 hover:text-[#42b9e5] hover:bg-[#42b9e5]/10"
                         }`}
                       >
                         {pathname === item.href && (
                           <motion.div
                             layoutId="nav-indicator"
-                            className="absolute inset-0 bg-blue-400/20 rounded-full"
+                            className="absolute inset-0 bg-gradient-to-r from-[#42b9e5]/20 to-[#4f83ed]/20 rounded-full"
                             transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
                           />
                         )}
@@ -110,8 +110,6 @@ const Header = () => {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="flex items-center space-x-2 md:space-x-4"
           >
-
-
             {/* Notifications - Hidden on very small screens */}
             <motion.button 
               whileHover={{ scale: 1.1 }}
@@ -119,7 +117,7 @@ const Header = () => {
               aria-label="Notifications"
               className="hidden sm:block"
             >
-              <MdNotifications className="text-xl md:text-2xl text-gray-300 hover:text-blue-400" />
+              <MdNotifications className="text-xl md:text-2xl text-gray-300 hover:text-[#42b9e5]" />
             </motion.button>
             
             {/* Auth Button / Profile */}
@@ -138,7 +136,7 @@ const Header = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -300 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="fixed top-[88px] left-0 right-0 bg-[#10182B]/95 backdrop-blur-md border-b border-gray-400 z-40 md:hidden"
+            className="fixed top-[88px] left-0 right-0 bg-[#10182B]/95 backdrop-blur-md border-b border-gray-400/20 z-40 md:hidden"
           >
             <nav className="px-4 py-6">
               <ul className="space-y-4">
@@ -154,8 +152,8 @@ const Header = () => {
                         onClick={() => setIsMobileMenuOpen(false)}
                         className={`block px-4 py-3 rounded-lg transition-all duration-200 ${
                           pathname === item.href 
-                            ? "bg-blue-400/20 text-blue-400 font-medium border-l-4 border-blue-400" 
-                            : "text-gray-300 hover:text-blue-400 hover:bg-blue-400/10"
+                            ? "bg-gradient-to-r from-[#42b9e5]/20 to-[#4f83ed]/20 text-[#42b9e5] font-medium border-l-4 border-[#42b9e5]" 
+                            : "text-gray-300 hover:text-[#42b9e5] hover:bg-[#42b9e5]/10"
                         }`}
                       >
                         <span className="text-lg">{item.label}</span>
@@ -166,8 +164,8 @@ const Header = () => {
               </ul>
               
               {/* Mobile Notifications */}
-              <div className="mt-6 pt-6 border-t border-gray-600">
-                <button className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all duration-200 w-full">
+              <div className="mt-6 pt-6 border-t border-gray-600/30">
+                <button className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-[#42b9e5] hover:bg-[#42b9e5]/10 rounded-lg transition-all duration-200 w-full">
                   <MdNotifications className="text-xl" />
                   <span className="text-lg">Notifications</span>
                 </button>

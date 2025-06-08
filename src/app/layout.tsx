@@ -1,10 +1,9 @@
 // src/app/layout.tsx
+
 import type { Metadata } from "next";
-import Header from '@/components/Header';
-import Footer from '@/components/footer';
-import AnimatedLayout from '@/components/AnimatedLayout';
 import { inter } from './fonts';
 import '../globals.css';
+import ClientLayoutWrapper from '@/components/ClientLayoutWrapper';
 
 export const metadata: Metadata = {
   title: 'Daily Mantra & Weekly Mindfulness Theme | ReFocused',
@@ -135,14 +134,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen pt-20" suppressHydrationWarning={true}>
-        <Header />
-        <AnimatedLayout>
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
-        </AnimatedLayout>
-        <Footer />
+      <body className="min-h-screen" suppressHydrationWarning={true}>
+        <ClientLayoutWrapper>
+          {children}
+        </ClientLayoutWrapper>
       </body>
     </html>
   );

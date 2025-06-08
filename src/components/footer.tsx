@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Mail, 
   Phone, 
@@ -20,6 +20,12 @@ import {
 const Footer = () => {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [currentDate, setCurrentDate] = useState("");
+
+  useEffect(() => {
+    // Set the date only on the client side
+    setCurrentDate(new Date().toLocaleDateString());
+  }, []);
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,7 +265,7 @@ const Footer = () => {
           <div className="mt-4 pt-4 border-t border-gray-800">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
               <div>
-                <span>Version 1.0.0 • Last updated: {new Date().toLocaleDateString()}</span>
+                <span>Version 1.0.0 • Last updated: {currentDate}</span>
               </div>
               <div className="flex gap-4">
                 <span>🌟 Trusted by 10k+ users</span>

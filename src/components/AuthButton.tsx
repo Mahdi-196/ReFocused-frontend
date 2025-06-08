@@ -72,16 +72,15 @@ const AuthButton = () => {
         <>
           <button 
             onClick={() => router.push('/profile')}
-            className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 border-2 border-gray-600/50 hover:border-gray-500/70 transition-all duration-200 shadow-lg hover:shadow-xl"
+            className="w-10 h-10 rounded-full bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#3590e0] hover:to-[#30b0b1] border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center"
             title="Go to Profile"
           >
             <User size={18} className="text-white" />
           </button>
-
         </>
       ) : (
-        <div className="w-10 h-10 rounded-full bg-gray-700/50 border-2 border-gray-600/50 flex items-center justify-center">
-          <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-10 h-10 rounded-full bg-[#10182B]/80 border-2 border-[#42b9e5]/30 flex items-center justify-center shadow-[0_0_10px_rgba(66,185,229,0.3)]">
+          <div className="w-4 h-4 border-2 border-[#42b9e5] border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
     </div>

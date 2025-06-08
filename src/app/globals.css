@@ -15,6 +15,46 @@
   backface-visibility: hidden;
 }
 
+/* Glow animations */
+@keyframes glow-pulse {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes glow-pulse-delayed {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 4s infinite ease-in-out;
+}
+
+.animate-glow-pulse-delayed {
+  animation: glow-pulse-delayed 5s infinite ease-in-out;
+  animation-delay: 2s;
+}
+
 /* Remove Flip Card Animation - Start */
 /* .flip-card { ... } */
 /* .flip-card-inner { ... } */
