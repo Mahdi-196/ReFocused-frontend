@@ -90,39 +90,39 @@ const QuoteOfTheDay = () => {
       className="lg:col-span-1" 
       aria-labelledby="daily-quote"
     >
-      <article className="bg-white rounded-xl p-8 shadow-sm h-80 flex flex-col justify-between">
+      <article className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-8 h-80 flex flex-col justify-between">
         <div>
           <header className="flex items-center justify-between mb-4">
-            <h2 id="daily-quote" className="text-lg font-semibold text-gray-800">
+            <h2 id="daily-quote" className="text-lg font-semibold text-white">
               💭 Quote of the Day
             </h2>
             <button
               onClick={refreshQuote}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-full hover:bg-gray-700/50 transition-colors"
               aria-label="Get a new inspirational quote"
               title="Refresh Quote"
             >
-              <RefreshCw className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isFading ? 'rotate-180' : ''}`} />
+              <RefreshCw className={`w-4 h-4 text-gray-300 transition-transform duration-300 ${isFading ? 'rotate-180' : ''}`} />
             </button>
           </header>
           
           <div className={`transition-all duration-300 ${isFading ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'}`}>
             <blockquote 
-              className="text-xl italic leading-relaxed text-gray-700 mb-6 flex-grow flex items-center"
+              className="text-xl italic leading-relaxed text-gray-200 mb-6 flex-grow flex items-center"
               cite="Daily Inspiration"
             >
               <span className="text-center w-full">"{quote.text}"</span>
             </blockquote>
             <footer className="text-right">
-              <cite className="text-lg font-medium text-gray-600 not-italic">
+              <cite className="text-lg font-medium text-gray-300 not-italic">
                 — {quote.author}
               </cite>
             </footer>
           </div>
         </div>
         
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-xs text-gray-500 text-center">
+        <div className="mt-4 pt-4 border-t border-gray-600/50">
+          <p className="text-xs text-gray-400 text-center">
             Daily motivation for your productivity journey
           </p>
         </div>

@@ -7,6 +7,7 @@ import { MdNotifications } from "react-icons/md";
 import { Menu, X, User } from "lucide-react";
 import DevTools from "./devTools";
 import AuthButton from "./AuthButton";
+import VolumeIndicator from "./VolumeIndicator";
 import { useState } from "react";
 
 const Header = () => {
@@ -19,6 +20,7 @@ const Header = () => {
     { href: "/study", label: "Study" },
     { href: "/journal", label: "Journal" },
     { href: "/relax", label: "Relax" },
+    { href: "/settings", label: "Settings" },
   ];
 
   const toggleMobileMenu = () => {
@@ -28,9 +30,6 @@ const Header = () => {
   return (
     <>
       <motion.header 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
         className="fixed top-0 left-0 right-0 bg-[#10182B]/80 backdrop-blur-md shadow py-4 border-b border-gray-400 z-50"
       >
         <div className="w-full flex items-center justify-between px-4 md:px-6">
@@ -53,9 +52,6 @@ const Header = () => {
 
             {/* Desktop Logo */}
             <motion.div 
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
               className="hidden md:flex items-center space-x-2"
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" />
@@ -68,9 +64,6 @@ const Header = () => {
           <div className="flex items-center">
             {/* Mobile Logo - Centered */}
             <motion.div 
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
               className="md:hidden flex items-center space-x-2"
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-8 h-8" />
@@ -81,30 +74,31 @@ const Header = () => {
             <nav className="hidden md:block">
               <ul className="flex space-x-6">
                 {navItems.map((item, index) => (
-                  <motion.li 
-                    key={item.href}
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.1 * index }}
-                  >
-                    <Link
-                      href={item.href}
-                      className={`relative px-3 py-2 rounded-full transition-all duration-200 ${
-                        pathname === item.href 
-                          ? "bg-blue-400/20 text-blue-400 font-medium" 
-                          : "text-gray-300 hover:text-blue-400 hover:bg-blue-400/10"
-                      }`}
+                  <li key={item.href}>
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.1 * index }}
                     >
-                      {pathname === item.href && (
-                        <motion.div
-                          layoutId="nav-indicator"
-                          className="absolute inset-0 bg-blue-400/20 rounded-full"
-                          transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
-                        />
-                      )}
-                      <span className="relative z-10">{item.label}</span>
-                    </Link>
-                  </motion.li>
+                      <Link
+                        href={item.href}
+                        className={`relative px-3 py-2 rounded-full transition-all duration-200 ${
+                          pathname === item.href 
+                            ? "bg-blue-400/20 text-blue-400 font-medium" 
+                            : "text-gray-300 hover:text-blue-400 hover:bg-blue-400/10"
+                        }`}
+                      >
+                        {pathname === item.href && (
+                          <motion.div
+                            layoutId="nav-indicator"
+                            className="absolute inset-0 bg-blue-400/20 rounded-full"
+                            transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
+                          />
+                        )}
+                        <span className="relative z-10">{item.label}</span>
+                      </Link>
+                    </motion.div>
+                  </li>
                 ))}
               </ul>
             </nav>
@@ -117,6 +111,11 @@ const Header = () => {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="flex items-center space-x-2 md:space-x-4"
           >
+            {/* Volume Indicator - Hidden on very small screens */}
+            <div className="hidden sm:block">
+              <VolumeIndicator size="sm" />
+            </div>
+
             {/* Notifications - Hidden on very small screens */}
             <motion.button 
               whileHover={{ scale: 1.1 }}
@@ -148,24 +147,25 @@ const Header = () => {
             <nav className="px-4 py-6">
               <ul className="space-y-4">
                 {navItems.map((item, index) => (
-                  <motion.li 
-                    key={item.href}
-                    initial={{ opacity: 0, x: -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2, delay: 0.1 * index }}
-                  >
-                    <Link
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`block px-4 py-3 rounded-lg transition-all duration-200 ${
-                        pathname === item.href 
-                          ? "bg-blue-400/20 text-blue-400 font-medium border-l-4 border-blue-400" 
-                          : "text-gray-300 hover:text-blue-400 hover:bg-blue-400/10"
-                      }`}
+                  <li key={item.href}>
+                    <motion.div
+                      initial={{ opacity: 0, x: -50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: 0.1 * index }}
                     >
-                      <span className="text-lg">{item.label}</span>
-                    </Link>
-                  </motion.li>
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`block px-4 py-3 rounded-lg transition-all duration-200 ${
+                          pathname === item.href 
+                            ? "bg-blue-400/20 text-blue-400 font-medium border-l-4 border-blue-400" 
+                            : "text-gray-300 hover:text-blue-400 hover:bg-blue-400/10"
+                        }`}
+                      >
+                        <span className="text-lg">{item.label}</span>
+                      </Link>
+                    </motion.div>
+                  </li>
                 ))}
               </ul>
               

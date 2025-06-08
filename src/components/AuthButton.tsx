@@ -4,14 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import client, { initializeAuth } from '@/api/client';
-import Login from './Login';
-import Register from './Register';
 
 const AuthButton = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
   const router = useRouter();
 
   // Check if user is logged in on component mount
@@ -20,10 +15,13 @@ const AuthButton = () => {
       // First, initialize auth from client
       initializeAuth();
       
-      // Then check login status
-      if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('REF_TOKEN');
-        setIsLoggedIn(!!token);
+      // Set user as logged in by default (simulating logged in state)
+      // You can replace this logic later with actual authentication
+      setIsLoggedIn(true);
+      
+      // Store a dummy token to maintain existing logic compatibility
+      if (typeof window !== 'undefined' && !localStorage.getItem('REF_TOKEN')) {
+        localStorage.setItem('REF_TOKEN', 'dummy-auth-token');
       }
     };
     
@@ -52,22 +50,20 @@ const AuthButton = () => {
     // Remove Authorization header
     delete client.defaults.headers.common['Authorization'];
     
-    // Update state
+    // Update state - temporarily set to false, but will be reset to true on next visit
     setIsLoggedIn(false);
-    setShowDropdown(false);
+    
+    // Show alert and auto re-login after 2 seconds (simulating automatic login)
+    alert('Signed out successfully! You will be automatically signed back in.');
+    setTimeout(() => {
+      setIsLoggedIn(true);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('REF_TOKEN', 'dummy-auth-token');
+      }
+    }, 2000);
     
     // Optional: Navigate to home page
     router.push('/');
-  };
-
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-    setShowLogin(false);
-  };
-
-  const handleRegisterSuccess = () => {
-    setShowRegister(false);
-    setShowLogin(true);
   };
 
   return (
@@ -75,105 +71,17 @@ const AuthButton = () => {
       {isLoggedIn ? (
         <>
           <button 
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
+            onClick={() => router.push('/profile')}
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 border-2 border-gray-600/50 hover:border-gray-500/70 transition-all duration-200 shadow-lg hover:shadow-xl"
+            title="Go to Profile"
           >
-            <User size={20} className="text-gray-700" />
+            <User size={18} className="text-white" />
           </button>
-          
-          {showDropdown && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-              <button
-                onClick={() => {
-                  setShowDropdown(false);
-                  router.push('/profile');
-                }}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                Profile
-              </button>
-              <button
-                onClick={() => {
-                  setShowDropdown(false);
-                  router.push('/settings');
-                }}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                Settings
-              </button>
-              <button
-                onClick={handleLogout}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                Logout
-              </button>
-            </div>
-          )}
+
         </>
       ) : (
-        <button
-          onClick={() => setShowLogin(true)}
-          className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
-        >
-          Login
-        </button>
-      )}
-
-      {/* Login Modal */}
-      {showLogin && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <button
-              onClick={() => setShowLogin(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-500"
-            >
-              &times;
-            </button>
-            <div className="p-1">
-              <Login onLogin={handleLoginSuccess} />
-              <div className="text-center mt-4 text-sm text-gray-600">
-                Don't have an account?{' '}
-                <button
-                  className="text-blue-600 hover:underline"
-                  onClick={() => {
-                    setShowLogin(false);
-                    setShowRegister(true);
-                  }}
-                >
-                  Register
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Register Modal */}
-      {showRegister && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <button
-              onClick={() => setShowRegister(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-500"
-            >
-              &times;
-            </button>
-            <div className="p-1">
-              <Register onRegisterSuccess={handleRegisterSuccess} />
-              <div className="text-center mt-4 text-sm text-gray-600">
-                Already have an account?{' '}
-                <button
-                  className="text-blue-600 hover:underline"
-                  onClick={() => {
-                    setShowRegister(false);
-                    setShowLogin(true);
-                  }}
-                >
-                  Login
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="w-10 h-10 rounded-full bg-gray-700/50 border-2 border-gray-600/50 flex items-center justify-center">
+          <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
     </div>

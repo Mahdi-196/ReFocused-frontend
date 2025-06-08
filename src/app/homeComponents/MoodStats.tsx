@@ -3,23 +3,23 @@
 const MoodStats = () => (
   <div className="space-y-3">
     <div className="flex justify-between items-center">
-      <span className="text-gray-600">Mood</span>
+      <span className="text-gray-300">Mood</span>
       <div className="flex items-center gap-2">
-        <span>8/10</span>
+        <span className="text-gray-200 font-medium">8/10</span>
         <span>😊</span>
       </div>
     </div>
     <div className="flex justify-between items-center">
-      <span className="text-gray-600">Stress</span>
+      <span className="text-gray-300">Stress</span>
       <div className="flex items-center gap-2">
-        <span>3/10</span>
+        <span className="text-gray-200 font-medium">3/10</span>
         <span>😌</span>
       </div>
     </div>
     <div className="flex justify-between items-center">
-      <span className="text-gray-600">Focus</span>
+      <span className="text-gray-300">Focus</span>
       <div className="flex items-center gap-2">
-        <span>7/10</span>
+        <span className="text-gray-200 font-medium">7/10</span>
         <span>💫</span>
       </div>
     </div>

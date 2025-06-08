@@ -1,6 +1,7 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
 import Header from '@/components/Header';
+import Footer from '@/components/footer';
 import AnimatedLayout from '@/components/AnimatedLayout';
 import { inter } from './fonts';
 import '../globals.css';
@@ -141,6 +142,7 @@ export default function RootLayout({
             {children}
           </main>
         </AnimatedLayout>
+        <Footer />
       </body>
     </html>
   );

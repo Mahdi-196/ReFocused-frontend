@@ -325,7 +325,7 @@ const mockDayData: MockData = {
   }
 };
 
-type TabType = 'Summary' | 'Mood' | 'Habits';
+type TabType = 'Summary';
 
 type SimpleFilter = 'all' | 'active' | 'inactive';
 
@@ -507,6 +507,14 @@ export default function TrackPage() {
 
   const getRatingColor = (rating: number) => {
     if (rating >= 9) return 'bg-green-600';
+    if (rating >= 7) return 'bg-green-500';
+    if (rating >= 5) return 'bg-yellow-400';
+    if (rating >= 3) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
+
+  const getRatingBarColor = (rating: number) => {
+    if (rating >= 9) return 'bg-green-500';
     if (rating >= 7) return 'bg-green-500';
     if (rating >= 5) return 'bg-yellow-400';
     if (rating >= 3) return 'bg-orange-500';
@@ -698,107 +706,104 @@ export default function TrackPage() {
     });
 
     const renderTabContent = () => {
-      switch (activeTab) {
-        case 'Summary':
-          return (
-            <div className="flex flex-col gap-6">
-              <div>
-                <div className="font-medium text-white mb-2">Day Rating:</div>
-                <div className={`inline-flex items-center px-3 py-1 rounded-full text-white font-medium ${getRatingColor(data.dayRating)}`}>
-                  {data.dayRating}/10
-                </div>
+      return (
+        <div className="flex flex-col gap-6">
+          {/* Day Rating */}
+          <div className="bg-gray-700/50 rounded-lg p-4">
+            <div className="font-medium text-white mb-3">Day Rating:</div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-3 bg-gray-600 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-300 ${getRatingBarColor(data.dayRating)}`}
+                  style={{ width: `${(data.dayRating / 10) * 100}%` }}
+                />
               </div>
-
-              <div>
-                <div className="font-medium text-white mb-3">Mood:</div>
-                <div className="flex flex-col gap-2">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.happiness)}`}>
-                    Happy: {data.mood.happiness}/5
-                  </span>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.satisfaction)}`}>
-                    Satisfied: {data.mood.satisfaction}/5
-                  </span>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.stress, 'stress')}`}>
-                    Stress: {data.mood.stress}/5
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <div className="font-medium text-white mb-2">Habits:</div>
-                <div className="text-gray-300">
-                  {data.habits.filter(h => h.completed).length}/{data.habits.length} completed
-                </div>
+              <div className={`px-3 py-1 rounded-full text-white font-medium text-sm ${getRatingColor(data.dayRating)}`}>
+                {data.dayRating}/10
               </div>
             </div>
-          );
-        
-        case 'Mood':
-          return (
-            <div className="space-y-6">
+          </div>
+
+          {/* Mood */}
+          <div className="bg-gray-700/50 rounded-lg p-4">
+            <div className="font-medium text-white mb-3">Mood:</div>
+            <div className="space-y-3">
+              {/* Happy */}
               <div>
-                <div className="font-medium text-white mb-2">Happiness</div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-gray-300 text-sm">Happy:</span>
+                  <span className="text-white text-sm font-medium">{data.mood.happiness}/5</span>
+                </div>
+                <div className="flex items-center gap-3">
                   <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full bg-blue-500 transition-all duration-300`}
+                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.mood.happiness, 'happiness').replace('bg-', 'bg-')}`}
                       style={{ width: `${(data.mood.happiness / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.happiness)}`}>
-                    {data.mood.happiness}/5
-                  </div>
                 </div>
               </div>
-
+              
+              {/* Satisfied */}
               <div>
-                <div className="font-medium text-white mb-2">Satisfaction</div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-gray-300 text-sm">Satisfied:</span>
+                  <span className="text-white text-sm font-medium">{data.mood.satisfaction}/5</span>
+                </div>
+                <div className="flex items-center gap-3">
                   <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full bg-green-500 transition-all duration-300`}
+                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.mood.satisfaction, 'satisfaction').replace('bg-', 'bg-')}`}
                       style={{ width: `${(data.mood.satisfaction / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.satisfaction)}`}>
-                    {data.mood.satisfaction}/5
-                  </div>
                 </div>
               </div>
-
+              
+              {/* Stress */}
               <div>
-                <div className="font-medium text-white mb-2">Stress</div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-gray-300 text-sm">Stress:</span>
+                  <span className="text-white text-sm font-medium">{data.mood.stress}/5</span>
+                </div>
+                <div className="flex items-center gap-3">
                   <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full bg-red-500 transition-all duration-300`}
+                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.mood.stress, 'stress').replace('bg-', 'bg-')}`}
                       style={{ width: `${(data.mood.stress / 5) * 100}%` }}
                     />
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-white font-medium ${getMoodBadgeColor(data.mood.stress, 'stress')}`}>
-                    {data.mood.stress}/5
-                  </div>
                 </div>
               </div>
             </div>
-          );
+          </div>
 
-        case 'Habits':
-          return (
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+          {/* Habits */}
+          <div className="bg-gray-700/50 rounded-lg p-4">
+            <div className="font-medium text-white mb-3">Habits:</div>
+            <div className="flex items-center justify-between mb-3 p-2 bg-gray-600/50 rounded">
+              <span className="text-gray-300 text-sm">Progress:</span>
+              <span className="text-white font-medium">
+                {data.habits.filter(h => h.completed).length}/{data.habits.length} completed
+              </span>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
               {data.habits.map((habit, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-white">{habit.name}</span>
-                  <span className={`px-3 py-1 rounded-full text-white font-medium ${
-                    habit.completed ? 'bg-green-500' : 'bg-red-500'
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-600/30 rounded-lg hover:bg-gray-600/50 transition-colors">
+                  <span className="text-white text-sm flex-1">{habit.name}</span>
+                  <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                    habit.completed 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-red-500/80 text-white'
                   }`}>
-                    {habit.completed ? 'Completed' : 'Missed'}
-                  </span>
+                    {habit.completed ? '✓' : '✗'}
+                  </div>
                 </div>
               ))}
             </div>
-          );
-      }
+          </div>
+        </div>
+      );
     };
 
     return (
@@ -809,19 +814,7 @@ export default function TrackPage() {
           <>
             <h3 className="text-lg font-medium text-white mb-4">{formattedDate}</h3>
             
-            <div className="flex flex-col gap-1 mb-4 bg-gray-700 rounded-lg p-1">
-              {(['Summary', 'Mood', 'Habits'] as TabType[]).map((tab) => (
-                <div
-                  key={tab}
-                  className={`text-center py-2 rounded cursor-pointer transition-colors text-sm ${
-                    activeTab === tab ? 'bg-gray-600 text-white font-medium shadow-sm' : 'text-gray-300 hover:text-white'
-                  }`}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {tab}
-                </div>
-              ))}
-            </div>
+
 
             <div className="text-gray-300 text-sm">
               {renderTabContent()}
@@ -954,14 +947,14 @@ export default function TrackPage() {
                 }}
               />
               <button 
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors active:scale-95 transform transition-all duration-75"
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transform transition-all duration-75"
                 onClick={handleAddHabit}
               >
                 Add
               </button>
               <button
                 onClick={cycleFilter}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors active:scale-95 transform transition-all duration-75 ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg active:scale-95 transform transition-all duration-75 ${
                   simpleFilter === 'all' 
                     ? 'text-gray-300 hover:text-white hover:bg-gray-600' 
                     : 'text-blue-300 bg-blue-500/20 hover:bg-blue-500/30'
@@ -1028,57 +1021,7 @@ export default function TrackPage() {
         <NumberMood />
           </section>
 
-        {/* Rate Your Day Section */}
-        <section className="mb-8">
-          <div 
-            className="rounded-lg p-6 shadow-md"
-            style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
-          >
-            <h2 className="text-2xl text-white mb-4">Rate Your Day</h2>
-            <div 
-              className="p-6 rounded-lg shadow-sm"
-              style={{ background: "linear-gradient(135deg, #374151 0%, #2D3748 100%)" }}
-            >
-              <h3 className="text-lg font-medium mb-2 text-white text-center">Overall Day Rating</h3>
-              <p className="text-gray-300 mb-4 text-center">How would you rate your overall day on a scale of 1-10?</p>
-              <input 
-                type="range" 
-                className="w-full my-4" 
-                min="1" 
-                max="10" 
-                defaultValue="5" 
-                onChange={(e) => {
-                  const rating = parseInt(e.target.value);
-                  const ratingElement = e.target.nextElementSibling?.nextElementSibling;
-                  if (ratingElement) {
-                    ratingElement.setAttribute('data-rating', rating.toString());
-                    ratingElement.textContent = `${rating}/10`;
-                    // Update the rating element's style
-                    const ratingStyle = getRatingStyle(rating);
-                    Object.assign(ratingElement.style, ratingStyle);
-                  }
-                }}
-              />
-              <div className="flex justify-between text-gray-300 mt-2">
-                <span>1</span>
-                <span>5</span>
-                <span>10</span>
-              </div>
-              <div 
-                className="text-center py-2 rounded mt-4 text-white font-medium transition-colors duration-300 relative overflow-hidden"
-                style={getRatingStyle(5)}
-              >
-                <div 
-                  className="absolute inset-0 rounded opacity-20 pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
-                  }}
-                />
-                <span className="relative z-10">5/10</span>
-              </div>
-            </div>
-          </div>
-        </section>
+
 
         {/* Calendar Section */}
           <section className="mb-8">

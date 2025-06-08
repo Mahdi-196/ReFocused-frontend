@@ -29,9 +29,9 @@ const TaskList: React.FC<TaskListProps> = ({
   return (
     <div className="mt-6">
       <div className="flex items-center gap-2 mb-3">
-        <span className="font-medium text-gray-700">✅ Today's Tasks</span>
+        <span className="font-medium text-gray-300">✅ Today's Tasks</span>
       </div>
-      <div className="bg-white rounded-lg p-4">
+      <div className="bg-gray-700/30 border border-gray-600/50 rounded-lg p-4">
         <ul className="space-y-2 mb-3">
           {tasks.map(task => (
             <li key={task.id} className="group relative flex items-center justify-between gap-2 pr-8">
@@ -47,15 +47,15 @@ const TaskList: React.FC<TaskListProps> = ({
                       )
                     );
                   }}
-                  className="flex-shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="flex-shrink-0 rounded border-gray-500 text-blue-500 focus:ring-blue-500 bg-gray-600"
                 />
-                <span className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                <span className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-200'}`}>
                   {task.text}
                 </span>
               </div>
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-gray-100"
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-gray-600/50"
                 aria-label="Delete task"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -71,12 +71,12 @@ const TaskList: React.FC<TaskListProps> = ({
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
             placeholder={tasks.length >= 3 ? "Task limit reached" : "Add a new task..."}
-            className="flex-grow p-2 bg-white rounded-md border border-gray-200 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="flex-grow p-2 bg-gray-600/50 border border-gray-500/50 rounded-md text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:bg-gray-700/50 disabled:cursor-not-allowed disabled:text-gray-500"
             disabled={tasks.length >= 3}
           />
           <button
             type="submit"
-            className="p-2 bg-gray-900 text-white rounded-md hover:bg-gray-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
             disabled={tasks.length >= 3 || !newTask.trim()}
           >
             +

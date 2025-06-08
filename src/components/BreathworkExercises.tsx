@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain, ChevronRight, X } from 'lucide-react';
 import BoxBreathing from './breathing/BoxBreathing';
 import StarBreathing from './breathing/StarBreathing';
@@ -78,15 +79,7 @@ const BREATHING_TECHNIQUES: Technique[] = [
     durationSec: 240, // 4 min
     category: 'breathing'
   },
-  {
-    key: 'belly',
-    label: 'Belly Breathing',
-    description: '3 min diaphragm-engaging "Workout"',
-    icon: <Activity className="w-5 h-5" />,
-    pattern: 'Focus on belly movement',
-    durationSec: 180, // 3 min
-    category: 'breathing'
-  },
+
   {
     key: 'extended-exhale',
     label: 'Extended Exhale',
@@ -284,51 +277,51 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
           </div>
 
           {/* Breathing Techniques Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
             {techniques
               .filter(t => t.category === 'breathing')
               .map((technique) => (
                 <div
                   key={technique.key}
-                  className={`group p-4 rounded-2xl border-2 transition-all duration-200 hover:border-blue-400/50 hover:shadow-xl hover:scale-[1.01] ${
+                  className={`group p-4 rounded-2xl border-2 transition-all duration-200 hover:border-blue-400/50 hover:shadow-xl hover:scale-[1.02] ${
                     selectedTechnique?.key === technique.key
                       ? 'border-blue-400 shadow-xl scale-[1.02] bg-blue-900/20'
-                      : 'border-gray-600/50'
+                      : 'border-gray-600/50 bg-gray-800/20'
                   }`}
                 >
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0 ${
                           selectedTechnique?.key === technique.key
                             ? 'bg-blue-500 text-white'
                             : 'bg-gray-700/50 text-gray-300 group-hover:bg-blue-600/30 group-hover:text-blue-300'
                         }`}>
                           {technique.icon}
                         </div>
-                        <h3 className="font-semibold text-white group-hover:text-blue-200">
+                        <h3 className="font-semibold text-white group-hover:text-blue-200 text-sm leading-tight">
                           {technique.label}
                         </h3>
                       </div>
                       <button
                         onClick={() => openFocusedSession(technique)}
-                        className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors opacity-0 group-hover:opacity-100"
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
                         aria-label={`Start focused ${technique.label} session`}
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
-                    <p className="text-sm text-gray-300 line-clamp-2">
+                    <p className="text-xs text-gray-300 line-clamp-2 leading-relaxed">
                       {technique.description}
                     </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <div className="flex items-center justify-between text-xs text-gray-400">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {Math.round(technique.durationSec / 60)} min
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Activity className="w-3 h-3" />
-                        {technique.pattern.split(',')[0]}
+                      <span className="flex items-center gap-1 truncate ml-2">
+                        <Activity className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{technique.pattern.split(',')[0]}</span>
                       </span>
                     </div>
                   </div>
@@ -430,7 +423,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
         </div>
 
         {/* Focused Breathing Session Modal */}
-        {isModalOpen && modalTechnique && (
+        {isModalOpen && modalTechnique && typeof window !== 'undefined' && createPortal(
           <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-50 p-4">
             <div className="bg-gradient-to-br from-gray-900/95 to-slate-900/95 backdrop-blur-sm border border-gray-700/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl">
               {/* Close Button */}
@@ -589,7 +582,8 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

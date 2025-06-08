@@ -26,20 +26,20 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
     className="lg:col-span-2" 
     aria-labelledby="daily-momentum"
   >
-    <div className="bg-blue-50 rounded-xl p-6 shadow-sm">
-      <h2 id="daily-momentum" className="flex items-center gap-2 mb-6 text-xl font-semibold text-gray-800">
+    <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
+      <h2 id="daily-momentum" className="flex items-center gap-2 mb-6 text-xl font-semibold text-white">
         🎯 Daily Momentum
       </h2>
 
       <div className="mb-6">
-        <label htmlFor="daily-goal" className="flex items-center gap-2 mb-2 font-medium text-gray-700">
+        <label htmlFor="daily-goal" className="flex items-center gap-2 mb-2 font-medium text-gray-300">
           Today's Focus Goal
         </label>
         <input
           id="daily-goal"
           type="text"
           placeholder="Set your main goal for today..."
-          className="w-full p-2 bg-transparent text-lg font-semibold text-gray-800 placeholder-gray-500 focus:outline-none focus:border-b-2 focus:border-blue-300"
+          className="w-full p-2 bg-transparent text-lg font-semibold text-white placeholder-gray-400 focus:outline-none focus:border-b-2 focus:border-blue-400"
           aria-label="Enter your daily mantra or focus goal"
         />
       </div>
