@@ -1,13 +1,39 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
-import DailyMomentum from './homeComponents/DailyMomentum';
-import QuoteOfTheDay from './homeComponents/QuickAccess';
-import WordOfTheDay from './homeComponents/WordOfTheDay';
-import GoalTracker from './homeComponents/GoalTracker';
-import MindFuel from './homeComponents/MindFuel';
-import ProductivityScore from './homeComponents/ProductivityScore';
+
+// Dynamically import heavy components
+const DailyMomentum = dynamic(() => import('./homeComponents/DailyMomentum'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>
+});
+
+const QuoteOfTheDay = dynamic(() => import('./homeComponents/QuickAccess'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 h-24 rounded-lg"></div>
+});
+
+const WordOfTheDay = dynamic(() => import('./homeComponents/WordOfTheDay'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 h-24 rounded-lg"></div>
+});
+
+const GoalTracker = dynamic(() => import('./homeComponents/GoalTracker'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 h-48 rounded-lg"></div>
+});
+
+const MindFuel = dynamic(() => import('./homeComponents/MindFuel'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>
+});
+
+const ProductivityScore = dynamic(() => import('./homeComponents/ProductivityScore'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>
+});
 import { Task } from './homeComponents/TaskList';
 import client from '@/api/client';
 import { Goal, UIGoal, GoalView, goalToUIGoal, CreateGoalRequest, UpdateGoalRequest } from '@/types/goal';

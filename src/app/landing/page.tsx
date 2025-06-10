@@ -124,24 +124,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Enhanced organic glowing background */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] max-w-[1200px] aspect-square pointer-events-none">
-          {/* Base large glow */}
-          <div className="absolute inset-0 rounded-[40%_60%_70%_30%/40%_50%_60%_50%] bg-gradient-to-r from-[#42b9e5]/20 to-[#4f83ed]/20 blur-[150px] opacity-50 animate-glow-pulse-delayed"></div>
-          
-          {/* Offset middle glow */}
-          <div className="absolute inset-[8%_12%_10%_15%] rounded-[50%_50%_40%_60%/50%_40%_60%_40%] bg-gradient-to-tr from-[#42b9e5]/25 to-[#4f83ed]/25 blur-[130px] opacity-50 animate-glow-pulse"></div>
-          
-          {/* Smaller asymmetric glow */}
-          <div className="absolute inset-[22%_28%_25%_20%] rounded-[60%_40%_30%_70%/60%_30%_70%_40%] bg-gradient-to-br from-[#42b9e5]/30 to-[#4f83ed]/30 blur-[100px] opacity-50 animate-glow-pulse-delayed"></div>
-          
-          {/* Core glow with slight offset */}
-          <div className="absolute inset-[38%_42%_40%_37%] rounded-[40%_60%_50%_50%/45%_50%_55%_50%] bg-gradient-to-r from-[#42b9e5]/40 to-[#4f83ed]/30 blur-[70px] opacity-60 animate-glow-pulse"></div>
-          
-          {/* Additional accent glows */}
-          <div className="absolute top-[30%] left-[35%] w-[30%] h-[25%] rounded-full bg-[#35bfc0]/20 blur-[100px] opacity-40 animate-float"></div>
-          <div className="absolute bottom-[35%] right-[30%] w-[25%] h-[30%] rounded-full bg-[#2e7fd8]/20 blur-[90px] opacity-30 animate-float-delayed"></div>
-        </div>
+       
 
         <div className="container mx-auto text-center relative z-10 py-8 px-4">
           <motion.div
@@ -169,7 +152,7 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(66,185,229,0.3)]">ReFocused</span>
+            <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">ReFocused</span>
           </motion.h1>
           
           <motion.h2
@@ -179,7 +162,7 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <span className="text-white">Transform Your</span><br />
-            <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(66,185,229,0.3)]">Productivity</span>
+            <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">Productivity</span>
           </motion.h2>
           
           <motion.p
@@ -201,8 +184,8 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.5 }}
           >
             <div className="p-4 flex items-start">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4 shadow-[0_0_10px_rgba(66,185,229,0.2)]">
-                <FaBrain className="w-6 h-6 text-[#42b9e5] drop-shadow-[0_0_3px_rgba(66,185,229,0.5)]" />
+              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4">
+                <FaBrain className="w-6 h-6 text-[#42b9e5]" />
               </div>
               <div className="text-left">
                 <h3 className="text-white font-semibold mb-1">Smart Productivity</h3>
@@ -212,7 +195,7 @@ export default function LandingPage() {
             
             <div className="p-4 flex items-start">
               <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4 shadow-[0_0_10px_rgba(66,185,229,0.2)]">
-                <FiAward className="w-6 h-6 text-[#42b9e5] drop-shadow-[0_0_3px_rgba(66,185,229,0.5)]" />
+                <FiAward className="w-6 h-6 text-[#42b9e5]" />
               </div>
               <div className="text-left">
                 <h3 className="text-white font-semibold mb-1">Research-Backed</h3>
@@ -227,7 +210,7 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            <Link href="/app" className="relative text-white bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#2a75c8] hover:to-[#30b0b1] focus:ring-4 focus:ring-blue-300/50 font-medium rounded-lg text-lg px-12 py-4 flex items-center justify-center transition duration-300 ease-in-out shadow-[0_0_15px_rgba(66,185,229,0.5)] hover:shadow-[0_0_25px_rgba(66,185,229,0.7)] border border-[#42b9e5]/30">
+            <Link href="/app" className="relative text-white bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#2a75c8] hover:to-[#30b0b1] focus:ring-4 focus:ring-blue-300/50 font-medium rounded-lg text-lg px-12 py-4 flex items-center justify-center transition duration-300 ease-in-out border border-[#42b9e5]/30">
               <motion.span
                 whileHover={{ x: 5 }}
                 className="flex items-center"
@@ -431,7 +414,7 @@ export default function LandingPage() {
              transition={{ duration: 0.5, delay: 0.2 }}
              viewport={{ once: true }}
            >
-             <span className="bg-gradient-to-r from-[#2dd4bf] to-[#14b8a6] bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(20,184,166,0.3)]">ReFocused AI</span>
+             <span className="bg-gradient-to-r from-[#2dd4bf] to-[#14b8a6] bg-clip-text text-transparent">ReFocused AI</span>
            </motion.h2>
           
           <motion.p

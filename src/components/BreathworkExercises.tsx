@@ -3,16 +3,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain, ChevronRight, X } from 'lucide-react';
-import BoxBreathing from './breathing/BoxBreathing';
-import StarBreathing from './breathing/StarBreathing';
-import LazyEightBreathing from './breathing/LazyEightBreathing';
-import BreatheThroughAnxiety from './breathing/BreatheThroughAnxiety';
-import BreatheInRelaxation from './breathing/BreatheInRelaxation';
-import AlternateNostrilBreathing from './breathing/AlternateNostrilBreathing';
-import BellyBreathing from './breathing/BellyBreathing';
-import ExtendedExhaleBreathing from './breathing/ExtendedExhaleBreathing';
-import DeepBreathing from './breathing/DeepBreathing';
-import FiveBreathCounting from './breathing/FiveBreathCounting';
+import {
+  BoxBreathing,
+  StarBreathing,
+  LazyEightBreathing,
+  BreatheThroughAnxiety,
+  BreatheInRelaxation,
+  AlternateNostrilBreathing,
+  BellyBreathing,
+  ExtendedExhaleBreathing,
+  DeepBreathing,
+  FiveBreathCounting
+} from './LazyBreathingComponents';
 
 export interface Technique {
   key: string;

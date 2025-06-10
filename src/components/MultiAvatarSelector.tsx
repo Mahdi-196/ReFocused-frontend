@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shuffle, Check, X, Zap, Palette, Robot } from 'lucide-react';
+import { Shuffle, Check, X, Zap, Palette, Bot } from 'lucide-react';
 
 interface MultiAvatarSelectorProps {
   isOpen: boolean;
@@ -43,7 +43,7 @@ const MultiAvatarSelector = ({ isOpen, onClose, onSelect, currentAvatar, userNam
     {
       id: 'robohash',
       name: 'RoboHash',
-      icon: <Robot size={16} />,
+      icon: <Bot size={16} />,
       description: 'Robots & monsters',
       styles: [
         { id: 'robots', name: 'Robots' },
