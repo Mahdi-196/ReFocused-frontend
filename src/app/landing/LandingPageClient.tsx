@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from 'react-icons/fi';
 import { FaBrain, FaRobot } from 'react-icons/fa';
 import SimpleFooter from '@/components/SimpleFooter';
-import LoginModal from '@/components/LoginModal';
 
 // Type for orb configuration
 type Orb = {
@@ -21,7 +20,6 @@ export default function LandingPageClient() {
   // State for orbs
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   
   // Ensure client-side only execution
   useEffect(() => {
@@ -43,19 +41,6 @@ export default function LandingPageClient() {
     
     setOrbs(generatedOrbs);
   }, [isMounted]);
-
-  const handleStartWithReFocused = () => {
-    setIsLoginModalOpen(true);
-  };
-
-  const handleCloseLoginModal = () => {
-    setIsLoginModalOpen(false);
-  };
-
-  const handleLoginSuccess = () => {
-    // Redirect to app after successful login
-    window.location.href = '/app';
-  };
 
   return (
     <div className="overflow-hidden">
@@ -130,12 +115,12 @@ export default function LandingPageClient() {
           
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-20 mb-8">
-            <button 
-              onClick={handleStartWithReFocused}
+            <Link 
+              href="/app"
               className="px-8 py-4 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 min-h-[56px] flex items-center justify-center"
             >
               Start with ReFocused
-            </button>
+            </Link>
             <Link 
               href="#features"
               className="px-8 py-4 border-2 border-[#42b9e5] text-[#42b9e5] font-semibold rounded-xl hover:bg-[#42b9e5] hover:text-white transition-all duration-300 min-h-[56px] flex items-center justify-center"
@@ -312,28 +297,21 @@ export default function LandingPageClient() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={handleStartWithReFocused}
+            <Link 
+              href="/app"
               className="px-8 py-4 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 min-h-[56px] flex items-center justify-center"
             >
               Sign In to ReFocused
-            </button>
-            <button 
-              onClick={handleStartWithReFocused}
+            </Link>
+            <Link 
+              href="/app"
               className="px-8 py-4 border-2 border-[#42b9e5] text-[#42b9e5] font-semibold rounded-xl hover:bg-[#42b9e5] hover:text-white transition-all duration-300 min-h-[56px] flex items-center justify-center"
             >
               Join ReFocused✨
-            </button>
+            </Link>
           </div>
         </div>
       </section>
-
-      {/* Login Modal */}
-      <LoginModal 
-        isOpen={isLoginModalOpen}
-        onClose={handleCloseLoginModal}
-        onLoginSuccess={handleLoginSuccess}
-      />
 
       <SimpleFooter />
     </div>
