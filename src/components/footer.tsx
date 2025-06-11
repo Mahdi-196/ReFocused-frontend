@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { 
   Mail, 
@@ -76,15 +75,13 @@ const Footer = () => {
       {/* Back to Top Button */}
       <div className="container mx-auto px-4 py-2">
         <div className="flex justify-end">
-          <motion.button
+          <button
             onClick={scrollToTop}
-            className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-blue-400 transition-colors"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-blue-400 transition-colors hover:scale-105"
           >
             <ArrowUp className="w-4 h-4" />
             <span className="text-sm">Back to top</span>
-          </motion.button>
+          </button>
         </div>
       </div>
 
@@ -93,15 +90,10 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-1">
-            <motion.div 
-              className="flex items-center space-x-2 mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
+            <div className="flex items-center space-x-2 mb-4">
               <img src="/favicon.svg" alt="ReFocused Logo" className="w-8 h-8" />
               <span className="text-xl font-bold text-white">ReFocused</span>
-            </motion.div>
+            </div>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">
               Your comprehensive platform for mindfulness, productivity, and personal growth. 
               Track your progress, build healthy habits, and achieve your goals with ReFocused.
@@ -128,20 +120,15 @@ const Footer = () => {
           <div>
             <h3 className="text-white font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              {quickLinks.map((link, index) => (
-                <motion.li 
-                  key={link.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                >
+              {quickLinks.map((link) => (
+                <li key={link.name}>
                   <Link 
                     href={link.href}
                     className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
                   >
                     {link.name}
                   </Link>
-                </motion.li>
+                </li>
               ))}
             </ul>
           </div>
@@ -150,20 +137,15 @@ const Footer = () => {
           <div>
             <h3 className="text-white font-semibold mb-4">Support</h3>
             <ul className="space-y-2">
-              {supportLinks.map((link, index) => (
-                <motion.li 
-                  key={link.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                >
+              {supportLinks.map((link) => (
+                <li key={link.name}>
                   <Link 
                     href={link.href}
                     className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
                   >
                     {link.name}
                   </Link>
-                </motion.li>
+                </li>
               ))}
             </ul>
           </div>
@@ -185,71 +167,51 @@ const Footer = () => {
                   className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                   disabled={subscribed}
                 />
-                <motion.button
+                <button
                   type="submit"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors hover:scale-110"
                   disabled={subscribed}
                 >
                   <Send className="w-4 h-4" />
-                </motion.button>
+                </button>
               </div>
               
               {subscribed && (
-                <motion.p 
-                  className="text-green-400 text-sm"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  ✓ Thank you for subscribing!
-                </motion.p>
+                <p className="text-green-400 text-sm">
+                  ✓ Successfully subscribed! Thank you.
+                </p>
               )}
             </form>
 
-            {/* Social Media */}
+            {/* Social Links */}
             <div className="mt-6">
-              <h4 className="text-white font-medium mb-3">Follow Us</h4>
-              <div className="flex gap-3">
-                {socialLinks.map((social, index) => {
+              <h4 className="text-white text-sm font-medium mb-3">Follow Us</h4>
+              <div className="flex space-x-3">
+                {socialLinks.map((social) => {
                   const IconComponent = social.icon;
                   return (
-                    <motion.a
+                    <a
                       key={social.name}
                       href={social.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-blue-600 transition-all"
-                      whileHover={{ scale: 1.1, y: -2 }}
-                      whileTap={{ scale: 0.95 }}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="text-gray-400 hover:text-blue-400 transition-colors"
+                      aria-label={social.name}
                     >
-                      <IconComponent className="w-4 h-4" />
-                    </motion.a>
+                      <IconComponent className="w-5 h-5" />
+                    </a>
                   );
                 })}
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Bar */}
-      <div className="border-t border-gray-800">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            {/* Copyright */}
-            <div className="flex items-center gap-2 text-gray-400 text-sm">
-              <span>© 2024 ReFocused. Made with</span>
-              <Heart className="w-4 h-4 text-red-400" />
-              <span>for your wellbeing</span>
-            </div>
-
-            {/* Legal Links */}
-            <div className="flex flex-wrap gap-4">
-              {legalLinks.map((link, index) => (
+        {/* Legal Links & Copyright */}
+        <div className="mt-12 pt-8 border-t border-gray-800">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <div className="flex flex-wrap justify-center md:justify-start gap-6">
+              {legalLinks.map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
@@ -259,19 +221,11 @@ const Footer = () => {
                 </Link>
               ))}
             </div>
-          </div>
-
-          {/* Additional Info */}
-          <div className="mt-4 pt-4 border-t border-gray-800">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
-              <div>
-                <span>Version 1.0.0 • Last updated: {currentDate}</span>
-              </div>
-              <div className="flex gap-4">
-                <span>🌟 Trusted by 10k+ users</span>
-                <span>🔒 Privacy-first approach</span>
-                <span>💚 Open source friendly</span>
-              </div>
+            
+            <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <span>© {new Date().getFullYear()} ReFocused. Made with</span>
+              <Heart className="w-4 h-4 text-red-400" />
+              <span>for your growth.</span>
             </div>
           </div>
         </div>

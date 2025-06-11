@@ -2,26 +2,9 @@
 
 import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion, useInView, useScroll, useTransform } from 'framer-motion';
-import { FiZap, FiTarget, FiClock, FiCalendar, FiBook, FiHeart, FiBarChart2, FiAward } from 'react-icons/fi';
-import { FaBrain } from 'react-icons/fa';
-import Footer from '@/components/footer';
-
-// Keyframes for floating animations
-const floatKeyframes = `
-  @keyframes float {
-    0% { transform: translateY(0) translateX(0) rotate(0); }
-    33% { transform: translateY(-10px) translateX(5px) rotate(1deg); }
-    66% { transform: translateY(5px) translateX(-5px) rotate(-1deg); }
-    100% { transform: translateY(0) translateX(0) rotate(0); }
-  }
-  @keyframes float-delayed {
-    0% { transform: translateY(0) translateX(0) rotate(0); }
-    33% { transform: translateY(8px) translateX(-7px) rotate(-1deg); }
-    66% { transform: translateY(-5px) translateX(3px) rotate(1deg); }
-    100% { transform: translateY(0) translateX(0) rotate(0); }
-  }
-`;
+import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from 'react-icons/fi';
+import { FaBrain, FaRobot } from 'react-icons/fa';
+import SimpleFooter from '@/components/SimpleFooter';
 
 // Type for orb configuration
 type Orb = {
@@ -34,11 +17,6 @@ type Orb = {
 };
 
 export default function LandingPageClient() {
-  const featuresRef = useRef(null);
-  const featuresInView = useInView(featuresRef, { once: true, amount: 0.3 });
-  const { scrollYProgress } = useScroll();
-  const scrollOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
-  
   // State for orbs
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [isMounted, setIsMounted] = useState(false);
@@ -64,45 +42,17 @@ export default function LandingPageClient() {
     setOrbs(generatedOrbs);
   }, [isMounted]);
 
-  // Add animation styles to head
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      ${floatKeyframes}
-      .animate-float {
-        animation: float 12s ease-in-out infinite;
-      }
-      .animate-float-delayed {
-        animation: float-delayed 15s ease-in-out infinite;
-      }
-      .animate-glow-pulse {
-        animation: pulse 4s ease-in-out infinite;
-      }
-      .animate-glow-pulse-delayed {
-        animation: pulse 6s ease-in-out infinite;
-      }
-      @keyframes pulse {
-        0%, 100% { opacity: 0.7; }
-        50% { opacity: 0.9; }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
   return (
     <div className="overflow-hidden">
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center py-20 px-4 bg-[#10182B] overflow-hidden">
+      <section id="top" className="relative min-h-[90vh] flex items-center justify-center py-20 px-4 bg-[#10182B] overflow-hidden">
         {/* Radial gradient background */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#10182B] via-[#10182B] to-[#0c1324]"></div>
         
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             {orbs.map((orb, i) => (
-              <motion.div
+              <div
                 key={i}
                 className="absolute rounded-full bg-blue-400"
                 style={{
@@ -110,17 +60,7 @@ export default function LandingPageClient() {
                   left: orb.left,
                   width: orb.width,
                   height: orb.height,
-                }}
-                initial={{ opacity: 0.1, scale: 0 }}
-                animate={{ 
-                  opacity: [0.1, 0.3, 0.1],
-                  scale: [0, 1, 0],
-                  y: [0, -30, 0]
-                }}
-                transition={{
-                  duration: orb.duration,
-                  repeat: Infinity,
-                  delay: orb.delay,
+                  opacity: 0.2,
                 }}
               />
             ))}
@@ -128,64 +68,30 @@ export default function LandingPageClient() {
         </div>
 
         <div className="container mx-auto text-center relative z-10 py-8 px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-6"
-          >
+          <div className="mb-6">
             <div className="inline-block px-6 py-2 rounded-full bg-[#10182B]/50 backdrop-blur-sm border border-blue-500/20 text-blue-400 mb-6">
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, delay: 1 }}
-                className="flex items-center justify-center"
-              >
+              <span className="flex items-center justify-center">
                 <FiZap className="inline mr-2" />
                 Powered by Focus & Productivity
-              </motion.span>
+              </span>
             </div>
-          </motion.div>
+          </div>
           
-          <motion.h1 
-            className="text-5xl md:text-7xl font-bold mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            suppressHydrationWarning={true}
-          >
+          <h1 className="text-5xl md:text-7xl font-bold mb-6">
             <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">ReFocused</span>
-          </motion.h1>
+          </h1>
           
-          <motion.h2
-            className="text-4xl md:text-6xl font-bold mb-10 text-white"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            suppressHydrationWarning={true}
-          >
+          <h2 className="text-4xl md:text-6xl font-bold mb-10 text-white">
             <span className="text-white">Transform Your</span><br />
             <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">Productivity</span>
-          </motion.h2>
+          </h2>
           
-          <motion.p
-            className="text-lg md:text-xl text-slate-300 max-w-3xl mx-auto mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            Experience the future of personal development with ReFocused's
-            revolutionary platform designed to help you build better habits, maintain
-            focus, and unlock your full potential through proven productivity methods.
-          </motion.p>
+          <p className="text-lg md:text-xl text-slate-300 max-w-3xl mx-auto mb-12">
+            Experience the future of personal development with ReFocused's revolutionary platform designed to help you build better habits, maintain focus, and unlock your full potential through proven productivity methods.
+          </p>
           
           {/* Features highlights */}
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-12">
             <div className="p-4 flex items-start">
               <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4">
                 <FaBrain className="w-6 h-6 text-[#42b9e5]" />
@@ -198,40 +104,216 @@ export default function LandingPageClient() {
             
             <div className="p-4 flex items-start">
               <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4 shadow-[0_0_10px_rgba(66,185,229,0.2)]">
-                <FiAward className="w-6 h-6 text-[#42b9e5]" />
+                <FiCheckCircle className="w-6 h-6 text-[#42b9e5]" />
               </div>
               <div className="text-left">
-                <h3 className="text-white font-semibold mb-1">Achievement System</h3>
-                <p className="text-slate-300 text-sm">Gamified progress tracking with meaningful rewards</p>
+                <h3 className="text-white font-semibold mb-1">Research-Backed</h3>
+                <p className="text-slate-300 text-sm">Methods proven by productivity and focus research</p>
               </div>
             </div>
-          </motion.div>
+          </div>
           
           {/* CTA buttons */}
-          <motion.div 
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-          >
+          <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-20 mb-8">
             <Link 
               href="/app"
-              className="px-8 py-4 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105"
+              className="px-8 py-4 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 min-h-[56px] flex items-center justify-center"
             >
-              Start Your Journey
+              Start with ReFocused
             </Link>
             <Link 
               href="#features"
-              className="px-8 py-4 border-2 border-[#42b9e5] text-[#42b9e5] font-semibold rounded-xl hover:bg-[#42b9e5] hover:text-white transition-all duration-300"
+              className="px-8 py-4 border-2 border-[#42b9e5] text-[#42b9e5] font-semibold rounded-xl hover:bg-[#42b9e5] hover:text-white transition-all duration-300 min-h-[56px] flex items-center justify-center"
             >
               Learn More
             </Link>
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Rest of the component content would go here */}
-      <Footer />
+      {/* ReFocused Features Section */}
+      <section id="features" className="py-20 px-4 bg-gradient-to-b from-[#0c1324] to-[#10182B]">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-block px-6 py-2 rounded-full bg-gradient-to-r from-[#42b9e5]/20 to-[#4f83ed]/20 text-[#42b9e5] mb-6">
+              <FiZap className="inline mr-2" />
+              ReFocused Features
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Everything You Need to <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">Succeed</span>
+            </h2>
+            <p className="text-lg text-slate-300 max-w-2xl mx-auto">
+              Experience simple yet effective tools designed to help you succeed with an easy-to-use interface and intuitive navigation that keeps you focused on what matters.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Daily Momentum */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-4 rounded-lg w-fit mb-6">
+                <FiTarget className="w-8 h-8 text-[#42b9e5]" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Daily Momentum</h3>
+              <p className="text-slate-300 leading-relaxed">
+                Set and track goals with our gamified system featuring daily, weekly, and monthly scoring based on your effort and difficulty level. Progress at your own pace and celebrate every achievement.
+              </p>
+            </div>
+
+            {/* Premium Focus Sessions */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-4 rounded-lg w-fit mb-6">
+                <FiClock className="w-8 h-8 text-[#42b9e5]" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Premium Focus Sessions</h3>
+              <p className="text-slate-300 leading-relaxed">
+                Studying made simple with customizable Pomodoro timers, flashcards, progress tracking, easy note-taking, and intuitive to-do lists all in one seamless experience.
+              </p>
+            </div>
+
+            {/* Intelligent Habit Building */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-4 rounded-lg w-fit mb-6">
+                <FaBrain className="w-8 h-8 text-[#42b9e5]" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Intelligent Habit Building</h3>
+              <p className="text-slate-300 leading-relaxed">
+                Habit tracking reimagined for simplicity and effectiveness. Our intuitive system helps you not only create new habits but maintain them long-term with minimal friction.
+              </p>
+            </div>
+
+            {/* Guided Reflection */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-4 rounded-lg w-fit mb-6">
+                <FiBook className="w-8 h-8 text-[#42b9e5]" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Guided Reflection</h3>
+              <p className="text-slate-300 leading-relaxed">
+                Journaling made simple yet profound with premade challenges, thoughtful prompts, and creative ideas that inspire deeper self-awareness and personal growth.
+              </p>
+            </div>
+
+            {/* Mindful Restoration */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-4 rounded-lg w-fit mb-6">
+                <FiHeart className="w-8 h-8 text-[#42b9e5]" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Mindful Restoration</h3>
+              <p className="text-slate-300 leading-relaxed">
+                Access a comprehensive collection of guided breathing exercises and meditation sessions designed to reduce stress, improve focus, and restore mental clarity.
+              </p>
+            </div>
+
+            {/* Smart Recommendations */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-4 rounded-lg w-fit mb-6">
+                <FiBarChart2 className="w-8 h-8 text-[#42b9e5]" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Smart Recommendations</h3>
+              <p className="text-slate-300 leading-relaxed">
+                Receive subtle, non-intrusive AI recommendations precisely when you need them, designed specifically to help you overcome obstacles and maintain momentum.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ReFocused AI Section */}
+      <section className="py-20 px-4 bg-[#10182B]">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-block px-6 py-2 rounded-full bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-400 mb-6">
+              <FaRobot className="inline mr-2" />
+              ReFocused AI
+            </div>
+            <p className="text-lg text-slate-300 max-w-4xl mx-auto leading-relaxed">
+              ReFocused offers an intelligent AI companion specifically designed to accelerate your personal growth. Trained on hundreds of thousands of examples across self-help, academic studies, productivity methods, and development strategies, our AI delivers personalized guidance that generic assistants simply cannot match.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+            {/* Self-Help Focused */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-green-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-4 rounded-lg w-fit mb-6">
+                <FaBrain className="w-8 h-8 text-green-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Self-Help Focused</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Trained specifically for personal development and productivity guidance
+              </p>
+            </div>
+
+            {/* Conversational Guidance */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-green-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-4 rounded-lg w-fit mb-6">
+                <FiUsers className="w-8 h-8 text-green-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Conversational Guidance</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Natural conversations that provide personalized advice and support
+              </p>
+            </div>
+
+            {/* Goal-Oriented */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-green-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-4 rounded-lg w-fit mb-6">
+                <FiTarget className="w-8 h-8 text-green-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Goal-Oriented</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Helps you set, track, and achieve your personal and professional goals
+              </p>
+            </div>
+
+            {/* Growth Mindset */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-8 hover:border-green-500/30 transition-all duration-300">
+              <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-4 rounded-lg w-fit mb-6">
+                <FiTrendingUp className="w-8 h-8 text-green-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Growth Mindset</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Encourages continuous improvement and positive habit formation
+              </p>
+            </div>
+          </div>
+
+          {/* Built for Your Success */}
+          <div className="bg-gradient-to-br from-green-500/10 to-teal-500/10 rounded-2xl p-8 border border-green-500/20 text-center">
+            <h3 className="text-2xl font-bold text-white mb-4">Built for Your Success</h3>
+            <p className="text-slate-300 leading-relaxed max-w-3xl mx-auto">
+              Our AI doesn't just answer questions—it understands your journey, celebrates your progress, and provides the encouragement and practical guidance you need to overcome obstacles and achieve your goals. Every interaction is designed to move you forward on your path to personal growth.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="py-20 px-4 bg-gradient-to-b from-[#10182B] to-[#0c1324]">
+        <div className="container mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            Ready to Transform Your <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">Productivity</span>?
+          </h2>
+          <p className="text-lg text-slate-300 max-w-2xl mx-auto mb-12">
+            Join thousands of users who have already improved their focus, productivity, and wellbeing with ReFocused.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              href="/app"
+              className="px-8 py-4 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 min-h-[56px] flex items-center justify-center"
+            >
+              Sign In to ReFocused
+            </Link>
+            <Link 
+              href="/app"
+              className="px-8 py-4 border-2 border-[#42b9e5] text-[#42b9e5] font-semibold rounded-xl hover:bg-[#42b9e5] hover:text-white transition-all duration-300 min-h-[56px] flex items-center justify-center"
+            >
+              Join ReFocused✨
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <SimpleFooter />
     </div>
   );
 } 
