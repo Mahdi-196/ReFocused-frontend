@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import NumberMood from '@/components/NumberMood';
 import PageTransition from '@/components/PageTransition';
+import AuthGuard from '@/components/AuthGuard';
 
 interface DayData {
   mood: {
@@ -826,7 +827,8 @@ export default function TrackPage() {
   };
 
   return (
-    <PageTransition>
+    <AuthGuard>
+      <PageTransition>
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
@@ -1149,5 +1151,6 @@ export default function TrackPage() {
         </div>
       )}
     </PageTransition>
+    </AuthGuard>
   );
 }

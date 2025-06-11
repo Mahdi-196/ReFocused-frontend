@@ -4,9 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdNotifications } from "react-icons/md";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import DevTools from "./devTools";
-import AuthButton from "./AuthButton";
 
 import { useState } from "react";
 
@@ -103,7 +102,7 @@ const Header = () => {
             </nav>
           </div>
 
-          {/* Right Side - Profile and Notifications */}
+          {/* Right Side - Notifications Only */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -119,11 +118,6 @@ const Header = () => {
             >
               <MdNotifications className="text-xl md:text-2xl text-gray-300 hover:text-[#42b9e5]" />
             </motion.button>
-            
-            {/* Auth Button / Profile */}
-            <div className="scale-90 md:scale-100">
-              <AuthButton />
-            </div>
           </motion.div>
         </div>
       </motion.header>

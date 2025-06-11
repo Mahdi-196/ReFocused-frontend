@@ -4,25 +4,31 @@ import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import client, { initializeAuth } from '@/api/client';
+import AuthModal from './AuthModal';
 
 const AuthButton = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   // Check if user is logged in on component mount
   useEffect(() => {
     const checkAuth = () => {
-      // First, initialize auth from client
+      // Initialize auth from client
       initializeAuth();
       
-      // Set user as logged in by default (simulating logged in state)
-      // You can replace this logic later with actual authentication
-      setIsLoggedIn(true);
+      // Check if user has a valid token
+      const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
       
-      // Store a dummy token to maintain existing logic compatibility
-      if (typeof window !== 'undefined' && !localStorage.getItem('REF_TOKEN')) {
-        localStorage.setItem('REF_TOKEN', 'dummy-auth-token');
+      if (token && token !== 'dummy-auth-token') {
+        setIsLoggedIn(true);
+        client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      } else {
+        setIsLoggedIn(false);
       }
+      
+      setIsLoading(false);
     };
     
     checkAuth();
@@ -34,10 +40,19 @@ const AuthButton = () => {
       }
     };
     
+    // Listen for storage changes (login/logout in other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'REF_TOKEN') {
+        checkAuth();
+      }
+    };
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -45,45 +60,75 @@ const AuthButton = () => {
     // Clear token from localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('REF_TOKEN');
+      localStorage.removeItem('REF_USER');
     }
     
     // Remove Authorization header
     delete client.defaults.headers.common['Authorization'];
     
-    // Update state - temporarily set to false, but will be reset to true on next visit
+    // Update state
     setIsLoggedIn(false);
     
-    // Show alert and auto re-login after 2 seconds (simulating automatic login)
-    alert('Signed out successfully! You will be automatically signed back in.');
-    setTimeout(() => {
-      setIsLoggedIn(true);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('REF_TOKEN', 'dummy-auth-token');
-      }
-    }, 2000);
-    
-    // Optional: Navigate to home page
+    // Navigate to home page
     router.push('/');
   };
 
+  const openAuthModal = () => {
+    setIsAuthModalOpen(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-[#10182B]/80 border-2 border-[#42b9e5]/30 flex items-center justify-center shadow-[0_0_10px_rgba(66,185,229,0.3)]">
+        <div className="w-4 h-4 border-2 border-[#42b9e5] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative">
-      {isLoggedIn ? (
-        <>
-          <button 
-            onClick={() => router.push('/profile')}
-            className="w-10 h-10 rounded-full bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#3590e0] hover:to-[#30b0b1] border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center"
-            title="Go to Profile"
+    <>
+      <div className="relative">
+        {isLoggedIn ? (
+          <div className="relative group">
+            <button 
+              className="w-10 h-10 rounded-full bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#3590e0] hover:to-[#30b0b1] border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center"
+              title="Profile Menu"
+            >
+              <User size={18} className="text-white" />
+            </button>
+            
+            {/* Dropdown Menu */}
+            <div className="absolute right-0 top-12 bg-[#10182B]/95 backdrop-blur-md border border-gray-600/30 rounded-lg shadow-lg py-2 min-w-[120px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <button
+                onClick={() => router.push('/profile')}
+                className="w-full px-4 py-2 text-left text-gray-300 hover:text-white hover:bg-gray-700/50 transition-colors"
+              >
+                Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full px-4 py-2 text-left text-gray-300 hover:text-white hover:bg-gray-700/50 transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={openAuthModal}
+            className="px-4 py-2 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-medium rounded-lg hover:shadow-[0_0_15px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 text-sm"
           >
-            <User size={18} className="text-white" />
+            Sign In
           </button>
-        </>
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-[#10182B]/80 border-2 border-[#42b9e5]/30 flex items-center justify-center shadow-[0_0_10px_rgba(66,185,229,0.3)]">
-          <div className="w-4 h-4 border-2 border-[#42b9e5] border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        defaultTab="login"
+      />
+    </>
   );
 };
 

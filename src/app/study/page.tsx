@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import Pomodoro from "@/components/pomodoro";
 import QuickNotes from "@/components/QuickNotes";
 import PageTransition from '@/components/PageTransition';
+import AuthGuard from '@/components/AuthGuard';
 
 type Card = {
   id: string;
@@ -184,7 +185,8 @@ export default function StudyPage() {
   };
 
   return (
-    <PageTransition>
+    <AuthGuard>
+      <PageTransition>
       <div 
         className="min-h-screen py-8"
         style={{ backgroundColor: "#1A2537" }}
@@ -569,5 +571,6 @@ export default function StudyPage() {
         </div>
       </div>
     </PageTransition>
+    </AuthGuard>
   );
 }
