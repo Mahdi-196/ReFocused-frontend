@@ -1,6 +1,6 @@
 declare global {
   interface Window {
-    google?: {
+    google: {
       accounts: {
         id: {
           initialize: (config: {
@@ -9,17 +9,14 @@ declare global {
             auto_select?: boolean;
             cancel_on_tap_outside?: boolean;
           }) => void;
-          prompt: (callback?: (notification: unknown) => void) => void;
+          prompt: () => void;
           renderButton: (
-            parent: HTMLElement | null,
-            options: {
+            element: HTMLElement | null,
+            options?: {
               theme?: 'outline' | 'filled_blue' | 'filled_black';
               size?: 'large' | 'medium' | 'small';
-              width?: string | number;
               text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
               shape?: 'rectangular' | 'pill' | 'circle' | 'square';
-              logo_alignment?: 'left' | 'center';
-              locale?: string;
             }
           ) => void;
           disableAutoSelect: () => void;
