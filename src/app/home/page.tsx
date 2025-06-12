@@ -41,11 +41,7 @@ import { Goal, UIGoal, GoalView, goalToUIGoal, CreateGoalRequest, UpdateGoalRequ
 const Home = () => {
   const [activeGoalView, setActiveGoalView] = useState<GoalView>('sprint');
   const [newTask, setNewTask] = useState('');
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, text: 'Complete project meeting', completed: false },
-    { id: 2, text: 'Write documentation', completed: false },
-    { id: 3, text: 'Update sprint board', completed: false },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const [sprintGoals, setSprintGoals] = useState<UIGoal[]>([]);
   const [visionGoals, setVisionGoals] = useState<UIGoal[]>([]);
@@ -61,59 +57,9 @@ const Home = () => {
         setVisionGoals(uiGoals.filter(g => g.category === "long_term"));
       } catch (error) {
         console.error("Error fetching goals:", error);
-        // Fallback to default goals if API fails
-        setSprintGoals([
-          { 
-            id: 201, 
-            user_id: 1,
-            goal_text: 'Implement new features',
-            name: 'Implement new features', 
-            progress: 45, 
-            type: 'sprint', 
-            category: 'sprint',
-            completed: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          { 
-            id: 202, 
-            user_id: 1,
-            goal_text: 'Code refactoring',
-            name: 'Code refactoring', 
-            progress: 80, 
-            type: 'sprint', 
-            category: 'sprint',
-            completed: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-        ]);
-        setVisionGoals([
-          { 
-            id: 301, 
-            user_id: 1,
-            goal_text: 'Launch MVP',
-            name: 'Launch MVP', 
-            progress: 25, 
-            type: 'vision', 
-            category: 'long_term',
-            completed: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          { 
-            id: 302, 
-            user_id: 1,
-            goal_text: 'Grow user base',
-            name: 'Grow user base', 
-            progress: 15, 
-            type: 'vision', 
-            category: 'long_term',
-            completed: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-        ]);
+        // Start with empty goals for fresh user experience
+        setSprintGoals([]);
+        setVisionGoals([]);
       }
     };
 
@@ -156,26 +102,7 @@ const Home = () => {
       setNewGoalName('');
     } catch (error) {
       console.error('Error adding goal:', error);
-      // Fallback to local-only logic if API fails
-      const localGoal: UIGoal = { 
-        id: Date.now(),
-        user_id: 1,
-        goal_text: newGoalName.trim(),
-        name: newGoalName.trim(), 
-        progress: 0,
-        type: category === 'sprint' ? 'sprint' : 'vision',
-        category,
-        completed: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      if (category === 'sprint') {
-        setSprintGoals([...sprintGoals, localGoal]);
-      } else {
-        setVisionGoals([...visionGoals, localGoal]);
-      }
-      setNewGoalName('');
+      // Don't add goal if API fails - user should try again
     }
   };
 
@@ -209,22 +136,7 @@ const Home = () => {
       }
     } catch (error) {
       console.error('Error updating goal:', error);
-      // Fallback to local-only logic if API fails
-      const localGoalUpdate: UIGoal = {
-        ...editingGoal,
-        goal_text: editingGoal.goal_text || editingGoal.name,
-        name: editingGoal.name,
-        progress: editedGoalProgress,
-        completed: editedGoalProgress === 100,
-        category: editingGoal.type === 'sprint' ? 'sprint' : 'long_term',
-        updated_at: new Date().toISOString()
-      };
-      
-      if (editingGoal.type === 'sprint') {
-        setSprintGoals(sprintGoals.map(g => g.id === editingGoal.id ? localGoalUpdate : g));
-      } else {
-        setVisionGoals(visionGoals.map(g => g.id === editingGoal.id ? localGoalUpdate : g));
-      }
+      // Don't update goal if API fails - user should try again
     } finally {
       setIsEditGoalModalOpen(false);
       setEditingGoal(null);

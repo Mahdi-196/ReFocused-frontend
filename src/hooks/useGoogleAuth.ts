@@ -54,13 +54,23 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
   const initializeGoogleAuth = useCallback(() => {
     if (typeof window === 'undefined' || !window.google) return;
 
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    
+    if (!clientId) {
+      console.error('Google Client ID not found. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID in your .env.local file');
+      if (onError) {
+        onError('Google OAuth is not configured. Please contact support.');
+      }
+      return;
+    }
+
     window.google.accounts.id.initialize({
-      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      client_id: clientId,
       callback: handleGoogleResponse,
       auto_select: false,
       cancel_on_tap_outside: true,
     });
-  }, [handleGoogleResponse]);
+  }, [handleGoogleResponse, onError]);
 
   const signInWithGoogle = useCallback(() => {
     if (typeof window === 'undefined' || !window.google) {

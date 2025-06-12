@@ -1,341 +1,44 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import NumberMood from '@/components/NumberMood';
 import PageTransition from '@/components/PageTransition';
 import AuthGuard from '@/components/AuthGuard';
+import client from '@/api/client';
 
-interface DayData {
-  mood: {
-    happiness: number;
-    satisfaction: number;
-    stress: number;
-  };
-  dayRating: number;
-  habits: {
-    name: string;
+// Removed unused DayData interface
+
+interface UserHabit {
+  id: number;
+  name: string;
+  streak: number;
+  isFavorite: boolean;
+  createdAt: Date;
+}
+
+interface DailyEntry {
+  date: string;
+  happiness?: number;
+  satisfaction?: number;
+  stress?: number;
+  dayRating?: number;
+  habitCompletions?: {
+    habitId: number;
     completed: boolean;
   }[];
 }
 
-interface MockData {
-  [key: string]: DayData;
-}
-
-// Mock historical data
-const mockDayData: MockData = {
-  '2025-04-05': {
-    mood: {
-      happiness: 4,
-      satisfaction: 5,
-      stress: 2
-    },
-    dayRating: 9,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-04-08': {
-    mood: {
-      happiness: 2,
-      satisfaction: 2,
-      stress: 4
-    },
-    dayRating: 3,
-    habits: [
-      { name: 'Exercise', completed: false },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-04-12': {
-    mood: {
-      happiness: 5,
-      satisfaction: 4,
-      stress: 2
-    },
-    dayRating: 9,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  // May 2025 seed data
-  '2025-05-01': {
-    mood: {
-      happiness: 5,
-      satisfaction: 5,
-      stress: 1
-    },
-    dayRating: 10,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-02': {
-    mood: {
-      happiness: 3,
-      satisfaction: 3,
-      stress: 3
-    },
-    dayRating: 6,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: false },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-03': {
-    mood: {
-      happiness: 2,
-      satisfaction: 2,
-      stress: 5
-    },
-    dayRating: 2,
-    habits: [
-      { name: 'Exercise', completed: false },
-      { name: 'Meditate', completed: false },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-05-05': {
-    mood: {
-      happiness: 4,
-      satisfaction: 4,
-      stress: 2
-    },
-    dayRating: 8,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-07': {
-    mood: {
-      happiness: 3,
-      satisfaction: 2,
-      stress: 4
-    },
-    dayRating: 4,
-    habits: [
-      { name: 'Exercise', completed: false },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-05-08': {
-    mood: {
-      happiness: 5,
-      satisfaction: 4,
-      stress: 1
-    },
-    dayRating: 9,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-10': {
-    mood: {
-      happiness: 4,
-      satisfaction: 3,
-      stress: 2
-    },
-    dayRating: 7,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: false },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-12': {
-    mood: {
-      happiness: 1,
-      satisfaction: 1,
-      stress: 5
-    },
-    dayRating: 1,
-    habits: [
-      { name: 'Exercise', completed: false },
-      { name: 'Meditate', completed: false },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-05-14': {
-    mood: {
-      happiness: 4,
-      satisfaction: 5,
-      stress: 2
-    },
-    dayRating: 8,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-05-15': {
-    mood: {
-      happiness: 5,
-      satisfaction: 5,
-      stress: 1
-    },
-    dayRating: 10,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-17': {
-    mood: {
-      happiness: 3,
-      satisfaction: 4,
-      stress: 3
-    },
-    dayRating: 6,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-05-18': {
-    mood: {
-      happiness: 2,
-      satisfaction: 2,
-      stress: 4
-    },
-    dayRating: 3,
-    habits: [
-      { name: 'Exercise', completed: false },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-05-20': {
-    mood: {
-      happiness: 4,
-      satisfaction: 4,
-      stress: 2
-    },
-    dayRating: 8,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-22': {
-    mood: {
-      happiness: 3,
-      satisfaction: 3,
-      stress: 3
-    },
-    dayRating: 5,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: false },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-24': {
-    mood: {
-      happiness: 5,
-      satisfaction: 4,
-      stress: 1
-    },
-    dayRating: 9,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-25': {
-    mood: {
-      happiness: 2,
-      satisfaction: 1,
-      stress: 5
-    },
-    dayRating: 2,
-    habits: [
-      { name: 'Exercise', completed: false },
-      { name: 'Meditate', completed: false },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-05-27': {
-    mood: {
-      happiness: 4,
-      satisfaction: 4,
-      stress: 2
-    },
-    dayRating: 7,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: false }
-    ]
-  },
-  '2025-05-28': {
-    mood: {
-      happiness: 5,
-      satisfaction: 5,
-      stress: 1
-    },
-    dayRating: 10,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-30': {
-    mood: {
-      happiness: 3,
-      satisfaction: 3,
-      stress: 3
-    },
-    dayRating: 6,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: false },
-      { name: 'Read', completed: true }
-    ]
-  },
-  '2025-05-31': {
-    mood: {
-      happiness: 4,
-      satisfaction: 5,
-      stress: 2
-    },
-    dayRating: 8,
-    habits: [
-      { name: 'Exercise', completed: true },
-      { name: 'Meditate', completed: true },
-      { name: 'Read', completed: true }
-    ]
-  }
-};
-
 type TabType = 'Summary';
-
 type SimpleFilter = 'all' | 'active' | 'inactive';
 
 export default function TrackPage() {
-  const [habits, setHabits] = useState([
-    { name: 'Exercise', streak: 3, isFavorite: false, createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) }, // 5 days ago
-    { name: 'Meditate', streak: 5, isFavorite: true, createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) }, // 10 days ago
-    { name: 'Read', streak: 0, isFavorite: false, createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) } // 2 days ago
-  ]);
+  // State for user data
+  const [habits, setHabits] = useState<UserHabit[]>([]);
+  const [dailyEntries, setDailyEntries] = useState<{[key: string]: DailyEntry}>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI state
   const [newHabit, setNewHabit] = useState('');
   const [habitError, setHabitError] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -345,9 +48,42 @@ export default function TrackPage() {
   const calendarRef = useRef<HTMLDivElement>(null);
   const [habitModalOpen, setHabitModalOpen] = useState(false);
   const [selectedHabitIndex, setSelectedHabitIndex] = useState<number | null>(null);
-  
-  // Simple filter state
   const [simpleFilter, setSimpleFilter] = useState<SimpleFilter>('all');
+
+  // Load user data on component mount
+  useEffect(() => {
+    loadUserData();
+  }, [currentMonth]);
+
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Load habits
+      const habitsResponse = await client.get('/habits');
+      setHabits(habitsResponse.data || []);
+      
+      // Load daily entries for current month
+      const monthStr = currentMonth.toISOString().slice(0, 7); // YYYY-MM
+      const entriesResponse = await client.get(`/daily-entries?month=${monthStr}`);
+      
+      // Convert array to object with date as key
+      const entriesMap: {[key: string]: DailyEntry} = {};
+      if (entriesResponse.data) {
+        entriesResponse.data.forEach((entry: DailyEntry) => {
+          entriesMap[entry.date] = entry;
+        });
+      }
+      setDailyEntries(entriesMap);
+      
+    } catch (err) {
+      console.error('Failed to load user data:', err);
+      setError('Failed to load your data. Please try refreshing the page.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX);
@@ -369,7 +105,7 @@ export default function TrackPage() {
     setTouchStart(null);
   };
 
-  const handleAddHabit = () => {
+  const handleAddHabit = async () => {
     if (!newHabit.trim()) {
       setHabitError('Please enter a habit name');
       return;
@@ -385,15 +121,35 @@ export default function TrackPage() {
       return;
     }
     
-    // Add the new habit and clear error
-    setHabits([...habits, { name: newHabit.trim(), streak: 0, isFavorite: false, createdAt: new Date() }]);
-    setNewHabit('');
-    setHabitError('');
+    try {
+      const response = await client.post('/habits', {
+        name: newHabit.trim()
+      });
+      
+      // Add the new habit to state
+      setHabits([...habits, response.data]);
+      setNewHabit('');
+      setHabitError('');
+    } catch (err) {
+      console.error('Failed to add habit:', err);
+      setHabitError('Failed to add habit. Please try again.');
+    }
   };
 
-  const handleDeleteHabit = (indexToDelete: number) => {
-    const newHabits = habits.filter((_, index) => index !== indexToDelete);
-    setHabits(newHabits);
+  const handleDeleteHabit = async (indexToDelete: number) => {
+    const habitToDelete = habits[indexToDelete];
+    if (!habitToDelete) return;
+    
+    try {
+      await client.delete(`/habits/${habitToDelete.id}`);
+      
+      // Remove habit from state
+      const newHabits = habits.filter((_, index) => index !== indexToDelete);
+      setHabits(newHabits);
+    } catch (err) {
+      console.error('Failed to delete habit:', err);
+      setError('Failed to delete habit. Please try again.');
+    }
   };
 
   const handleOpenHabitModal = (index: number) => {
@@ -413,15 +169,21 @@ export default function TrackPage() {
     }
   };
 
-  const handleToggleFavorite = () => {
-    if (selectedHabitIndex !== null) {
-      const currentHabit = habits[selectedHabitIndex];
-      const currentFavoriteCount = habits.filter(h => h.isFavorite).length;
-      
-      // If trying to favorite and already at limit
-      if (!currentHabit.isFavorite && currentFavoriteCount >= 3) {
-        return; // Don't allow more than 3 favorites
-      }
+  const handleToggleFavorite = async () => {
+    if (selectedHabitIndex === null) return;
+    
+    const currentHabit = habits[selectedHabitIndex];
+    const currentFavoriteCount = habits.filter(h => h.isFavorite).length;
+    
+    // If trying to favorite and already at limit
+    if (!currentHabit.isFavorite && currentFavoriteCount >= 3) {
+      return; // Don't allow more than 3 favorites
+    }
+    
+    try {
+      await client.put(`/habits/${currentHabit.id}`, {
+        isFavorite: !currentHabit.isFavorite
+      });
       
       setHabits(prev => 
         prev.map((habit, index) => 
@@ -431,6 +193,9 @@ export default function TrackPage() {
         )
       );
       handleCloseHabitModal();
+    } catch (err) {
+      console.error('Failed to update habit:', err);
+      setError('Failed to update habit. Please try again.');
     }
   };
 
@@ -498,9 +263,46 @@ export default function TrackPage() {
     }
   };
 
+  // Calculate real statistics from user data
+  const calculateCurrentStreak = () => {
+    if (habits.length === 0) return 0;
+    return Math.max(...habits.map(h => h.streak));
+  };
+
+  const calculateHabitsCompleted = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayEntry = dailyEntries[today];
+    if (!todayEntry?.habitCompletions) return { completed: 0, total: habits.length };
+    
+    const completed = todayEntry.habitCompletions.filter(hc => hc.completed).length;
+    return { completed, total: habits.length };
+  };
+
+  const calculateDaysTracked = () => {
+    return Object.keys(dailyEntries).length;
+  };
+
+  const calculateMonthlyCompletion = () => {
+    const currentMonthEntries = Object.values(dailyEntries).filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate.getMonth() === currentMonth.getMonth() && 
+             entryDate.getFullYear() === currentMonth.getFullYear();
+    });
+    
+    if (currentMonthEntries.length === 0) return 0;
+    
+    const daysWithHabits = currentMonthEntries.filter(entry => 
+      entry.habitCompletions && entry.habitCompletions.some(hc => hc.completed)
+    ).length;
+    
+    return Math.round((daysWithHabits / currentMonthEntries.length) * 100);
+  };
+
   const getDayClass = (dateStr: string) => {
-    if (!mockDayData[dateStr]) return '';
-    const dayRating = mockDayData[dateStr].dayRating;
+    const entry = dailyEntries[dateStr];
+    if (!entry || !entry.dayRating) return '';
+    
+    const dayRating = entry.dayRating;
     if (dayRating >= 8) return 'bg-gradient-to-br from-green-500 to-green-700 border-green-400 shadow-lg shadow-green-900/30 relative overflow-hidden';
     if (dayRating >= 5) return 'bg-gradient-to-br from-yellow-500 to-yellow-600 border-yellow-400 shadow-lg shadow-yellow-900/30 relative overflow-hidden';
     return 'bg-gradient-to-br from-red-500 to-red-700 border-red-400 shadow-lg shadow-red-900/30 relative overflow-hidden';
@@ -530,8 +332,8 @@ export default function TrackPage() {
       };
     } else if (rating >= 7) {
       return {
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%)',
+        boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
       };
     } else if (rating >= 5) {
       return {
@@ -553,25 +355,22 @@ export default function TrackPage() {
 
   const getMoodBadgeColor = (rating: number, type: 'happiness' | 'satisfaction' | 'stress' = 'happiness') => {
     if (type === 'stress') {
-      switch (rating) {
-        case 1: return 'bg-green-500';
-        case 2: return 'bg-yellow-400';
-        case 3: return 'bg-orange-500';
-        case 4:
-        case 5: return 'bg-red-500';
-        default: return 'bg-green-500';
-      }
+      // For stress, lower is better, so invert the color logic
+      if (rating <= 1) return 'bg-green-500';
+      if (rating <= 2) return 'bg-yellow-400';
+      if (rating <= 3) return 'bg-orange-500';
+      return 'bg-red-500';
     } else {
-      switch (rating) {
-        case 1:
-        case 2: return 'bg-red-500';
-        case 3: return 'bg-orange-500';
-        case 4: return 'bg-yellow-400';
-        case 5: return 'bg-green-500';
-        default: return 'bg-yellow-400';
-      }
+      // For happiness and satisfaction, higher is better
+      if (rating >= 5) return 'bg-green-500';
+      if (rating >= 4) return 'bg-yellow-400';
+      if (rating >= 3) return 'bg-orange-500';
+      if (rating >= 2) return 'bg-red-400';
+      return 'bg-red-500';
     }
   };
+
+
 
   const renderCalendar = () => {
     const firstDay = new Date(currentMonth);
@@ -694,11 +493,11 @@ export default function TrackPage() {
   };
 
   const renderDayDetails = () => {
-    if (!selectedDate || !mockDayData[selectedDate]) {
+    if (!selectedDate || !dailyEntries[selectedDate]) {
       return <p className="text-center text-gray-400 py-8 text-sm">Click a date to view details</p>;
     }
 
-    const data = mockDayData[selectedDate];
+    const data = dailyEntries[selectedDate];
     const date = new Date(selectedDate);
     const formattedDate = date.toLocaleDateString('en-US', { 
       month: 'long',
@@ -733,13 +532,13 @@ export default function TrackPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-gray-300 text-sm">Happy:</span>
-                  <span className="text-white text-sm font-medium">{data.mood.happiness}/5</span>
+                  <span className="text-white text-sm font-medium">{data.happiness || 0}/5</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.mood.happiness, 'happiness').replace('bg-', 'bg-')}`}
-                      style={{ width: `${(data.mood.happiness / 5) * 100}%` }}
+                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.happiness || 0, 'happiness').replace('bg-', 'bg-')}`}
+                      style={{ width: `${((data.happiness || 0) / 5) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -749,13 +548,13 @@ export default function TrackPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-gray-300 text-sm">Satisfied:</span>
-                  <span className="text-white text-sm font-medium">{data.mood.satisfaction}/5</span>
+                  <span className="text-white text-sm font-medium">{data.satisfaction || 0}/5</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.mood.satisfaction, 'satisfaction').replace('bg-', 'bg-')}`}
-                      style={{ width: `${(data.mood.satisfaction / 5) * 100}%` }}
+                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.satisfaction || 0, 'satisfaction').replace('bg-', 'bg-')}`}
+                      style={{ width: `${((data.satisfaction || 0) / 5) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -765,13 +564,13 @@ export default function TrackPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-gray-300 text-sm">Stress:</span>
-                  <span className="text-white text-sm font-medium">{data.mood.stress}/5</span>
+                  <span className="text-white text-sm font-medium">{data.stress || 0}/5</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.mood.stress, 'stress').replace('bg-', 'bg-')}`}
-                      style={{ width: `${(data.mood.stress / 5) * 100}%` }}
+                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.stress || 0, 'stress').replace('bg-', 'bg-')}`}
+                      style={{ width: `${((data.stress || 0) / 5) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -785,22 +584,25 @@ export default function TrackPage() {
             <div className="flex items-center justify-between mb-3 p-2 bg-gray-600/50 rounded">
               <span className="text-gray-300 text-sm">Progress:</span>
               <span className="text-white font-medium">
-                {data.habits.filter(h => h.completed).length}/{data.habits.length} completed
+                {data.habitCompletions?.filter(h => h.completed).length}/{data.habitCompletions?.length} completed
               </span>
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-              {data.habits.map((habit, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-600/30 rounded-lg hover:bg-gray-600/50 transition-colors">
-                  <span className="text-white text-sm flex-1">{habit.name}</span>
-                  <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                    habit.completed 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-red-500/80 text-white'
-                  }`}>
-                    {habit.completed ? '✓' : '✗'}
+              {data.habitCompletions?.map((completion, index) => {
+                const habit = habits.find(h => h.id === completion.habitId);
+                return (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-600/30 rounded-lg hover:bg-gray-600/50 transition-colors">
+                    <span className="text-white text-sm flex-1">{habit?.name || 'Unknown Habit'}</span>
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                      completion.completed 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-red-500/80 text-white'
+                    }`}>
+                      {completion.completed ? '✓' : '✗'}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -809,7 +611,7 @@ export default function TrackPage() {
 
     return (
       <div className="p-4">
-        {!selectedDate || !mockDayData[selectedDate] ? (
+        {!selectedDate || !dailyEntries[selectedDate] ? (
           <p className="text-center text-gray-400 py-8 text-sm">Click a date to view details</p>
         ) : (
           <>
@@ -825,6 +627,52 @@ export default function TrackPage() {
       </div>
     );
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <AuthGuard>
+        <PageTransition>
+          <div className="min-h-screen bg-gradient-to-b from-[#0a1220] to-[#10182B] text-white">
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-[#42b9e5] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-300">Loading your tracking data...</p>
+              </div>
+            </div>
+          </div>
+        </PageTransition>
+      </AuthGuard>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <AuthGuard>
+        <PageTransition>
+          <div className="min-h-screen bg-gradient-to-b from-[#0a1220] to-[#10182B] text-white">
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="text-center">
+                <div className="text-red-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </div>
+                <p className="text-gray-300 mb-4">{error}</p>
+                <button
+                  onClick={loadUserData}
+                  className="px-4 py-2 bg-[#42b9e5] text-white rounded-lg hover:bg-[#3a9fd4] transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        </PageTransition>
+      </AuthGuard>
+    );
+  }
 
   return (
     <AuthGuard>
@@ -871,7 +719,7 @@ export default function TrackPage() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-white">7 days</p>
+                <p className="text-2xl font-bold text-white">{calculateCurrentStreak()} days</p>
               </div>
 
               {/* Habits Completed */}
@@ -887,7 +735,7 @@ export default function TrackPage() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-white">3/5</p>
+                <p className="text-2xl font-bold text-white">{calculateHabitsCompleted().completed}/{calculateHabitsCompleted().total}</p>
               </div>
 
               {/* Days Tracked */}
@@ -903,7 +751,7 @@ export default function TrackPage() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-white">28</p>
+                <p className="text-2xl font-bold text-white">{calculateDaysTracked()}</p>
               </div>
 
               {/* This Month */}
@@ -919,7 +767,7 @@ export default function TrackPage() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-white">85%</p>
+                <p className="text-2xl font-bold text-white">{calculateMonthlyCompletion()}%</p>
               </div>
             </div>
           </section>

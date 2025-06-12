@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Settings, LogOut, MessageSquare, X, Star, Camera, Volume2, VolumeX, Bell, Wind } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import AvatarSelector from '@/components/AvatarSelector';
 import { useSettings } from '@/hooks/useSettings';
+import client, { initializeAuth } from '@/api/client';
+import { useRouter } from 'next/navigation';
 
 interface FeedbackData {
   rating: number;
@@ -14,7 +16,24 @@ interface FeedbackData {
   contact: string;
 }
 
+interface UserData {
+  id: number;
+  email: string;
+  name: string;
+  username?: string;
+  createdAt: string;
+  avatar?: string;
+}
+
+interface UserStats {
+  totalHabits: number;
+  currentStreak: number;
+  longestStreak: number;
+  totalDaysTracked: number;
+}
+
 const Profile = () => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('profile');
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false);
@@ -28,8 +47,71 @@ const Profile = () => {
   });
   const [appSettingsActiveSection, setAppSettingsActiveSection] = useState('audio');
   
+  // User data state
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   // Settings hook
   const { settings, updateSettings, isLoaded } = useSettings();
+
+  // Load user data on component mount
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Initialize auth headers
+      initializeAuth();
+      
+      // Load user profile data
+      const userResponse = await client.get('/auth/me');
+      setUserData(userResponse.data);
+      
+      // Set avatar from user data or generate one
+      const avatarUrl = userResponse.data.avatar || 
+        `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userResponse.data.name || userResponse.data.email)}&backgroundColor=transparent`;
+      setCurrentAvatar(avatarUrl);
+      
+      // Load user statistics (fallback if endpoint doesn't exist)
+      try {
+        const statsResponse = await client.get('/user/stats');
+        setUserStats(statsResponse.data);
+      } catch (statsErr) {
+        // If stats endpoint doesn't exist, create mock stats
+        console.log('Stats endpoint not available, using mock data');
+        setUserStats({
+          totalHabits: 0,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalDaysTracked: 0
+        });
+      }
+      
+    } catch (err) {
+      console.error('Failed to load user data:', err);
+      setError('Failed to load profile data. Please try refreshing the page.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    // Clear local storage
+    localStorage.removeItem('REF_TOKEN');
+    localStorage.removeItem('REF_USER');
+    
+    // Clear axios auth header
+    delete client.defaults.headers.common['Authorization'];
+    
+    // Redirect to home page
+    router.push('/');
+  };
 
   const menuItems = [
     { id: 'profile', icon: <User size={18} />, label: 'Profile' },
@@ -357,26 +439,60 @@ const Profile = () => {
                     </div>
 
                     <div className="flex-1 space-y-6 w-full lg:w-auto">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div className="flex items-center space-x-3">
-                            <h4 className="text-xl font-semibold text-white">John Doe</h4>
-                            <svg className="w-4 h-4 text-gray-400 hover:text-blue-400 cursor-pointer transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                          </div>
-                          <p className="text-gray-300 text-sm">john@example.com</p>
-                          <p className="text-gray-400 text-sm">Member since January 2024</p>
+                      {loading ? (
+                        <div className="animate-pulse space-y-4">
+                          <div className="h-6 bg-gray-700 rounded w-1/3"></div>
+                          <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+                          <div className="h-4 bg-gray-700 rounded w-1/4"></div>
                         </div>
-                        
-                        <div className="space-y-4">
-                          <div className="bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/30 rounded-lg p-4">
-                            <h5 className="text-blue-400 font-medium mb-2">Current Streak</h5>
-                            <p className="text-2xl font-bold text-white">7 days</p>
-                            <p className="text-gray-400 text-sm">Keep it up! 🔥</p>
+                      ) : error ? (
+                        <div className="text-red-400 text-sm">{error}</div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-3">
+                              <h4 className="text-xl font-semibold text-white">
+                                {userData?.name || userData?.username || 'User'}
+                              </h4>
+                              <svg className="w-4 h-4 text-gray-400 hover:text-blue-400 cursor-pointer transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </div>
+                            <p className="text-gray-300 text-sm">{userData?.email}</p>
+                            <p className="text-gray-400 text-sm">
+                              Member since {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'long' 
+                              }) : 'Unknown'}
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <div className="bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/30 rounded-lg p-4">
+                              <h5 className="text-blue-400 font-medium mb-2">Current Streak</h5>
+                              <p className="text-2xl font-bold text-white">
+                                {userStats?.currentStreak || 0} days
+                              </p>
+                              <p className="text-gray-400 text-sm">
+                                {(userStats?.currentStreak || 0) > 0 ? 'Keep it up! 🔥' : 'Start your streak today! 💪'}
+                              </p>
+                            </div>
+                            
+                            {userStats && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-gray-700/30 rounded-lg p-3 text-center">
+                                  <p className="text-lg font-bold text-white">{userStats.totalHabits}</p>
+                                  <p className="text-xs text-gray-400">Total Habits</p>
+                                </div>
+                                <div className="bg-gray-700/30 rounded-lg p-3 text-center">
+                                  <p className="text-lg font-bold text-white">{userStats.longestStreak}</p>
+                                  <p className="text-xs text-gray-400">Best Streak</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -438,7 +554,7 @@ const Profile = () => {
                       <p className="text-sm text-gray-300">
                         {isSubscribed ? 'You are currently subscribed to our newsletter' : 'You are not subscribed to our newsletter'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">john@example.com</p>
+                      <p className="text-xs text-gray-400 mt-1">{userData?.email}</p>
                     </div>
                     <button
                       onClick={() => setIsSubscribed(!isSubscribed)}
@@ -520,8 +636,19 @@ const Profile = () => {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">John Doe</h3>
-                  <p className="text-sm text-gray-400">john@example.com</p>
+                  {loading ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-4 bg-gray-700 rounded w-24 mx-auto"></div>
+                      <div className="h-3 bg-gray-700 rounded w-32 mx-auto"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-semibold text-white">
+                        {userData?.name || userData?.username || 'User'}
+                      </h3>
+                      <p className="text-sm text-gray-400">{userData?.email}</p>
+                    </>
+                  )}
                 </div>
 
                 <nav className="space-y-2">
@@ -548,7 +675,10 @@ const Profile = () => {
                     <span className="text-sm font-medium">Give Feedback</span>
                   </button>
                   
-                  <button className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-red-400 hover:text-red-300 hover:bg-red-900/20">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                  >
                     <LogOut size={18} />
                     <span className="text-sm font-medium">Logout</span>
                   </button>
@@ -569,7 +699,7 @@ const Profile = () => {
           onClose={() => setIsAvatarSelectorOpen(false)}
           onSelect={(avatarUrl) => setCurrentAvatar(avatarUrl)}
           currentAvatar={currentAvatar}
-          userName="John Doe"
+          userName={userData?.name || userData?.username || 'User'}
         />
       </div>
       

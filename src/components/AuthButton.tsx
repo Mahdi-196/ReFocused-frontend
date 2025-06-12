@@ -56,23 +56,6 @@ const AuthButton = () => {
     };
   }, []);
 
-  const handleLogout = () => {
-    // Clear token from localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('REF_TOKEN');
-      localStorage.removeItem('REF_USER');
-    }
-    
-    // Remove Authorization header
-    delete client.defaults.headers.common['Authorization'];
-    
-    // Update state
-    setIsLoggedIn(false);
-    
-    // Navigate to home page
-    router.push('/');
-  };
-
   const openAuthModal = () => {
     setIsAuthModalOpen(true);
   };
@@ -89,30 +72,13 @@ const AuthButton = () => {
     <>
       <div className="relative">
         {isLoggedIn ? (
-          <div className="relative group">
-            <button 
-              className="w-10 h-10 rounded-full bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#3590e0] hover:to-[#30b0b1] border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center"
-              title="Profile Menu"
-            >
-              <User size={18} className="text-white" />
-            </button>
-            
-            {/* Dropdown Menu */}
-            <div className="absolute right-0 top-12 bg-[#10182B]/95 backdrop-blur-md border border-gray-600/30 rounded-lg shadow-lg py-2 min-w-[120px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <button
-                onClick={() => router.push('/profile')}
-                className="w-full px-4 py-2 text-left text-gray-300 hover:text-white hover:bg-gray-700/50 transition-colors"
-              >
-                Profile
-              </button>
-              <button
-                onClick={handleLogout}
-                className="w-full px-4 py-2 text-left text-gray-300 hover:text-white hover:bg-gray-700/50 transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
+          <button 
+            onClick={() => router.push('/profile')}
+            className="w-10 h-10 rounded-full bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#3590e0] hover:to-[#30b0b1] border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center"
+            title="Go to Profile"
+          >
+            <User size={18} className="text-white" />
+          </button>
         ) : (
           <button
             onClick={openAuthModal}

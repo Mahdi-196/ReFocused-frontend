@@ -35,36 +35,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      // Fix URL construction to avoid double slashes
-      const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '');
-      
       console.log('Attempting login for:', email);
       
-      const response = await fetch(`${baseUrl}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email, 
-          password 
-        }),
-        signal: controller.signal,
-        credentials: 'include'
+      const response = await client.post('/auth/login', {
+        email, 
+        password 
       });
 
       clearTimeout(timeoutId);
       
-      const data = await response.json().catch(() => ({}));
-      
-      if (!response.ok) {
-        console.error('Login failed with status:', response.status, data);
-        throw new Error(data.message || `Error: ${response.status} - ${response.statusText}`);
-      }
-      
       console.log('Login successful');
       
-      const token = data.access_token;
+      const token = response.data.access_token;
       
       if (!token) {
         throw new Error('No access token received from server');

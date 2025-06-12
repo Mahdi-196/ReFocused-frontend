@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import client from '@/api/client';
+// Removed unused client import
 import { UIGoal, GoalView } from '@/types/goal';
 
 type GoalTrackerProps = {

@@ -75,29 +75,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     setIsLoading(true);
 
     try {
-      const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '');
       const endpoint = activeTab === 'login' ? '/auth/login' : '/auth/register';
       
       const payload = activeTab === 'login' 
         ? { email: formData.email, password: formData.password }
         : { email: formData.email, password: formData.password, name: formData.name };
 
-      const response = await fetch(`${baseUrl}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        credentials: 'include'
-      });
-
-      const data = await response.json().catch(() => ({}));
+      const response = await client.post(endpoint, payload);
       
-      if (!response.ok) {
-        throw new Error(data.message || `${activeTab === 'login' ? 'Login' : 'Registration'} failed`);
-      }
-      
-      const token = data.access_token;
+      const token = response.data.access_token;
       
       if (!token) {
         throw new Error('No access token received from server');
