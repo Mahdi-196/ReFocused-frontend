@@ -37,7 +37,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       console.log('Attempting login for:', email);
       
-      const response = await client.post('/auth/login', {
+      const response = await client.post('/api/v1/auth/login', {
         email, 
         password 
       });

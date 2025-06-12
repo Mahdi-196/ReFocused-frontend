@@ -61,12 +61,12 @@ export default function TrackPage() {
       setError(null);
       
       // Load habits
-      const habitsResponse = await client.get('/habits');
+      const habitsResponse = await client.get('/api/v1/habits');
       setHabits(habitsResponse.data || []);
       
       // Load daily entries for current month
       const monthStr = currentMonth.toISOString().slice(0, 7); // YYYY-MM
-      const entriesResponse = await client.get(`/daily-entries?month=${monthStr}`);
+      const entriesResponse = await client.get(`/api/v1/dashboard/daily-entries?month=${monthStr}`);
       
       // Convert array to object with date as key
       const entriesMap: {[key: string]: DailyEntry} = {};
@@ -122,7 +122,7 @@ export default function TrackPage() {
     }
     
     try {
-      const response = await client.post('/habits', {
+      const response = await client.post('/api/v1/habits', {
         name: newHabit.trim()
       });
       
@@ -141,7 +141,7 @@ export default function TrackPage() {
     if (!habitToDelete) return;
     
     try {
-      await client.delete(`/habits/${habitToDelete.id}`);
+      await client.delete(`/api/v1/habits/${habitToDelete.id}`);
       
       // Remove habit from state
       const newHabits = habits.filter((_, index) => index !== indexToDelete);
@@ -181,7 +181,7 @@ export default function TrackPage() {
     }
     
     try {
-      await client.put(`/habits/${currentHabit.id}`, {
+      await client.put(`/api/v1/habits/${currentHabit.id}`, {
         isFavorite: !currentHabit.isFavorite
       });
       

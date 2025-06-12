@@ -28,11 +28,11 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       // Fix URL construction to avoid double slashes
-      const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '');
+      const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
       
       console.log('Registering user with:', { username, email, name });
       
-      const response = await fetch(`${baseUrl}/auth/register`, {
+      const response = await fetch(`${baseUrl}/api/v1/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

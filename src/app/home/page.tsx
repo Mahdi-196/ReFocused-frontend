@@ -149,7 +149,7 @@ const Home = () => {
 
   const handleDeleteGoal = async (id: number, type: 'sprint' | 'vision') => {
     try {
-      await client.delete(`/goals/${id}`);
+              await client.delete(`/api/v1/goals/${id}`);
       
       // On success, filter out the deleted goal from state
       if (type === 'sprint') {

@@ -14,8 +14,8 @@ interface UseGoogleAuthProps {
 export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
   const handleGoogleResponse = async (response: GoogleAuthResponse) => {
     try {
-      // Use the API client which has mock interceptors
-      const res = await client.post('/auth/google', {
+      // Use the API client with proxy routing
+      const res = await client.post('/api/v1/auth/google', {
         token: response.credential
       });
 

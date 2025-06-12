@@ -75,7 +75,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     setIsLoading(true);
 
     try {
-      const endpoint = activeTab === 'login' ? '/auth/login' : '/auth/register';
+      const endpoint = activeTab === 'login' ? '/api/v1/auth/login' : '/api/v1/auth/register';
       
       const payload = activeTab === 'login' 
         ? { email: formData.email, password: formData.password }

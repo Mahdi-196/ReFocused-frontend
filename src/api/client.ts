@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create a pre-configured axios instance for API requests
 const client = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000",
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "",
   withCredentials: true, // Include cookies in cross-site requests
   headers: {
     'Content-Type': 'application/json',

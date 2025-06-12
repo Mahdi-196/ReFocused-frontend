@@ -26,10 +26,14 @@ interface UserData {
 }
 
 interface UserStats {
-  totalHabits: number;
-  currentStreak: number;
-  longestStreak: number;
-  totalDaysTracked: number;
+  goals_total: number;
+  goals_completed: number;
+  habits_total: number;
+  mood_entries_count: number;
+  study_sets_count: number;
+  mantras_count: number;
+  journal_collections_count: number;
+  account_age_days: number;
 }
 
 const Profile = () => {
@@ -69,27 +73,31 @@ const Profile = () => {
       // Initialize auth headers
       initializeAuth();
       
-      // Load user profile data
-      const userResponse = await client.get('/auth/me');
+      // Load user profile data - using correct backend endpoint
+      const userResponse = await client.get('/api/v1/user/me');
       setUserData(userResponse.data);
       
       // Set avatar from user data or generate one
-      const avatarUrl = userResponse.data.avatar || 
+      const avatarUrl = userResponse.data.profile_picture || 
         `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userResponse.data.name || userResponse.data.email)}&backgroundColor=transparent`;
       setCurrentAvatar(avatarUrl);
       
-      // Load user statistics (fallback if endpoint doesn't exist)
+      // Load user statistics
       try {
-        const statsResponse = await client.get('/user/stats');
+        const statsResponse = await client.get('/api/v1/user/stats');
         setUserStats(statsResponse.data);
       } catch (statsErr) {
         // If stats endpoint doesn't exist, create mock stats
         console.log('Stats endpoint not available, using mock data');
         setUserStats({
-          totalHabits: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-          totalDaysTracked: 0
+          goals_total: 0,
+          goals_completed: 0,
+          habits_total: 0,
+          mood_entries_count: 0,
+          study_sets_count: 0,
+          mantras_count: 0,
+          journal_collections_count: 0,
+          account_age_days: 0
         });
       }
       
@@ -469,24 +477,32 @@ const Profile = () => {
                           
                           <div className="space-y-4">
                             <div className="bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/30 rounded-lg p-4">
-                              <h5 className="text-blue-400 font-medium mb-2">Current Streak</h5>
+                              <h5 className="text-blue-400 font-medium mb-2">Account Age</h5>
                               <p className="text-2xl font-bold text-white">
-                                {userStats?.currentStreak || 0} days
+                                {userStats?.account_age_days || 0} days
                               </p>
                               <p className="text-gray-400 text-sm">
-                                {(userStats?.currentStreak || 0) > 0 ? 'Keep it up! 🔥' : 'Start your streak today! 💪'}
+                                Member since day one! 🎉
                               </p>
                             </div>
                             
                             {userStats && (
                               <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-                                  <p className="text-lg font-bold text-white">{userStats.totalHabits}</p>
+                                  <p className="text-lg font-bold text-white">{userStats.habits_total}</p>
                                   <p className="text-xs text-gray-400">Total Habits</p>
                                 </div>
                                 <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-                                  <p className="text-lg font-bold text-white">{userStats.longestStreak}</p>
-                                  <p className="text-xs text-gray-400">Best Streak</p>
+                                  <p className="text-lg font-bold text-white">{userStats.goals_completed}</p>
+                                  <p className="text-xs text-gray-400">Goals Done</p>
+                                </div>
+                                <div className="bg-gray-700/30 rounded-lg p-3 text-center">
+                                  <p className="text-lg font-bold text-white">{userStats.mood_entries_count}</p>
+                                  <p className="text-xs text-gray-400">Mood Entries</p>
+                                </div>
+                                <div className="bg-gray-700/30 rounded-lg p-3 text-center">
+                                  <p className="text-lg font-bold text-white">{userStats.journal_collections_count}</p>
+                                  <p className="text-xs text-gray-400">Journal Entries</p>
                                 </div>
                               </div>
                             )}
