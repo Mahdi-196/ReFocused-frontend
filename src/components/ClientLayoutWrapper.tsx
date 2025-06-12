@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Header from './Header';
 import Footer from './footer';
 import AnimatedLayout from './AnimatedLayout';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export default function ClientLayoutWrapper({
   children,
@@ -17,6 +18,8 @@ export default function ClientLayoutWrapper({
   const [isLoading, setIsLoading] = useState(true);
   
   const isLandingPage = pathname === '/';
+  const isProfilePage = pathname === '/profile';
+  const shouldShowFooter = isLandingPage || isProfilePage;
   
   // Check authentication status
   useEffect(() => {
@@ -60,14 +63,16 @@ export default function ClientLayoutWrapper({
   }
 
   return (
-    <div className={isLandingPage ? '' : 'pt-20'}>
-      {!isLandingPage && <Header />}
-      <AnimatedLayout>
-        <main className={`${!isLandingPage ? 'container mx-auto px-4 py-8' : ''}`}>
-          {children}
-        </main>
-      </AnimatedLayout>
-      {!isLandingPage && <Footer />}
-    </div>
+    <AuthProvider>
+      <div className={isLandingPage ? '' : 'pt-20'}>
+        {!isLandingPage && <Header />}
+        <AnimatedLayout>
+          <main className={`${!isLandingPage ? 'container mx-auto px-4 py-8' : ''}`}>
+            {children}
+          </main>
+        </AnimatedLayout>
+        {shouldShowFooter && <Footer />}
+      </div>
+    </AuthProvider>
   );
 } 

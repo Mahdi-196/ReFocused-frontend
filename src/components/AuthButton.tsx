@@ -10,11 +10,13 @@ const AuthButton = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
   const router = useRouter();
 
   // Check if user is logged in on component mount
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       // Initialize auth from client
       initializeAuth();
       
@@ -24,8 +26,37 @@ const AuthButton = () => {
       if (token && token !== 'dummy-auth-token') {
         setIsLoggedIn(true);
         client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // Try to fetch user profile to get avatar
+        try {
+          const response = await client.get('/api/v1/user/me');
+          const userData = response.data;
+          
+          // Set avatar from user data or generate one
+          const avatarUrl = userData.profile_picture || 
+            `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
+          setUserAvatar(avatarUrl);
+          setUserName(userData.name || userData.email || 'User');
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+          // Fallback to stored user data
+          const storedUser = localStorage.getItem('REF_USER');
+          if (storedUser) {
+            try {
+              const userData = JSON.parse(storedUser);
+              const avatarUrl = userData.profile_picture || 
+                `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
+              setUserAvatar(avatarUrl);
+              setUserName(userData.name || userData.email || 'User');
+            } catch (parseError) {
+              console.error('Failed to parse stored user data:', parseError);
+            }
+          }
+        }
       } else {
         setIsLoggedIn(false);
+        setUserAvatar(null);
+        setUserName('');
       }
       
       setIsLoading(false);
@@ -44,15 +75,30 @@ const AuthButton = () => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'REF_TOKEN') {
         checkAuth();
+      } else if (e.key === 'REF_USER') {
+        // Update avatar when user data changes
+        const userData = e.newValue ? JSON.parse(e.newValue) : null;
+        if (userData && userData.profile_picture) {
+          setUserAvatar(userData.profile_picture);
+        }
       }
     };
     
+    // Listen for custom avatar update events
+    const handleAvatarUpdate = (event: CustomEvent) => {
+      const { avatarUrl, userData } = event.detail;
+      setUserAvatar(avatarUrl);
+      setUserName(userData.name || userData.email || 'User');
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
     };
   }, []);
 
@@ -74,10 +120,21 @@ const AuthButton = () => {
         {isLoggedIn ? (
           <button 
             onClick={() => router.push('/profile')}
-            className="w-10 h-10 rounded-full bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#3590e0] hover:to-[#30b0b1] border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center"
-            title="Go to Profile"
+            className="w-10 h-10 rounded-full border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center overflow-hidden"
+            title={`Go to Profile - ${userName}`}
           >
-            <User size={18} className="text-white" />
+            {userAvatar ? (
+              <img 
+                src={userAvatar} 
+                alt={`${userName}'s avatar`}
+                className="w-full h-full object-cover"
+                onError={() => setUserAvatar(null)} // Fallback to icon if image fails
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#3590e0] hover:to-[#30b0b1] flex items-center justify-center">
+                <User size={18} className="text-white" />
+              </div>
+            )}
           </button>
         ) : (
           <button

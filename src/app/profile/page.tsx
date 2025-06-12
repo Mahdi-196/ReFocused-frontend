@@ -56,9 +56,27 @@ const Profile = () => {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [showAvatarSuccess, setShowAvatarSuccess] = useState(false);
   
   // Settings hook
   const { settings, updateSettings, isLoaded } = useSettings();
+  
+  // Add authentication check for this page
+  const [isAuthenticatedUser, setIsAuthenticatedUser] = useState(false);
+  
+  useEffect(() => {
+    const checkPageAuth = () => {
+      const token = localStorage.getItem('REF_TOKEN');
+      if (!token || token === 'dummy-auth-token') {
+        router.push('/');
+        return;
+      }
+      setIsAuthenticatedUser(true);
+    };
+    
+    checkPageAuth();
+  }, [router]);
 
   // Load user data on component mount
   useEffect(() => {
@@ -119,6 +137,71 @@ const Profile = () => {
     
     // Redirect to home page
     router.push('/');
+  };
+
+  const handleAvatarSelect = async (avatarUrl: string) => {
+    setAvatarSaving(true);
+    try {
+      // Update local state immediately for better UX
+      setCurrentAvatar(avatarUrl);
+
+      // Initialize auth headers
+      initializeAuth();
+
+      // Save avatar to database
+      await client.patch('/api/v1/user/profile', {
+        profile_picture: avatarUrl
+      });
+
+      // Update userData state
+      if (userData) {
+        const updatedUserData = { ...userData, profile_picture: avatarUrl };
+        setUserData(updatedUserData);
+        
+        // Update localStorage to sync with header
+        localStorage.setItem('REF_USER', JSON.stringify(updatedUserData));
+        
+        // Trigger a custom event to notify other components (like AuthButton) about the avatar change
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+          detail: { avatarUrl, userData: updatedUserData } 
+        }));
+      }
+
+      console.log('Avatar updated successfully');
+      
+      // Show success message
+      setShowAvatarSuccess(true);
+      setTimeout(() => setShowAvatarSuccess(false), 3000);
+    } catch (error: any) {
+      console.error('Failed to update avatar:', error);
+      
+      // Check if it's an authentication error
+      if (error.response?.status === 401) {
+        // Show specific auth error message
+        alert('Session expired. Please login again to save your avatar.');
+        
+        // Only logout if it's actually an auth issue, not a temporary token problem
+        if (error.response?.data?.error?.includes('expired') || 
+            error.response?.data?.error?.includes('invalid')) {
+          // Clear local storage and redirect
+          localStorage.removeItem('REF_TOKEN');
+          localStorage.removeItem('REF_USER');
+          delete client.defaults.headers.common['Authorization'];
+          router.push('/');
+          return;
+        }
+      } else {
+        // Show user-friendly error message for other errors
+        alert('Failed to save avatar. Please try again.');
+      }
+      
+      // Revert to previous avatar if the API call failed
+      if (userData?.profile_picture) {
+        setCurrentAvatar(userData.profile_picture);
+      }
+    } finally {
+      setAvatarSaving(false);
+    }
   };
 
   const menuItems = [
@@ -424,7 +507,7 @@ const Profile = () => {
                     <div className="flex flex-col items-center space-y-4">
                       <div 
                         className="relative group cursor-pointer"
-                        onClick={() => setIsAvatarSelectorOpen(true)}
+                        onClick={() => !avatarSaving && setIsAvatarSelectorOpen(true)}
                       >
                         <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 group-hover:border-blue-500/50 transition-colors">
                           <img 
@@ -433,17 +516,40 @@ const Profile = () => {
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Camera className="w-6 h-6 text-white" />
-                        </div>
+                        {avatarSaving ? (
+                          <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Camera className="w-6 h-6 text-white" />
+                          </div>
+                        )}
                       </div>
                       
                       <button
                         onClick={() => setIsAvatarSelectorOpen(true)}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                        disabled={avatarSaving}
+                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
                       >
-                        Change Avatar
+                        {avatarSaving ? (
+                          <>
+                            <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          'Change Avatar'
+                        )}
                       </button>
+                      
+                      {showAvatarSuccess && (
+                        <div className="mt-2 px-3 py-2 bg-green-900/30 border border-green-700/50 rounded-lg text-green-400 text-xs flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Avatar saved successfully!
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex-1 space-y-6 w-full lg:w-auto">
@@ -629,6 +735,18 @@ const Profile = () => {
     }
   };
 
+  // Don't render until authenticated
+  if (!isAuthenticatedUser) {
+    return (
+      <div className="min-h-screen bg-[#1A2537] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#42b9e5] mx-auto mb-4"></div>
+          <p className="text-slate-300">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <PageTransition>
       <div 
@@ -713,7 +831,7 @@ const Profile = () => {
         <AvatarSelector
           isOpen={isAvatarSelectorOpen}
           onClose={() => setIsAvatarSelectorOpen(false)}
-          onSelect={(avatarUrl) => setCurrentAvatar(avatarUrl)}
+          onSelect={handleAvatarSelect}
           currentAvatar={currentAvatar}
           userName={userData?.name || userData?.username || 'User'}
         />
