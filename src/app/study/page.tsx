@@ -1,11 +1,12 @@
 "use client";
 
 // src/app/study/page.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Pomodoro from "@/components/pomodoro";
 import QuickNotes from "@/components/QuickNotes";
 import PageTransition from '@/components/PageTransition';
 import AuthGuard from '@/components/AuthGuard';
+import client from "@/api/client";
 
 type Card = {
   id: string;
@@ -17,6 +18,8 @@ type StudySet = {
   id: string;
   name: string;
   cards: Card[];
+  user_id?: string | number;
+  last_updated?: string;
 };
 
 type ModalType = 'newSet' | 'editSet' | 'addCard' | null;
@@ -35,133 +38,305 @@ export default function StudyPage() {
     back: ''
   });
   const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Initialize client-side rendering flag
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Load study sets from localStorage on mount and save whenever they change
+  // Load user ID from localStorage
   useEffect(() => {
     if (!isClient) return;
-    
     try {
-      const savedSets = localStorage.getItem('studySets');
-      if (savedSets) {
-        const parsed = JSON.parse(savedSets);
-        setStudySets(parsed);
-        if (parsed.length > 0 && !selectedSetId) {
-          setSelectedSetId(parsed[0].id);
-        }
+      const userDataString = localStorage.getItem('REF_USER');
+      if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        setUserId(userData.id?.toString());
       }
     } catch (error) {
-      console.error('Failed to load study sets from localStorage:', error);
+      console.error('Failed to load user data:', error);
     }
-  }, [isClient, selectedSetId]);
+  }, [isClient]);
 
+  // Load study sets from API on mount
   useEffect(() => {
-    if (!isClient || studySets.length === 0) return;
+    if (!isClient) return;
+    setIsLoading(true);
+    
+    const loadStudySets = async () => {
+      try {
+        if (userId) {
+          // Load from API if user is logged in
+          try {
+            console.log('Attempting to load study sets from API');
+            const response = await client.get('/api/v1/study/sets');
+            console.log('API response:', response.data);
+            
+            if (response.status === 200 && response.data) {
+              let fetchedSets: any[] = response.data;
+              // Handle possible array wrapping
+              if (!Array.isArray(fetchedSets) && fetchedSets.data && Array.isArray(fetchedSets.data)) {
+                fetchedSets = fetchedSets.data;
+              }
+              
+              if (Array.isArray(fetchedSets)) {
+                // Transform the backend data format to our frontend format
+                const transformedSets: StudySet[] = fetchedSets.map(set => ({
+                  id: set.id.toString(),
+                  name: set.title || 'Untitled Set',
+                  cards: (set.cards || []).map((card: any) => ({
+                    id: card.id.toString(),
+                    front: card.front_content || '',
+                    back: card.back_content || ''
+                  })),
+                  user_id: set.user_id,
+                  last_updated: set.updated_at || set.created_at
+                }));
+                
+                console.log('Transformed sets:', transformedSets);
+                setStudySets(transformedSets);
+                
+                if (transformedSets.length > 0 && !selectedSetId) {
+                  setSelectedSetId(transformedSets[0].id);
+                }
+              }
+            }
+          } catch (apiError) {
+            console.error('Failed to load study sets from API:', apiError);
+            setError('Failed to load study sets from server.');
+          } finally {
+            setIsLoading(false);
+          }
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to load study sets:', error);
+        setError('Failed to load study sets');
+        setIsLoading(false);
+      }
+    };
+
+    loadStudySets();
+  }, [isClient, userId, selectedSetId]);
+
+  // Function to save study sets to backend
+  const saveStudySets = useCallback(async (sets: StudySet[]) => {
+    if (!isClient || !userId) return;
     
     try {
-      localStorage.setItem('studySets', JSON.stringify(studySets));
+      console.log('Saving study sets to API:', sets);
+      // Send each study set individually with proper structure
+      for (const set of sets) {
+        // Format the data according to what backend expects
+        const payload = {
+          title: set.name,
+          cards: set.cards.map(card => ({
+            front_content: card.front,
+            back_content: card.back
+          }))
+        };
+        console.log('Sending payload to API:', payload);
+        await client.post('/api/v1/study/sets', payload);
+      }
     } catch (error) {
-      console.error('Failed to save study sets to localStorage:', error);
+      console.error('Failed to save study sets to API:', error);
+      setError('Failed to save to server.');
     }
-  }, [studySets, isClient]);
+  }, [isClient, userId]);
 
   const selectedSet = studySets.find(set => set.id === selectedSetId);
 
   // Function to handle adding a new set
-  const handleAddSet = () => {
-    if (!newSetName.trim()) return;
+  const handleAddSet = async () => {
+    if (!newSetName.trim() || !userId) return;
     
-    const newSet: StudySet = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newSetName.trim(),
-      cards: []
-    };
-    
-    setStudySets(prev => [...prev, newSet]);
-    setSelectedSetId(newSet.id);
-    setNewSetName('');
-    setModalOpen(null);
+    try {
+      // Create payload for backend
+      const payload = {
+        title: newSetName.trim(),
+        cards: [] // New set has no cards initially
+      };
+      
+      console.log('Creating new study set:', payload);
+      const response = await client.post('/api/v1/study/sets', payload);
+      console.log('API response:', response.data);
+      
+      // If the backend returns data, create a new set in our state
+      if (response.data && response.data.id) {
+        const newSet: StudySet = {
+          id: response.data.id.toString(),
+          name: newSetName.trim(),
+          cards: [],
+          user_id: userId ? parseInt(userId) : undefined,
+          last_updated: new Date().toISOString()
+        };
+        
+        // Add to local state for immediate UI update
+        const updatedSets = [...studySets, newSet];
+        setStudySets(updatedSets);
+        setSelectedSetId(newSet.id);
+      }
+      
+      setNewSetName('');
+      setModalOpen(null);
+    } catch (error) {
+      console.error('Failed to create study set:', error);
+      setError('Failed to create study set. Please try again.');
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
+    }
   };
-
+  
   // Function to handle editing a set name
-  const handleEditSet = () => {
-    if (!newSetName.trim() || !editingSetId) return;
+  const handleEditSet = async () => {
+    if (!newSetName.trim() || !editingSetId || !userId) return;
     
-    setStudySets(prev =>
-      prev.map(set =>
+    try {
+      // Get the existing set
+      const existingSet = studySets.find(set => set.id === editingSetId);
+      if (!existingSet) return;
+      
+      // Create payload for backend
+      const payload = {
+        title: newSetName.trim(),
+        cards: existingSet.cards.map(card => ({
+          front_content: card.front,
+          back_content: card.back
+        }))
+      };
+      
+      console.log('Updating study set:', payload);
+      const response = await client.put(`/api/v1/study/sets/${editingSetId}`, payload);
+      console.log('API response:', response.data);
+      
+      // Update the local state
+      const updatedSets = studySets.map(set =>
         set.id === editingSetId
-          ? { ...set, name: newSetName.trim() }
+          ? { 
+              ...set, 
+              name: newSetName.trim(), 
+              last_updated: new Date().toISOString() 
+            }
           : set
-      )
-    );
-    
-    setNewSetName('');
-    setEditingSetId(null);
-    setModalOpen(null);
+      );
+      
+      setStudySets(updatedSets);
+      setNewSetName('');
+      setEditingSetId(null);
+      setModalOpen(null);
+    } catch (error) {
+      console.error('Failed to edit study set:', error);
+      setError('Failed to update study set. Please try again.');
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
+    }
   };
 
   // Function to handle deleting a study set
-  const handleDeleteSet = () => {
-    if (!editingSetId) return;
+  const handleDeleteSet = async () => {
+    if (!editingSetId || !userId) return;
     
-    const updatedSets = studySets.filter(set => set.id !== editingSetId);
-    setStudySets(updatedSets);
-    
-    // If we're deleting the currently selected set, select the first available set or clear selection
-    if (selectedSetId === editingSetId) {
-      if (updatedSets.length > 0) {
-        setSelectedSetId(updatedSets[0].id);
-      } else {
-        setSelectedSetId(null);
+    try {
+      console.log('Deleting study set from API:', editingSetId);
+      await client.delete(`/api/v1/study/sets/${editingSetId}`);
+      console.log('Study set deleted successfully');
+      
+      const updatedSets = studySets.filter(set => set.id !== editingSetId);
+      setStudySets(updatedSets);
+      
+      // If we're deleting the currently selected set, select the first available set or clear selection
+      if (selectedSetId === editingSetId) {
+        if (updatedSets.length > 0) {
+          setSelectedSetId(updatedSets[0].id);
+        } else {
+          setSelectedSetId(null);
+        }
+        setCurrentCard(1);
+        setIsFlipped(false);
       }
-      setCurrentCard(1);
-      setIsFlipped(false);
+      
+      setNewSetName('');
+      setEditingSetId(null);
+      setModalOpen(null);
+    } catch (error) {
+      console.error('Failed to delete study set:', error);
+      setError('Failed to delete study set from server.');
+      setTimeout(() => setError(null), 3000);
     }
-    
-    setNewSetName('');
-    setEditingSetId(null);
-    setModalOpen(null);
   };
 
   // Function to handle adding a new card
-  const handleAddCard = () => {
-    if (!selectedSetId || !newCard.front.trim()) return;
+  const handleAddCard = async () => {
+    if (!selectedSetId || !newCard.front.trim() || !userId) return;
     
-    const newCardWithId = {
-      id: Math.random().toString(36).substr(2, 9),
-      front: newCard.front.trim(),
-      back: newCard.back.trim()
-    };
-    
-    setStudySets(prev =>
-      prev.map(set =>
-        set.id === selectedSetId
-          ? { ...set, cards: [...set.cards, newCardWithId] }
-          : set
-      )
-    );
-    
-    setNewCard({ front: '', back: '' });
-    setModalOpen(null);
+    try {
+      // Format the card for the backend
+      const cardPayload = {
+        study_set_id: parseInt(selectedSetId),
+        front_content: newCard.front.trim(),
+        back_content: newCard.back.trim()
+      };
+      
+      console.log('Adding card to study set:', cardPayload);
+      const response = await client.post(`/api/v1/study/sets/${selectedSetId}/cards`, cardPayload);
+      console.log('Card added response:', response.data);
+      
+      if (response.data && response.data.id) {
+        const newCardWithId = {
+          id: response.data.id.toString(),
+          front: newCard.front.trim(),
+          back: newCard.back.trim()
+        };
+        
+        const updatedSets = studySets.map(set =>
+          set.id === selectedSetId
+            ? { 
+                ...set, 
+                cards: [...set.cards, newCardWithId],
+                last_updated: new Date().toISOString()
+              }
+            : set
+        );
+        
+        setStudySets(updatedSets);
+        setNewCard({ front: '', back: '' });
+        setModalOpen(null);
+      }
+    } catch (error) {
+      console.error('Failed to save card to backend:', error);
+      setError('Failed to save card to server.');
+      setTimeout(() => setError(null), 3000);
+    }
   };
 
   // Function to delete a card
-  const handleDeleteCard = (cardId: string) => {
+  const handleDeleteCard = async (cardId: string) => {
     if (!selectedSetId) return;
     
-    setStudySets(prev =>
-      prev.map(set =>
-        set.id === selectedSetId
-          ? { ...set, cards: set.cards.filter(card => card.id !== cardId) }
-          : set
-      )
+    const updatedSets = studySets.map(set =>
+      set.id === selectedSetId
+        ? { 
+            ...set, 
+            cards: set.cards.filter(card => card.id !== cardId),
+            last_updated: new Date().toISOString()
+          }
+        : set
     );
     
+    setStudySets(updatedSets);
     setCurrentCard(1);
+    
+    try {
+      await saveStudySets(updatedSets);
+    } catch (error) {
+      console.error('Failed to save after deleting card:', error);
+    }
   };
 
   // Function to handle next card
@@ -216,8 +391,10 @@ export default function StudyPage() {
                     onClick={() => {
                       setNewSetName('');
                       setModalOpen('newSet');
+                      console.log('Opening new set modal');
                     }}
                     className="flex items-center gap-1 px-3 py-1 border border-gray-600 rounded-lg hover:bg-gray-700 text-sm active:scale-95 transform transition-all duration-75 text-white"
+                    aria-label="Create New Study Set"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -226,8 +403,28 @@ export default function StudyPage() {
                   </button>
                 </div>
                 
+                {/* Status Messages */}
+                {isLoading && (
+                  <div className="text-center py-4">
+                    <div className="animate-spin h-5 w-5 mx-auto mb-2 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                    <p className="text-gray-300 text-sm">Loading study sets...</p>
+                  </div>
+                )}
+                
+                {error && (
+                  <div className="text-red-400 bg-red-900/20 p-2 rounded mb-2 text-sm">
+                    {error}
+                  </div>
+                )}
+                
                 {/* Study Sets List */}
                 <div className="space-y-2">
+                  {!isLoading && studySets.length === 0 && (
+                    <p className="text-gray-300 text-center py-4">
+                      No study sets yet. Create your first set!
+                    </p>
+                  )}
+                  
                   {studySets.map(set => (
                     <div
                       key={set.id}
@@ -317,49 +514,57 @@ export default function StudyPage() {
                 )}
 
                 {/* Navigation */}
-                <div className="flex justify-between items-center mb-3">
-                  <button 
-                    className="p-1.5 text-gray-300 hover:text-gray-100 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
-                    disabled={!selectedSet?.cards.length}
-                    onClick={handlePrevCard}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <p className="text-sm text-blue-300">
-                    {selectedSet?.cards.length ? `${currentCard} of ${selectedSet.cards.length}` : '0 cards'}
-                  </p>
-                  <button 
-                    className="p-1.5 text-gray-300 hover:text-gray-100 disabled:opacity-50 active:scale-95 transform transition-transform duration-75"
-                    disabled={!selectedSet?.cards.length}
-                    onClick={handleNextCard}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Delete Button */}
-                {selectedSet?.cards.length ? (
-                  <div className="flex justify-center">
-                    <button 
-                      onClick={() => handleDeleteCard(selectedSet.cards[currentCard - 1].id)}
-                      className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm active:scale-95 transform transition-all duration-75"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete Card
-                    </button>
+                {selectedSet?.cards.length > 0 && (
+                  <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 justify-between items-center">
+                    <div className="flex space-x-2">
+                      <button 
+                        onClick={() => handleDeleteCard(selectedSet.cards[currentCard - 1].id)}
+                        className="px-3 py-1 border border-red-500 text-red-400 rounded hover:bg-red-900/30 active:scale-95 transform transition-all duration-75 text-sm"
+                      >
+                        Delete Card
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <button 
+                        onClick={handlePrevCard}
+                        className="p-2 hover:bg-gray-700 rounded-full active:scale-95 transform transition-all duration-75"
+                        title="Previous card"
+                      >
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      
+                      <span className="mx-4 text-white">
+                        {currentCard} / {selectedSet.cards.length}
+                      </span>
+                      
+                      <button 
+                        onClick={handleNextCard}
+                        className="p-2 hover:bg-gray-700 rounded-full active:scale-95 transform transition-all duration-75"
+                        title="Next card"
+                      >
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <div>
+                      <button 
+                        onClick={() => setIsFlipped(!isFlipped)}
+                        className="px-3 py-1 border border-gray-400 text-gray-300 rounded hover:bg-gray-700 active:scale-95 transform transition-all duration-75 text-sm"
+                      >
+                        Flip Card
+                      </button>
+                    </div>
                   </div>
-                ) : null}
+                )}
               </div>
             </div>
           </section>
 
-          {/* Summary Cards Section */}
           <section>
             {/* Time Period Toggle */}
             <div className="flex mb-4">
@@ -438,9 +643,12 @@ export default function StudyPage() {
 
           {/* Modals */}
           {modalOpen === 'newSet' && (
-            <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
-              <div className="bg-gray-800 text-white rounded-lg p-6 w-96 shadow-lg">
-                <h3 className="text-lg font-semibold mb-4">Create New Set</h3>
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-50">
+              <div 
+                className="bg-gray-800 text-white rounded-lg p-6 w-96 shadow-lg"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-semibold mb-4">Create New Study Set</h3>
                 <input
                   type="text"
                   placeholder="Enter set name"
@@ -448,7 +656,7 @@ export default function StudyPage() {
                   onChange={(e) => setNewSetName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md mb-4"
                   autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSet()}
+                  onKeyDown={(e) => e.key === 'Enter' && newSetName.trim() && handleAddSet()}
                 />
                 <div className="flex justify-end gap-2">
                   <button
@@ -522,34 +730,26 @@ export default function StudyPage() {
             <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
               <div className="bg-gray-800 text-white rounded-lg p-6 w-96 shadow-lg">
                 <h3 className="text-lg font-semibold mb-4">Add New Card</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Front
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter front side text"
-                      value={newCard.front}
-                      onChange={(e) => setNewCard(prev => ({ ...prev, front: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md"
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Back
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter back side text"
-                      value={newCard.back}
-                      onChange={(e) => setNewCard(prev => ({ ...prev, back: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md"
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddCard()}
-                    />
-                  </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-400 mb-1">Front</label>
+                  <textarea
+                    placeholder="Question or term"
+                    value={newCard.front}
+                    onChange={(e) => setNewCard(prev => ({ ...prev, front: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md resize-none h-24"
+                    autoFocus
+                  />
                 </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-400 mb-1">Back</label>
+                  <textarea
+                    placeholder="Answer or definition"
+                    value={newCard.back}
+                    onChange={(e) => setNewCard(prev => ({ ...prev, back: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md resize-none h-24"
+                  />
+                </div>
+                
                 <div className="flex justify-end gap-2 mt-4">
                   <button
                     onClick={() => setModalOpen(null)}

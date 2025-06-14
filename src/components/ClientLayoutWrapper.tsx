@@ -6,6 +6,7 @@ import Header from './Header';
 import Footer from './footer';
 import AnimatedLayout from './AnimatedLayout';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { initializeAuth } from '@/api/client';
 
 export default function ClientLayoutWrapper({
   children,
@@ -16,6 +17,7 @@ export default function ClientLayoutWrapper({
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
   
   const isLandingPage = pathname === '/';
   const isProfilePage = pathname === '/profile';
@@ -44,6 +46,11 @@ export default function ClientLayoutWrapper({
       }
     }
   }, [isAuthenticated, isLoading, isLandingPage, router]);
+
+  useEffect(() => {
+    setIsClient(true);
+    initializeAuth();
+  }, []);
 
   // Show loading spinner for protected routes while checking auth
   if (!isLandingPage && isLoading) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import NumberMood from '@/components/NumberMood';
 import PageTransition from '@/components/PageTransition';
 import AuthGuard from '@/components/AuthGuard';
@@ -28,7 +28,6 @@ interface DailyEntry {
   }[];
 }
 
-type TabType = 'Summary';
 type SimpleFilter = 'all' | 'active' | 'inactive';
 
 export default function TrackPage() {
@@ -43,7 +42,7 @@ export default function TrackPage() {
   const [habitError, setHabitError] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [activeTab, setActiveTab] = useState<TabType>('Summary');
+
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const [habitModalOpen, setHabitModalOpen] = useState(false);
@@ -51,11 +50,7 @@ export default function TrackPage() {
   const [simpleFilter, setSimpleFilter] = useState<SimpleFilter>('all');
 
   // Load user data on component mount
-  useEffect(() => {
-    loadUserData();
-  }, [currentMonth]);
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -83,7 +78,11 @@ export default function TrackPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentMonth]);
+
+  useEffect(() => {
+    loadUserData();
+  }, [currentMonth, loadUserData]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX);
@@ -106,33 +105,50 @@ export default function TrackPage() {
   };
 
   const handleAddHabit = async () => {
-    if (!newHabit.trim()) {
-      setHabitError('Please enter a habit name');
-      return;
-    }
-    
-    // Check for duplicate habit names (case-insensitive)
-    const habitExists = habits.some(habit => 
-      habit.name.toLowerCase() === newHabit.trim().toLowerCase()
-    );
-    
-    if (habitExists) {
-      setHabitError('This habit already exists');
-      return;
-    }
-    
     try {
-      const response = await client.post('/api/v1/habits', {
-        name: newHabit.trim()
-      });
+      if (!newHabit.trim()) {
+        setHabitError('Please enter a habit name');
+        return;
+      }
       
-      // Add the new habit to state
-      setHabits([...habits, response.data]);
+      const habitExists = habits.some(
+        (habit) => habit.name.toLowerCase() === newHabit.trim().toLowerCase()
+      );
+
+      if (habitExists) {
+        setHabitError('This habit already exists');
+        return;
+      }
+
+      const habitName = newHabit.trim();
+      
+      const optimisticHabit: UserHabit = {
+        id: Date.now(), 
+        name: habitName,
+        streak: 0,
+        isFavorite: false,
+        createdAt: new Date(),
+      };
+      
+      setHabits((prevHabits) => [...prevHabits, optimisticHabit]);
+      setSimpleFilter('all');
       setNewHabit('');
       setHabitError('');
+
+      client.post('/api/v1/habits', { name: habitName })
+        .then(response => {
+          console.log('🎉 Habit created on server:', response.data);
+          loadUserData(); 
+        })
+        .catch((err) => {
+          console.error('API call failed:', err);
+          setHabitError('Failed to add habit. Please try again.');
+          setHabits((prevHabits) => prevHabits.filter(h => h.id !== optimisticHabit.id));
+          setNewHabit(habitName);
+        });
     } catch (err) {
-      console.error('Failed to add habit:', err);
-      setHabitError('Failed to add habit. Please try again.');
+      console.error('🚨 Unexpected error in handleAddHabit:', err);
+      setHabitError('An unexpected error occurred. Please try again.');
     }
   };
 
@@ -220,6 +236,9 @@ export default function TrackPage() {
     // Second priority: sort by streak length (highest first)
     return b.streak - a.streak;
   });
+
+  // Debug: Log current habits count
+  console.log('🎯 Current habits in component:', habits.length, habits.map(h => h.name));
 
   const cycleFilter = () => {
     setSimpleFilter(prev => {
@@ -324,35 +343,6 @@ export default function TrackPage() {
     return 'bg-red-500';
   };
 
-  const getRatingStyle = (rating: number) => {
-    if (rating >= 9) {
-      return {
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-      };
-    } else if (rating >= 7) {
-      return {
-        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%)',
-        boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-      };
-    } else if (rating >= 5) {
-      return {
-        background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 50%, #a16207 100%)',
-        boxShadow: '0 4px 12px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-      };
-    } else if (rating >= 3) {
-      return {
-        background: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)',
-        boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-      };
-    } else {
-      return {
-        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
-        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-      };
-    }
-  };
-
   const getMoodBadgeColor = (rating: number, type: 'happiness' | 'satisfaction' | 'stress' = 'happiness') => {
     if (type === 'stress') {
       // For stress, lower is better, so invert the color logic
@@ -369,8 +359,6 @@ export default function TrackPage() {
       return 'bg-red-500';
     }
   };
-
-
 
   const renderCalendar = () => {
     const firstDay = new Date(currentMonth);
@@ -514,12 +502,12 @@ export default function TrackPage() {
             <div className="flex items-center gap-3">
               <div className="flex-1 h-3 bg-gray-600 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full transition-all duration-300 ${getRatingBarColor(data.dayRating)}`}
-                  style={{ width: `${(data.dayRating / 10) * 100}%` }}
+                  className={`h-full transition-all duration-300 ${getRatingBarColor(data.dayRating || 0)}`}
+                  style={{ width: `${((data.dayRating || 0) / 10) * 100}%` }}
                 />
               </div>
-              <div className={`px-3 py-1 rounded-full text-white font-medium text-sm ${getRatingColor(data.dayRating)}`}>
-                {data.dayRating}/10
+              <div className={`px-3 py-1 rounded-full text-white font-medium text-sm ${getRatingColor(data.dayRating || 0)}`}>
+                {data.dayRating || 0}/10
               </div>
             </div>
           </div>
@@ -616,8 +604,6 @@ export default function TrackPage() {
         ) : (
           <>
             <h3 className="text-lg font-medium text-white mb-4">{formattedDate}</h3>
-            
-
 
             <div className="text-gray-300 text-sm">
               {renderTabContent()}
@@ -795,10 +781,21 @@ export default function TrackPage() {
                   setNewHabit(e.target.value);
                   if (habitError) setHabitError(''); // Clear error when typing
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    console.log('🔤 Enter key pressed');
+                    handleAddHabit();
+                  }
+                }}
               />
               <button 
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transform transition-all duration-75"
-                onClick={handleAddHabit}
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log('🖱️ Button clicked');
+                  handleAddHabit();
+                }}
               >
                 Add
               </button>
@@ -821,22 +818,23 @@ export default function TrackPage() {
             )}
 
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-              {sortedHabits.length === 0 ? (
+              {loading && <div className="text-center text-gray-400 py-8">Loading habits...</div>}
+              {!loading && sortedHabits.length === 0 ? (
                 <div className="text-center text-gray-400 py-8">
                   {simpleFilter !== 'all' ? `No habits with ${simpleFilter === 'active' ? 'active streaks' : 'zero streaks'}` : 'No habits yet'}
                 </div>
               ) : (
-                sortedHabits.map((habit, sortedIndex) => {
-                  const originalIndex = habits.findIndex(h => h.name === habit.name && h.streak === habit.streak);
+                sortedHabits.map((habit) => {
+                  const originalIndex = habits.findIndex(h => h.id === habit.id);
                   return (
-                    <div key={originalIndex} className="group flex items-center justify-between hover:bg-gray-700/50 rounded-md p-2 transition-colors">
+                    <div key={habit.id} className="group flex items-center justify-between hover:bg-gray-700/50 rounded-md p-2 transition-colors">
                       <div className="flex items-center gap-3">
                         <input 
                           type="checkbox" 
                           className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
-                          id={`habit-${originalIndex}`} 
+                          id={`habit-${habit.id}`} 
                         />
-                        <label htmlFor={`habit-${originalIndex}`} className="text-white flex items-center gap-2">
+                        <label htmlFor={`habit-${habit.id}`} className="text-white flex items-center gap-2">
                           {habit.name}
                           {habit.isFavorite && (
                             <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
@@ -931,7 +929,6 @@ export default function TrackPage() {
                 const currentFavoriteCount = habits.filter(h => h.isFavorite).length;
                 const currentHabit = habits[selectedHabitIndex];
                 const isAtLimit = currentFavoriteCount >= 3;
-                const canPin = !currentHabit?.isFavorite && !isAtLimit;
                 
                 if (currentHabit?.isFavorite) {
                   return (

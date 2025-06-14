@@ -51,7 +51,7 @@ const Home = () => {
   useEffect(() => {
     const fetchGoals = async () => {
       try {
-        const res = await client.get<Goal[]>("/goals");
+        const res = await client.get<Goal[]>("/api/v1/goals");
         const uiGoals = res.data.map(goalToUIGoal);
         setSprintGoals(uiGoals.filter(g => g.category === "sprint"));
         setVisionGoals(uiGoals.filter(g => g.category === "long_term"));
@@ -90,7 +90,7 @@ const Home = () => {
         goal_text: newGoalName.trim()
       };
       
-      const response = await client.post<Goal>('/goals', requestData);
+      const response = await client.post<Goal>('/api/v1/goals', requestData);
       const newUIGoal = goalToUIGoal(response.data);
       
       if (category === 'sprint') {
@@ -126,7 +126,7 @@ const Home = () => {
         category
       };
       
-      const response = await client.patch<Goal>(`/goals/${editingGoal.id}`, updateData);
+      const response = await client.patch<Goal>(`/api/v1/goals/${editingGoal.id}`, updateData);
       const updatedUIGoal = goalToUIGoal(response.data);
       
       if (editingGoal.type === 'sprint') {

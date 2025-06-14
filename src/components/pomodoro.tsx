@@ -20,6 +20,15 @@ const Pomodoro = () => {
   const [autoStartBreaks, setAutoStartBreaks] = useState(false);
   const [autoStartPomodoros, setAutoStartPomodoros] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
+  
+  // === Temporary settings state (only applied when saved) ===
+  const [tempPomodoroTime, setTempPomodoroTime] = useState(25);
+  const [tempShortBreakTime, setTempShortBreakTime] = useState(5);
+  const [tempLongBreakTime, setTempLongBreakTime] = useState(15);
+  const [tempLongBreakInterval, setTempLongBreakInterval] = useState(3);
+  const [tempAutoStartBreaks, setTempAutoStartBreaks] = useState(false);
+  const [tempAutoStartPomodoros, setTempAutoStartPomodoros] = useState(false);
+  const [tempSoundOn, setTempSoundOn] = useState(false);
 
   // === Timer Logic ===
   // timeLeft (in seconds, may be fractional for smooth animation)
@@ -49,31 +58,45 @@ const Pomodoro = () => {
         // Using await with Promise.resolve to simulate asynchronous retrieval
         const storedPomodoroTime = await Promise.resolve(localStorage.getItem("pomodoroTime"));
         if (storedPomodoroTime) {
-          setPomodoroTime(parseInt(storedPomodoroTime, 10));
+          const time = parseInt(storedPomodoroTime, 10);
+          setPomodoroTime(time);
+          setTempPomodoroTime(time);
         }
         const storedShortBreakTime = await Promise.resolve(localStorage.getItem("shortBreakTime"));
         if (storedShortBreakTime) {
-          setShortBreakTime(parseInt(storedShortBreakTime, 10));
+          const time = parseInt(storedShortBreakTime, 10);
+          setShortBreakTime(time);
+          setTempShortBreakTime(time);
         }
         const storedLongBreakTime = await Promise.resolve(localStorage.getItem("longBreakTime"));
         if (storedLongBreakTime) {
-          setLongBreakTime(parseInt(storedLongBreakTime, 10));
+          const time = parseInt(storedLongBreakTime, 10);
+          setLongBreakTime(time);
+          setTempLongBreakTime(time);
         }
         const storedLongBreakInterval = await Promise.resolve(localStorage.getItem("longBreakInterval"));
         if (storedLongBreakInterval) {
-          setLongBreakInterval(parseInt(storedLongBreakInterval, 10));
+          const interval = parseInt(storedLongBreakInterval, 10);
+          setLongBreakInterval(interval);
+          setTempLongBreakInterval(interval);
         }
         const storedAutoStartBreaks = await Promise.resolve(localStorage.getItem("autoStartBreaks"));
         if (storedAutoStartBreaks) {
-          setAutoStartBreaks(storedAutoStartBreaks === "true");
+          const value = storedAutoStartBreaks === "true";
+          setAutoStartBreaks(value);
+          setTempAutoStartBreaks(value);
         }
         const storedAutoStartPomodoros = await Promise.resolve(localStorage.getItem("autoStartPomodoros"));
         if (storedAutoStartPomodoros) {
-          setAutoStartPomodoros(storedAutoStartPomodoros === "true");
+          const value = storedAutoStartPomodoros === "true";
+          setAutoStartPomodoros(value);
+          setTempAutoStartPomodoros(value);
         }
         const storedSoundOn = await Promise.resolve(localStorage.getItem("soundOn"));
         if (storedSoundOn) {
-          setSoundOn(storedSoundOn === "true");
+          const value = storedSoundOn === "true";
+          setSoundOn(value);
+          setTempSoundOn(value);
         }
         // Load persistent timer state
         const storedMode = await Promise.resolve(localStorage.getItem("pomodoroMode"));
@@ -166,6 +189,51 @@ const Pomodoro = () => {
     return () => clearInterval(interval);
   }, [isRunning, completeSession]);
 
+  // Initialize temporary settings when opening the modal
+  const openSettings = () => {
+    setTempPomodoroTime(pomodoroTime);
+    setTempShortBreakTime(shortBreakTime);
+    setTempLongBreakTime(longBreakTime);
+    setTempLongBreakInterval(longBreakInterval);
+    setTempAutoStartBreaks(autoStartBreaks);
+    setTempAutoStartPomodoros(autoStartPomodoros);
+    setTempSoundOn(soundOn);
+    setShowSettings(true);
+  };
+
+  // Close settings modal without saving changes
+  const closeSettings = () => {
+    setShowSettings(false);
+  };
+
+  // Apply settings from temporary state
+  const saveSettings = () => {
+    setPomodoroTime(tempPomodoroTime);
+    setShortBreakTime(tempShortBreakTime);
+    setLongBreakTime(tempLongBreakTime);
+    setLongBreakInterval(tempLongBreakInterval);
+    setAutoStartBreaks(tempAutoStartBreaks);
+    setAutoStartPomodoros(tempAutoStartPomodoros);
+    setSoundOn(tempSoundOn);
+    
+    // Save to localStorage
+    if (isClient) {
+      try {
+        localStorage.setItem("pomodoroTime", tempPomodoroTime.toString());
+        localStorage.setItem("shortBreakTime", tempShortBreakTime.toString());
+        localStorage.setItem("longBreakTime", tempLongBreakTime.toString());
+        localStorage.setItem("longBreakInterval", tempLongBreakInterval.toString());
+        localStorage.setItem("autoStartBreaks", tempAutoStartBreaks.toString());
+        localStorage.setItem("autoStartPomodoros", tempAutoStartPomodoros.toString());
+        localStorage.setItem("soundOn", tempSoundOn.toString());
+      } catch (error) {
+        console.error("Failed to save pomodoro settings to localStorage:", error);
+      }
+    }
+    
+    setShowSettings(false);
+  };
+
   function handleSkip() {
     completeSession(false);
   }
@@ -230,7 +298,7 @@ const Pomodoro = () => {
       <div className="absolute top-4 right-4">
         <UserRoundCog
           className="w-6 h-6 text-gray-600 cursor-pointer"
-          onClick={() => setShowSettings(true)}
+          onClick={openSettings}
         />
       </div>
 
@@ -373,138 +441,106 @@ const Pomodoro = () => {
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div
             className="absolute inset-0 bg-black opacity-30"
-            onClick={() => setShowSettings(false)}
+            onClick={closeSettings}
           ></div>
-          <div className="bg-white rounded-lg shadow-lg p-6 z-50 w-80">
+          <div className="bg-gray-800 text-white rounded-lg shadow-lg p-6 z-50 w-80"
+               style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Settings</h2>
-              <button onClick={() => setShowSettings(false)}>
-                <X className="w-5 h-5 text-gray-600" />
+              <button onClick={closeSettings}>
+                <X className="w-5 h-5 text-gray-300" />
               </button>
             </div>
             {/* Work Duration */}
             <div className="mb-5">
-              <label className="block font-semibold mb-1">
-                Work Duration: {pomodoroTime} min
+              <label className="block font-semibold mb-1 text-gray-300">
+                Work Duration: {tempPomodoroTime} min
               </label>
               <input
                 type="range"
                 min={1}
                 max={60}
-                value={pomodoroTime}
-                onChange={(e) => setPomodoroTime(parseInt(e.target.value, 10))}
-                className="w-full"
+                value={tempPomodoroTime}
+                onChange={(e) => setTempPomodoroTime(parseInt(e.target.value, 10))}
+                className="w-full accent-blue-500"
               />
             </div>
             {/* Short Break */}
             <div className="mb-5">
-              <label className="block font-semibold mb-1">
-                Short Break: {shortBreakTime} min
+              <label className="block font-semibold mb-1 text-gray-300">
+                Short Break: {tempShortBreakTime} min
               </label>
               <input
                 type="range"
                 min={1}
                 max={30}
-                value={shortBreakTime}
+                value={tempShortBreakTime}
                 onChange={(e) =>
-                  setShortBreakTime(parseInt(e.target.value, 10))
+                  setTempShortBreakTime(parseInt(e.target.value, 10))
                 }
-                className="w-full"
+                className="w-full accent-blue-500"
               />
             </div>
             {/* Long Break */}
             <div className="mb-5">
-              <label className="block font-semibold mb-1">
-                Long Break: {longBreakTime} min
+              <label className="block font-semibold mb-1 text-gray-300">
+                Long Break: {tempLongBreakTime} min
               </label>
               <input
                 type="range"
                 min={5}
                 max={60}
-                value={longBreakTime}
-                onChange={(e) => setLongBreakTime(parseInt(e.target.value, 10))}
-                className="w-full"
+                value={tempLongBreakTime}
+                onChange={(e) => setTempLongBreakTime(parseInt(e.target.value, 10))}
+                className="w-full accent-blue-500"
               />
             </div>
             {/* Sessions Before Long Break */}
             <div className="mb-5">
-              <label className="block font-semibold mb-1">
-                Sessions Before Long Break: {longBreakInterval}
+              <label className="block font-semibold mb-1 text-gray-300">
+                Sessions Before Long Break: {tempLongBreakInterval}
               </label>
               <input
                 type="range"
                 min={1}
                 max={10}
-                value={longBreakInterval}
+                value={tempLongBreakInterval}
                 onChange={(e) =>
-                  setLongBreakInterval(parseInt(e.target.value, 10))
+                  setTempLongBreakInterval(parseInt(e.target.value, 10))
                 }
-                className="w-full"
+                className="w-full accent-blue-500"
               />
             </div>
             {/* Toggles */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 text-gray-300">
               <span>Auto Start Breaks</span>
               <input
                 type="checkbox"
-                checked={autoStartBreaks}
-                onChange={(e) => setAutoStartBreaks(e.target.checked)}
+                checked={tempAutoStartBreaks}
+                onChange={(e) => setTempAutoStartBreaks(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-gray-700"
               />
             </div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 text-gray-300">
               <span>Auto Start Work</span>
               <input
                 type="checkbox"
-                checked={autoStartPomodoros}
-                onChange={(e) => setAutoStartPomodoros(e.target.checked)}
+                checked={tempAutoStartPomodoros}
+                onChange={(e) => setTempAutoStartPomodoros(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-gray-700"
               />
             </div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 text-gray-300">
               <span>Sound Notifications</span>
               <input
                 type="checkbox"
-                checked={soundOn}
-                onChange={(e) => setSoundOn(e.target.checked)}
+                checked={tempSoundOn}
+                onChange={(e) => setTempSoundOn(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-gray-700"
               />
             </div>
             <button
-              onClick={() => {
-                if (isClient) {
-                  try {
-                    localStorage.setItem(
-                      "pomodoroTime",
-                      pomodoroTime.toString()
-                    );
-                    localStorage.setItem(
-                      "shortBreakTime",
-                      shortBreakTime.toString()
-                    );
-                    localStorage.setItem(
-                      "longBreakTime",
-                      longBreakTime.toString()
-                    );
-                    localStorage.setItem(
-                      "longBreakInterval",
-                      longBreakInterval.toString()
-                    );
-                    localStorage.setItem(
-                      "autoStartBreaks",
-                      autoStartBreaks.toString()
-                    );
-                    localStorage.setItem(
-                      "autoStartPomodoros",
-                      autoStartPomodoros.toString()
-                    );
-                    localStorage.setItem("soundOn", soundOn.toString());
-                  } catch (error) {
-                    console.error(
-                      "Failed to save pomodoro settings to localStorage:",
-                      error
-                    );
-                  }
-                }
-                setShowSettings(false);
-              }}
+              onClick={saveSettings}
               className="block w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
             >
               Save Settings

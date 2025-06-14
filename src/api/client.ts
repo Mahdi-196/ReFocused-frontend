@@ -14,7 +14,13 @@ const client = axios.create({
 // Add request interceptor to handle common issues
 client.interceptors.request.use(
   config => {
-    // Add dynamic headers here if needed
+    // Dynamically add Authorization header if token exists
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('REF_TOKEN');
+      if (token && token !== 'dummy-auth-token') {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   error => {
@@ -32,13 +38,17 @@ client.interceptors.response.use(
       console.error('Network error - backend server may be unavailable at http://localhost:8000');
     }
     
-    // Handle 401 unauthorized errors
-    if (error.response?.status === 401) {
-      // Clear invalid token
+    const errorMessage = error.response?.data?.detail?.toLowerCase() || '';
+
+    // Handle 401 unauthorized errors more specifically
+    if (error.response?.status === 401 && (errorMessage.includes('token') || errorMessage.includes('authentication'))) {
+      // Clear invalid token if backend indicates an auth issue
       localStorage.removeItem('REF_TOKEN');
       localStorage.removeItem('REF_USER');
-      // Redirect to login
-      window.location.href = '/';
+      // Redirect to login only if not already on the landing page
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
     }
     
     // Log all API errors
@@ -52,8 +62,11 @@ client.interceptors.response.use(
 export const initializeAuth = () => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem("REF_TOKEN");
-    if (token) {
+    if (token && token !== 'dummy-auth-token') {
       client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      console.log('Auth initialized with token');
+    } else {
+      console.log('No valid token found for auth initialization');
     }
   }
 };

@@ -3,16 +3,16 @@
 import { useState } from 'react';
 
 interface MoodRating {
-  happiness: number;
-  satisfaction: number;
-  stress: number;
+  happiness: number | null;
+  satisfaction: number | null;
+  stress: number | null;
 }
 
 export default function NumberMood() {
   const [moodRatings, setMoodRatings] = useState<MoodRating>({
-    happiness: 3,
-    satisfaction: 3,
-    stress: 3
+    happiness: null,
+    satisfaction: null,
+    stress: null
   });
 
   const handleRatingChange = (type: keyof MoodRating, value: string) => {
@@ -22,7 +22,8 @@ export default function NumberMood() {
     }));
   };
 
-  const getRatingColor = (rating: number, type: 'normal' | 'stress' = 'normal') => {
+  const getRatingColor = (rating: number | null, type: 'normal' | 'stress' = 'normal') => {
+    if (rating === null) return 'bg-gray-600';
     if (type === 'stress') {
       switch (rating) {
         case 1: return 'bg-green-500';
@@ -44,7 +45,16 @@ export default function NumberMood() {
     }
   };
 
-  const getRatingStyle = (rating: number, type: 'normal' | 'stress' = 'normal') => {
+  const getRatingStyle = (rating: number | null, type: 'normal' | 'stress' = 'normal') => {
+    const defaultStyle = {
+      background: 'linear-gradient(135deg, #4b5563 0%, #374151 50%, #1f2937 100%)',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+    };
+
+    if (rating === null) {
+      return defaultStyle;
+    }
+
     if (type === 'stress') {
       switch (rating) {
         case 1: 
@@ -124,7 +134,7 @@ export default function NumberMood() {
             className="w-full my-4" 
             min="1" 
             max="5" 
-            value={moodRatings.happiness}
+            value={moodRatings.happiness || ''}
             onChange={(e) => {
               handleRatingChange('happiness', e.target.value);
               const ratingElement = e.target.nextElementSibling?.nextElementSibling;
@@ -149,7 +159,7 @@ export default function NumberMood() {
                 background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
               }}
             />
-            <span className="relative z-10">{moodRatings.happiness}/5</span>
+            <span className="relative z-10">{moodRatings.happiness ? `${moodRatings.happiness}/5` : 'Rate'}</span>
           </div>
         </div>
 
@@ -164,7 +174,7 @@ export default function NumberMood() {
             className="w-full my-4" 
             min="1" 
             max="5" 
-            value={moodRatings.satisfaction}
+            value={moodRatings.satisfaction || ''}
             onChange={(e) => {
               handleRatingChange('satisfaction', e.target.value);
               const ratingElement = e.target.nextElementSibling?.nextElementSibling;
@@ -189,7 +199,7 @@ export default function NumberMood() {
                 background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
               }}
             />
-            <span className="relative z-10">{moodRatings.satisfaction}/5</span>
+            <span className="relative z-10">{moodRatings.satisfaction ? `${moodRatings.satisfaction}/5` : 'Rate'}</span>
           </div>
         </div>
 
@@ -204,7 +214,7 @@ export default function NumberMood() {
             className="w-full my-4" 
             min="1" 
             max="5" 
-            value={moodRatings.stress}
+            value={moodRatings.stress || ''}
             onChange={(e) => {
               handleRatingChange('stress', e.target.value);
               const ratingElement = e.target.nextElementSibling?.nextElementSibling;
@@ -229,7 +239,7 @@ export default function NumberMood() {
                 background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
               }}
             />
-            <span className="relative z-10">{moodRatings.stress}/5</span>
+            <span className="relative z-10">{moodRatings.stress ? `${moodRatings.stress}/5` : 'Rate'}</span>
           </div>
         </div>
       </div>
