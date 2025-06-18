@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import client from '@/api/client';
+import { AUTH } from '@/api/endpoints';
 import GoogleSignInButton from './GoogleSignInButton';
 
 interface LoginProps {
@@ -37,7 +38,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       console.log('Attempting login for:', email);
       
-      const response = await client.post('/api/v1/auth/login', {
+      const response = await client.post(AUTH.LOGIN, {
         email, 
         password 
       });

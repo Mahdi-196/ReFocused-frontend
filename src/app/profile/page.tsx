@@ -8,6 +8,8 @@ import AvatarSelector from '@/components/AvatarSelector';
 import { useSettings } from '@/hooks/useSettings';
 import client, { initializeAuth } from '@/api/client';
 import { useRouter } from 'next/navigation';
+import { authService } from '@/api/services/authService';
+import { USER } from '@/api/endpoints';
 
 interface FeedbackData {
   rating: number;
@@ -91,18 +93,18 @@ const Profile = () => {
       // Initialize auth headers
       initializeAuth();
       
-      // Load user profile data - using correct backend endpoint
-      const userResponse = await client.get('/api/v1/user/me');
-      setUserData(userResponse.data);
+      // Load user profile data using cached auth service
+      const userData = await authService.getCurrentUser();
+      setUserData(userData);
       
       // Set avatar from user data or generate one
-      const avatarUrl = userResponse.data.profile_picture || 
-        `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userResponse.data.name || userResponse.data.email)}&backgroundColor=transparent`;
+      const avatarUrl = userData.avatar ||
+        `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
       setCurrentAvatar(avatarUrl);
       
       // Load user statistics
       try {
-        const statsResponse = await client.get('/api/v1/user/stats');
+        const statsResponse = await client.get(USER.STATS);
         setUserStats(statsResponse.data);
       } catch (statsErr) {
         // If stats endpoint doesn't exist, create mock stats
@@ -128,12 +130,8 @@ const Profile = () => {
   };
 
   const handleLogout = () => {
-    // Clear local storage
-    localStorage.removeItem('REF_TOKEN');
-    localStorage.removeItem('REF_USER');
-    
-    // Clear axios auth header
-    delete client.defaults.headers.common['Authorization'];
+    // Use auth service to clear everything
+    authService.logout();
     
     // Redirect to home page
     router.push('/');
@@ -148,14 +146,14 @@ const Profile = () => {
       // Initialize auth headers
       initializeAuth();
 
-      // Save avatar to database
-      await client.patch('/api/v1/user/profile', {
-        profile_picture: avatarUrl
-      });
+              // Save avatar to database
+        await client.patch(USER.PROFILE, {
+          avatar: avatarUrl
+        });
 
       // Update userData state
       if (userData) {
-        const updatedUserData = { ...userData, profile_picture: avatarUrl };
+        const updatedUserData = { ...userData, avatar: avatarUrl };
         setUserData(updatedUserData);
         
         // Update localStorage to sync with header
@@ -196,8 +194,8 @@ const Profile = () => {
       }
       
       // Revert to previous avatar if the API call failed
-      if (userData?.profile_picture) {
-        setCurrentAvatar(userData.profile_picture);
+      if (userData?.avatar) {
+        setCurrentAvatar(userData.avatar);
       }
     } finally {
       setAvatarSaving(false);

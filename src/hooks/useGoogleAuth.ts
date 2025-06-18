@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import client from '@/api/client';
+import { authService } from '@/api/services';
 
 interface GoogleAuthResponse {
   credential: string;
@@ -14,33 +14,17 @@ interface UseGoogleAuthProps {
 export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
   const handleGoogleResponse = async (response: GoogleAuthResponse) => {
     try {
-      // Use the API client with proxy routing
-      const res = await client.post('/api/v1/auth/google', {
-        token: response.credential
+      // Use the auth service to handle Google authentication
+      const authData = await authService.googleAuth({
+        id_token: response.credential
       });
-
-      const data = res.data;
-
-      const accessToken = data.access_token;
       
-      if (!accessToken) {
-        throw new Error('No access token received from server');
-      }
-
-      // Store token and user data
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('REF_TOKEN', accessToken);
-        if (data.user) {
-          localStorage.setItem('REF_USER', JSON.stringify(data.user));
-        }
-      }
-      
-      // Set authorization header for API client
-      client.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      // Save authentication data
+      authService.saveAuthData(authData);
       
       console.log('Google OAuth successful, token stored');
       if (onSuccess) {
-        onSuccess(accessToken);
+        onSuccess(authData.access_token);
       }
     } catch (error: unknown) {
       console.error('Google Auth Error:', error);

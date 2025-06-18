@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCw } from 'lucide-react';
 
 export default function PersistentTimer() {
@@ -27,31 +27,31 @@ export default function PersistentTimer() {
     setIsClient(true);
   }, []);
   
-  // Load timer state on mount
+  // Load state from localStorage on component mount
   useEffect(() => {
     if (!isClient) return;
     
     try {
-      // Load settings first
-      const storedPomodoroTime = localStorage.getItem("pomodoroTime");
-      if (storedPomodoroTime) setPomodoroTime(parseInt(storedPomodoroTime, 10));
+      // Load saved preferences
+      const savedPomodoroTime = localStorage.getItem("pomodoroTime");
+      if (savedPomodoroTime) setPomodoroTime(parseInt(savedPomodoroTime, 10));
       
-      const storedShortBreakTime = localStorage.getItem("shortBreakTime");
-      if (storedShortBreakTime) setShortBreakTime(parseInt(storedShortBreakTime, 10));
+      const savedShortBreakTime = localStorage.getItem("shortBreakTime");
+      if (savedShortBreakTime) setShortBreakTime(parseInt(savedShortBreakTime, 10));
       
-      const storedLongBreakTime = localStorage.getItem("longBreakTime");
-      if (storedLongBreakTime) setLongBreakTime(parseInt(storedLongBreakTime, 10));
+      const savedLongBreakTime = localStorage.getItem("longBreakTime");
+      if (savedLongBreakTime) setLongBreakTime(parseInt(savedLongBreakTime, 10));
       
-      const storedLongBreakInterval = localStorage.getItem("longBreakInterval");
-      if (storedLongBreakInterval) setLongBreakInterval(parseInt(storedLongBreakInterval, 10));
+      const savedLongBreakInterval = localStorage.getItem("longBreakInterval");
+      if (savedLongBreakInterval) setLongBreakInterval(parseInt(savedLongBreakInterval, 10));
       
-      const storedAutoStartBreaks = localStorage.getItem("autoStartBreaks");
-      if (storedAutoStartBreaks) setAutoStartBreaks(storedAutoStartBreaks === "true");
+      const savedAutoStartBreaks = localStorage.getItem("autoStartBreaks");
+      if (savedAutoStartBreaks) setAutoStartBreaks(savedAutoStartBreaks === "true");
       
-      const storedAutoStartPomodoros = localStorage.getItem("autoStartPomodoros");
-      if (storedAutoStartPomodoros) setAutoStartPomodoros(storedAutoStartPomodoros === "true");
+      const savedAutoStartPomodoros = localStorage.getItem("autoStartPomodoros");
+      if (savedAutoStartPomodoros) setAutoStartPomodoros(savedAutoStartPomodoros === "true");
       
-      // Then load timer state
+      // Load timer state
       const storedMode = localStorage.getItem("pomodoroMode");
       if (storedMode) setMode(storedMode as "pomodoro" | "short" | "long");
       
@@ -81,7 +81,7 @@ export default function PersistentTimer() {
     } catch (error) {
       console.error('Failed to load timer state:', error);
     }
-  }, [isClient]);
+  }, [isClient, completeSession, mode, pomodoroTime, shortBreakTime, longBreakTime]);
   
   // Update timer every 100ms when running
   useEffect(() => {
@@ -130,8 +130,8 @@ export default function PersistentTimer() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [isClient]);
 
-  // Complete session helper
-  const completeSession = (autoStart: boolean) => {
+  // Complete session helper - Define before it's used
+  const completeSession = useCallback((autoStart: boolean) => {
     if (mode === "pomodoro") {
       const newRounds = rounds + 1;
       const nextMode = newRounds % longBreakInterval === 0 ? "long" : "short";
@@ -161,15 +161,15 @@ export default function PersistentTimer() {
         localStorage.setItem("pomodoroIsRunning", "false");
       }
     }
-  };
+  }, [mode, rounds, longBreakInterval, autoStartBreaks, autoStartPomodoros, pomodoroTime, shortBreakTime, longBreakTime]);
 
   // Start the timer
-  const startTimer = (durationMinutes: number) => {
+  const startTimer = useCallback((durationMinutes: number) => {
     const targetTime = Date.now() + durationMinutes * 60 * 1000;
     localStorage.setItem("pomodoroTargetTime", targetTime.toString());
     localStorage.setItem("pomodoroIsRunning", "true");
     setIsRunning(true);
-  };
+  }, []);
 
   // Pause the timer
   const pauseTimer = () => {

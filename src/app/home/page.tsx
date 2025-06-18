@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
+import { GOALS } from '@/api/endpoints';
 
 // Dynamically import heavy components
 const DailyMomentum = dynamic(() => import('../homeComponents/DailyMomentum'), {
@@ -51,7 +52,7 @@ const Home = () => {
   useEffect(() => {
     const fetchGoals = async () => {
       try {
-        const res = await client.get<Goal[]>("/api/v1/goals");
+        const res = await client.get<Goal[]>(GOALS.BASE);
         const uiGoals = res.data.map(goalToUIGoal);
         setSprintGoals(uiGoals.filter(g => g.category === "sprint"));
         setVisionGoals(uiGoals.filter(g => g.category === "long_term"));
@@ -90,7 +91,7 @@ const Home = () => {
         goal_text: newGoalName.trim()
       };
       
-      const response = await client.post<Goal>('/api/v1/goals', requestData);
+      const response = await client.post<Goal>(GOALS.BASE, requestData);
       const newUIGoal = goalToUIGoal(response.data);
       
       if (category === 'sprint') {
@@ -126,7 +127,7 @@ const Home = () => {
         category
       };
       
-      const response = await client.patch<Goal>(`/api/v1/goals/${editingGoal.id}`, updateData);
+      const response = await client.patch<Goal>(GOALS.DETAIL(editingGoal.id), updateData);
       const updatedUIGoal = goalToUIGoal(response.data);
       
       if (editingGoal.type === 'sprint') {
@@ -149,7 +150,7 @@ const Home = () => {
 
   const handleDeleteGoal = async (id: number, type: 'sprint' | 'vision') => {
     try {
-              await client.delete(`/api/v1/goals/${id}`);
+      await client.delete(GOALS.DETAIL(id));
       
       // On success, filter out the deleted goal from state
       if (type === 'sprint') {

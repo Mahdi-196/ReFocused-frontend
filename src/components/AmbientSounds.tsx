@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, Trees, Waves, CloudRain, Zap, Wind, Bird, Droplets, Flame, Coffee, Music, Clock, Infinity } from 'lucide-react';
+import { addFocusTime, incrementSessions } from "@/services/statisticsService";
 
 interface Sound {
   id: string;
@@ -73,46 +74,178 @@ const AMBIENT_SOUNDS: Sound[] = [
   }
 ];
 
+// Utility functions for localStorage
+const getFromLocalStorage = (key: string): string | null => {
+  try {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(key);
+    }
+  } catch (error) {
+    console.warn('Failed to access localStorage:', error);
+  }
+  return null;
+};
+
+const setToLocalStorage = (key: string, value: string): void => {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  } catch (error) {
+    console.warn('Failed to save to localStorage:', error);
+  }
+};
+
 export default function AmbientSounds() {
-  const [currentSound, setCurrentSound] = useState<Sound | null>(AMBIENT_SOUNDS[0]);
+  // State
+  const [currentSound, setCurrentSound] = useState<Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState<number | null>(null); // null means infinity
+  const [duration, setDuration] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
-  // Timer effect
+  // Initialize client-side rendering flag
   useEffect(() => {
-    if (isPlaying && duration && timeLeft !== null) {
-      if (timeLeft <= 0) {
-        setIsPlaying(false);
-        setTimeLeft(null);
-        return;
-      }
-      
-      timerRef.current = setTimeout(() => {
-        setTimeLeft(prev => prev ? prev - 1 : 0);
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+    setIsClient(true);
+  }, []);
+
+  // Complete session helper - Following exact same pattern as Pomodoro
+  const completeSession = useCallback(async (autoStart: boolean): Promise<void> => {
+    if (duration && duration > 0) {
+      // Track completed focus session - same logic as Pomodoro
+      const completedTime = duration; // Already in minutes
+      try {
+        console.log('🎵 [AMBIENT SOUNDS] Session completed! Focus time:', completedTime, 'minutes');
+        
+        // Record the focus time (original duration, not time left)
+        await addFocusTime(completedTime);
+        
+        // Increment the session counter
+        await incrementSessions();
+        
+        console.log('✅ [AMBIENT SOUNDS] Statistics updated successfully');
+      } catch (error) {
+        console.error('Failed to record ambient sounds session statistics:', error);
       }
     }
+
+    // Stop the sound and reset state
+    setIsPlaying(false);
+    setTimeLeft(null);
+    localStorage.removeItem("ambientSoundsTargetTime");
+    localStorage.setItem("ambientSoundsIsPlaying", "false");
+  }, [duration]);
+
+  // Load state from localStorage on component mount - Following exact same pattern
+  useEffect(() => {
+    if (!isClient) return;
     
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+    try {
+      // Load last used sound
+      const lastSoundId = getFromLocalStorage('lastUsedAmbientSound');
+      if (lastSoundId) {
+        const lastSound = AMBIENT_SOUNDS.find(sound => sound.id === lastSoundId);
+        if (lastSound) {
+          setCurrentSound(lastSound);
+        } else {
+          setCurrentSound(AMBIENT_SOUNDS[0]);
+        }
+      } else {
+        setCurrentSound(AMBIENT_SOUNDS[0]);
+      }
+
+      // Load timer state - Following exact same pattern as PersistentTimer
+      const storedIsPlaying = localStorage.getItem("ambientSoundsIsPlaying");
+      const storedTargetTime = localStorage.getItem("ambientSoundsTargetTime");
+      const storedDuration = localStorage.getItem("ambientSoundsDuration");
+      
+      if (storedIsPlaying === "true" && storedTargetTime) {
+        const targetTime = parseInt(storedTargetTime, 10);
+        const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
+        
+        if (newTimeLeft > 0) {
+          setTimeLeft(newTimeLeft);
+          setIsPlaying(true);
+          if (storedDuration) {
+            setDuration(parseInt(storedDuration, 10));
+          }
+        } else {
+          // Timer finished while away, handle session completion
+          completeSession(false);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load ambient sounds state:', error);
+    }
+  }, [isClient, completeSession]);
+
+  // Update timer every 100ms when running - Following exact same pattern
+  useEffect(() => {
+    if (!isPlaying || !isClient) return;
+    
+    const interval = setInterval(() => {
+      const storedTargetTime = localStorage.getItem("ambientSoundsTargetTime");
+      if (storedTargetTime) {
+        const targetTime = parseInt(storedTargetTime, 10);
+        const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
+        
+        if (newTimeLeft <= 0.1) {
+          clearInterval(interval);
+          completeSession(true);
+        } else {
+          setTimeLeft(newTimeLeft);
+        }
+      }
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [isPlaying, isClient, completeSession]);
+
+  // Listen for storage events from other tabs/windows - Following exact same pattern
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "ambientSoundsTargetTime") {
+        const targetTime = e.newValue ? parseInt(e.newValue, 10) : null;
+        if (targetTime) {
+          const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
+          setTimeLeft(newTimeLeft);
+          setIsPlaying(true);
+        }
+      } else if (e.key === "ambientSoundsIsPlaying") {
+        setIsPlaying(e.newValue === "true");
+      } else if (e.key === "lastUsedAmbientSound") {
+        const soundId = e.newValue;
+        if (soundId) {
+          const sound = AMBIENT_SOUNDS.find(s => s.id === soundId);
+          if (sound) setCurrentSound(sound);
+        }
       }
     };
-  }, [isPlaying, timeLeft, duration]);
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [isClient]);
+
+  // Save current sound to localStorage whenever it changes
+  useEffect(() => {
+    if (currentSound) {
+      setToLocalStorage('lastUsedAmbientSound', currentSound.id);
+    }
+  }, [currentSound]);
 
   const handleSoundSelect = (sound: Sound) => {
     if (currentSound?.id === sound.id) {
       if (!isPlaying) {
         setShowDurationPicker(true);
       } else {
+        // Stop current session
         setIsPlaying(false);
         setTimeLeft(null);
+        localStorage.removeItem("ambientSoundsTargetTime");
+        localStorage.setItem("ambientSoundsIsPlaying", "false");
       }
     } else {
       setCurrentSound(sound);
@@ -122,21 +255,35 @@ export default function AmbientSounds() {
 
   const startPlaying = (selectedDuration: number | null) => {
     setDuration(selectedDuration);
-    if (selectedDuration) {
-      setTimeLeft(selectedDuration * 60); // Convert minutes to seconds
-    } else {
-      setTimeLeft(null);
-    }
-    setIsPlaying(true);
     setShowDurationPicker(false);
+    
+    if (selectedDuration) {
+      // Start timed session - Following exact same pattern as Pomodoro
+      const targetTime = Date.now() + selectedDuration * 60 * 1000;
+      localStorage.setItem("ambientSoundsTargetTime", targetTime.toString());
+      localStorage.setItem("ambientSoundsIsPlaying", "true");
+      localStorage.setItem("ambientSoundsDuration", selectedDuration.toString());
+      setTimeLeft(selectedDuration * 60);
+      setIsPlaying(true);
+    } else {
+      // Start infinite session
+      localStorage.setItem("ambientSoundsIsPlaying", "true");
+      localStorage.removeItem("ambientSoundsTargetTime");
+      localStorage.removeItem("ambientSoundsDuration");
+      setTimeLeft(null);
+      setIsPlaying(true);
+    }
   };
 
   const togglePlayPause = () => {
     if (!isPlaying) {
       setShowDurationPicker(true);
     } else {
+      // Pause - Following exact same pattern as Pomodoro
       setIsPlaying(false);
       setTimeLeft(null);
+      localStorage.removeItem("ambientSoundsTargetTime");
+      localStorage.setItem("ambientSoundsIsPlaying", "false");
     }
   };
 
@@ -216,8 +363,6 @@ export default function AmbientSounds() {
               }`}>
                 {sound.name}
               </h3>
-
-
             </button>
           );
         })}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Trash2, Plus, Check } from "lucide-react";
-import client from "@/api/client";
+import { incrementTasksDone } from "@/services/statisticsService";
 
 type UserNotesData = {
   notes: string;
@@ -15,8 +15,6 @@ export default function QuickNotes() {
   const [todos, setTodos] = useState<string[]>([]);
   const [newTodo, setNewTodo] = useState("");
   const [isClient, setIsClient] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<boolean | null>(null);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -24,20 +22,6 @@ export default function QuickNotes() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  // Load user ID from localStorage
-  useEffect(() => {
-    if (!isClient) return;
-    try {
-      const userDataString = localStorage.getItem('REF_USER');
-      if (userDataString) {
-        const userData = JSON.parse(userDataString);
-        setUserId(userData.id?.toString());
-      }
-    } catch (error) {
-      console.error('Failed to load user data:', error);
-    }
-  }, [isClient]);
 
   // Reset success message after 3 seconds
   useEffect(() => {
@@ -53,7 +37,7 @@ export default function QuickNotes() {
     if (!isClient) return;
     
     try {
-      // First try to load from localStorage
+      // Load from localStorage
       const storedDataString = localStorage.getItem("userQuickNotes");
       
       if (storedDataString) {
@@ -69,35 +53,13 @@ export default function QuickNotes() {
           return;
         }
       }
-
-      // If local data doesn't exist or is expired, try to fetch from API
-      loadUserDataFromApi();
     } catch (error) {
       console.error('Failed to load notes data:', error);
     }
-  }, [isClient, userId]);
+  }, [isClient]);
 
-  const loadUserDataFromApi = async () => {
-    if (!userId) return;
-    
-    try {
-      const response = await client.get(`/api/v1/user/notes`);
-      
-      if (response.data && response.data.notes !== undefined) {
-        setNotes(response.data.notes);
-        setTodos(response.data.todos || []);
-        
-        // Save to localStorage with timestamp
-        saveToLocalStorage(response.data.notes, response.data.todos || []);
-      }
-    } catch (error) {
-      console.error('Failed to load notes from API:', error);
-      // If API fails, just continue with current state - the local storage data will be used
-    }
-  };
-
-  const saveToLocalStorage = (notesData = notes, todosData = todos) => {
-    if (!isClient) return;
+  const saveToLocalStorage = useCallback((notesData = notes, todosData = todos) => {
+    if (!isClient) return false;
     
     try {
       const userData: UserNotesData = {
@@ -107,47 +69,14 @@ export default function QuickNotes() {
       };
       
       localStorage.setItem("userQuickNotes", JSON.stringify(userData));
+      setSaveSuccess(true);
       return true;
     } catch (error) {
       console.error('Failed to save notes to localStorage:', error);
+      setSaveSuccess(false);
       return false;
     }
-  };
-
-  const saveToApi = async () => {
-    if (!isClient) return;
-    
-    try {
-      setIsSaving(true);
-      
-      // Always save to localStorage first
-      saveToLocalStorage();
-      
-      if (userId) {
-        try {
-          // Try to save to API if user is logged in
-          await client.post('/api/v1/user/notes', {
-            notes,
-            todos
-          });
-          setSaveSuccess(true);
-        } catch (apiError) {
-          console.error('Failed to save notes to API:', apiError);
-          // API save failed but local save succeeded
-          setSaveSuccess(true);
-        }
-      } else {
-        // No user ID but local storage save succeeded
-        setSaveSuccess(true); 
-      }
-      
-      setIsSaving(false);
-    } catch (error) {
-      console.error('Failed to save notes:', error);
-      setSaveSuccess(false);
-      setIsSaving(false);
-    }
-  };
+  }, [isClient, notes, todos]);
 
   // Debounced save function - save after user stops typing
   const debouncedSave = useCallback((notesContent: string, todosContent: string[]) => {
@@ -159,13 +88,12 @@ export default function QuickNotes() {
     // Set a new timeout for 1 second
     const timeout = setTimeout(() => {
       saveToLocalStorage(notesContent, todosContent);
-      saveToApi();
     }, 1000);
     
     setSaveTimeout(timeout);
-  }, [saveTimeout, saveToApi]);
+  }, [saveTimeout, saveToLocalStorage]);
 
-  const clearAllData = async () => {
+  const clearAllData = () => {
     if (!isClient) return;
     
     setNotes("");
@@ -174,20 +102,10 @@ export default function QuickNotes() {
     try {
       // Clear from localStorage
       localStorage.removeItem("userQuickNotes");
-      
-      // Clear from API if user is logged in
-      if (userId) {
-        try {
-          await client.post('/api/v1/user/notes', {
-            notes: "",
-            todos: []
-          });
-        } catch (apiError) {
-          console.error('Failed to clear notes from API:', apiError);
-        }
-      }
+      setSaveSuccess(true);
     } catch (error) {
       console.error('Failed to clear notes:', error);
+      setSaveSuccess(false);
     }
   };
 
@@ -204,6 +122,14 @@ export default function QuickNotes() {
     const updatedTodos = todos.filter((_, i) => i !== index);
     setTodos(updatedTodos);
     debouncedSave(notes, updatedTodos);
+    
+    // Track completed task (when removing/completing todo)
+    try {
+      incrementTasksDone();
+      console.log('✅ [QUICK NOTES] Task completion tracked');
+    } catch (error) {
+      console.error('Failed to track completed task:', error);
+    }
   };
 
   return (

@@ -1,59 +1,57 @@
-import axios from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-// Create a pre-configured axios instance for API requests
-const client = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "",
-  withCredentials: true, // Include cookies in cross-site requests
+// Create axios instance with proper TypeScript typing
+const client: AxiosInstance = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1',
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
   },
-  timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000')
+  timeout: 30000, // Increased to 30 seconds for better reliability
 });
 
-// Add request interceptor to handle common issues
+// Request interceptor for auth tokens
 client.interceptors.request.use(
-  config => {
-    // Dynamically add Authorization header if token exists
+  (config: InternalAxiosRequestConfig) => {
+    // Add auth token if available
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
       if (token && token !== 'dummy-auth-token') {
+        config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
     return config;
   },
-  error => {
-    console.error('Request error:', error);
+  (error) => {
     return Promise.reject(error);
   }
 );
 
-// Add response interceptor to handle common errors
+// Response interceptor for error handling
 client.interceptors.response.use(
-  response => response,
-  error => {
-    // Handle network errors
-    if (error.message === 'Network Error') {
-      console.error('Network error - backend server may be unavailable at http://localhost:8000');
+  (response) => response,
+  (error) => {
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+      console.warn('⏰ API request timed out after 30 seconds:', error.config?.url);
+      error.isTimeout = true;
     }
     
-    const errorMessage = error.response?.data?.detail?.toLowerCase() || '';
-
-    // Handle 401 unauthorized errors more specifically
-    if (error.response?.status === 401 && (errorMessage.includes('token') || errorMessage.includes('authentication'))) {
-      // Clear invalid token if backend indicates an auth issue
-      localStorage.removeItem('REF_TOKEN');
-      localStorage.removeItem('REF_USER');
-      // Redirect to login only if not already on the landing page
-      if (window.location.pathname !== '/') {
+    // Handle CORS errors
+    if (error.code === 'ERR_NETWORK' && error.message === 'Network Error') {
+      console.warn('🌐 Network/CORS error - backend may be unavailable:', error.config?.url);
+      error.isNetworkError = true;
+    }
+    
+    if (error.response?.status === 401) {
+      // Handle unauthorized access
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('REF_TOKEN');
+        localStorage.removeItem('REF_USER');
+        delete client.defaults.headers.common['Authorization'];
         window.location.href = '/';
       }
     }
-    
-    // Log all API errors
-    console.error('API Error:', error.config?.url, error.message);
-    
     return Promise.reject(error);
   }
 );
@@ -72,7 +70,7 @@ export const initializeAuth = () => {
 };
 
 // ✅ Real backend API integration
-// Backend running on http://localhost:8000
+// Backend running on http://localhost:8000 via Next.js rewrites
 // Documentation: http://localhost:8000/docs
 
 export default client;  

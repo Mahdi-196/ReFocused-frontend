@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { incrementTasksDone } from "@/services/statisticsService";
 
 // Define Task type locally or import from a shared types file
 export type Task = {
@@ -40,12 +41,24 @@ const TaskList: React.FC<TaskListProps> = ({
                   type="checkbox"
                   checked={task.completed}
                   onChange={() => {
+                    const wasCompleted = task.completed;
+                    
                     // Use functional update for setting tasks
                     setTasks(currentTasks =>
                       currentTasks.map(t =>
                         t.id === task.id ? { ...t, completed: !t.completed } : t
                       )
                     );
+                    
+                    // Track task completion when checking off (not unchecking)
+                    if (!wasCompleted) {
+                      try {
+                        incrementTasksDone();
+                        console.log('✅ [TASK LIST] Task completion tracked for:', task.text);
+                      } catch (error) {
+                        console.error('Failed to track task completion:', error);
+                      }
+                    }
                   }}
                   className="flex-shrink-0 rounded border-gray-500 text-blue-500 focus:ring-blue-500 bg-gray-600"
                 />

@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MdNotifications } from "react-icons/md";
-import { Menu, X } from "lucide-react";
+import { Volume2, VolumeX, Menu, X } from "lucide-react";
 import DevTools from "./devTools";
 import AuthButton from "./AuthButton";
 
@@ -13,6 +12,7 @@ import { useState } from "react";
 const Header = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   const navItems = [
     { href: "/", label: "Home" },
@@ -24,6 +24,12 @@ const Header = () => {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const toggleSound = () => {
+    setSoundEnabled(!soundEnabled);
+    // Here you would also implement the actual sound toggling logic
+    // For example, saving to localStorage or context
   };
 
   return (
@@ -103,21 +109,29 @@ const Header = () => {
             </nav>
           </div>
 
-          {/* Right Side - Notifications & Profile */}
+          {/* Right Side - Sound Toggle & Profile */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.5 }}
             className="flex items-center space-x-2 md:space-x-4"
           >
-            {/* Notifications - Hidden on very small screens */}
+            {/* Sound Toggle - Hidden on very small screens */}
             <motion.button 
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              aria-label="Notifications"
-              className="hidden sm:block"
+              onClick={toggleSound}
+              aria-label={soundEnabled ? "Mute sounds" : "Enable sounds"}
+              className="hidden sm:flex items-center justify-center p-1.5 rounded-full transition-all duration-200"
+              style={{
+                background: soundEnabled ? "rgba(66, 185, 229, 0.15)" : "rgba(255, 100, 100, 0.15)",
+              }}
             >
-              <MdNotifications className="text-xl md:text-2xl text-gray-300 hover:text-[#42b9e5]" />
+              {soundEnabled ? (
+                <Volume2 className="w-5 h-5 text-[#42b9e5]" />
+              ) : (
+                <VolumeX className="w-5 h-5 text-red-400" />
+              )}
             </motion.button>
             
             {/* Profile/Auth Button - Import AuthButton component */}
@@ -161,11 +175,23 @@ const Header = () => {
                 ))}
               </ul>
               
-              {/* Mobile Notifications */}
+              {/* Mobile Sound Toggle */}
               <div className="mt-6 pt-6 border-t border-gray-600/30">
-                <button className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-[#42b9e5] hover:bg-[#42b9e5]/10 rounded-lg transition-all duration-200 w-full">
-                  <MdNotifications className="text-xl" />
-                  <span className="text-lg">Notifications</span>
+                <button 
+                  onClick={toggleSound}
+                  className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-[#42b9e5] hover:bg-[#42b9e5]/10 rounded-lg transition-all duration-200 w-full"
+                >
+                  {soundEnabled ? (
+                    <>
+                      <Volume2 className="text-xl text-[#42b9e5]" />
+                      <span className="text-lg">Sound On</span>
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="text-xl text-red-400" />
+                      <span className="text-lg">Sound Off</span>
+                    </>
+                  )}
                 </button>
               </div>
             </nav>

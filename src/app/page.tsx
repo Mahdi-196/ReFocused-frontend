@@ -6,6 +6,8 @@ import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTren
 import { FaBrain, FaRobot } from 'react-icons/fa';
 import SimpleFooter from '@/components/SimpleFooter';
 import AuthModal from '@/components/AuthModal';
+import { getStudySets } from '@/services/studyService';
+import { authService } from '@/api/services/authService';
 
 // Type for orb configuration
 type Orb = {
@@ -22,6 +24,10 @@ export default function HomePage() {
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  
+  // Cache testing state
+  const [cacheTestResult, setCacheTestResult] = useState<string>('');
+  const [isTestingCache, setIsTestingCache] = useState(false);
   
   // Ensure client-side only execution
   useEffect(() => {
@@ -43,6 +49,77 @@ export default function HomePage() {
     
     setOrbs(generatedOrbs);
   }, [isMounted]);
+
+  // Cache testing functions
+  const testStudySetsCache = async () => {
+    setIsTestingCache(true);
+    setCacheTestResult('');
+    
+    try {
+      console.log('🧪 [CACHE TEST] Testing study sets caching...');
+      
+      // First call - should fetch from API
+      const start1 = Date.now();
+      const sets1 = await getStudySets();
+      const time1 = Date.now() - start1;
+      console.log('🧪 [CACHE TEST] First call took:', time1 + 'ms');
+      
+      // Second call - should use cache
+      const start2 = Date.now();
+      const sets2 = await getStudySets();
+      const time2 = Date.now() - start2;
+      console.log('🧪 [CACHE TEST] Second call took:', time2 + 'ms');
+      
+      setCacheTestResult(`✅ Cache test completed!
+First call: ${time1}ms (API)
+Second call: ${time2}ms (Cache)
+Study sets found: ${sets1.length}
+${time2 < time1 / 2 ? 'Cache is working! 🎉' : 'Cache may not be working properly 🤔'}`);
+      
+    } catch (error) {
+      console.error('🧪 [CACHE TEST] Error:', error);
+      setCacheTestResult(`❌ Cache test failed: ${error}`);
+    } finally {
+      setIsTestingCache(false);
+    }
+  };
+
+  const testAuthCache = async () => {
+    setIsTestingCache(true);
+    setCacheTestResult('');
+    
+    try {
+      console.log('🧪 [CACHE TEST] Testing auth caching...');
+      
+      // Test cached user data
+      const cachedUser = authService.getCachedUser();
+      console.log('🧪 [CACHE TEST] Cached user:', cachedUser);
+      
+      setCacheTestResult(`👤 Auth cache test:
+Cached user: ${cachedUser ? JSON.stringify(cachedUser, null, 2) : 'No cached user found'}
+Is authenticated: ${authService.isAuthenticated()}`);
+      
+    } catch (error) {
+      console.error('🧪 [CACHE TEST] Auth error:', error);
+      setCacheTestResult(`❌ Auth cache test failed: ${error}`);
+    } finally {
+      setIsTestingCache(false);
+    }
+  };
+
+  const setupTestAuth = () => {
+    // Set up a test authentication for cache testing
+    localStorage.setItem('REF_TOKEN', 'test-token-for-cache-testing');
+    localStorage.setItem('REF_USER', JSON.stringify({
+      id: 1,
+      email: 'test@refocused.app',
+      name: 'Cache Test User',
+      username: 'cachetest',
+      createdAt: new Date().toISOString()
+    }));
+    
+    setCacheTestResult('🧪 Test authentication set up! You can now test the study sets cache.');
+  };
 
   return (
     <div className="overflow-hidden">
@@ -129,6 +206,56 @@ export default function HomePage() {
             >
               Learn More
             </Link>
+          </div>
+
+          {/* Cache Testing Section */}
+          <div className="bg-gradient-to-br from-gray-800/20 to-gray-900/20 backdrop-blur-sm border border-gray-600/30 rounded-xl p-6 max-w-2xl mx-auto">
+            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+              🧪 Cache System Testing
+              <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded ml-2">DEVELOPMENT</span>
+            </h3>
+            
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <button 
+                onClick={setupTestAuth}
+                className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 transition-all duration-200 text-sm"
+              >
+                Setup Test Auth
+              </button>
+              <button 
+                onClick={testAuthCache}
+                disabled={isTestingCache}
+                className="px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-all duration-200 text-sm disabled:opacity-50"
+              >
+                Test Auth Cache
+              </button>
+              <button 
+                onClick={testStudySetsCache}
+                disabled={isTestingCache}
+                className="px-4 py-2 bg-green-600/20 border border-green-500/30 text-green-300 rounded-lg hover:bg-green-600/30 transition-all duration-200 text-sm disabled:opacity-50"
+              >
+                Test Study Sets Cache
+              </button>
+            </div>
+            
+            {isTestingCache && (
+              <div className="text-blue-300 text-sm mb-4 flex items-center">
+                <div className="w-4 h-4 border-2 border-blue-300 border-t-transparent rounded-full animate-spin mr-2"></div>
+                Testing cache...
+              </div>
+            )}
+            
+            {cacheTestResult && (
+              <div className="bg-gray-900/50 border border-gray-600/30 rounded-lg p-4">
+                <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-x-auto">
+                  {cacheTestResult}
+                </pre>
+              </div>
+            )}
+            
+            <p className="text-xs text-gray-400 mt-2">
+              Open browser console to see detailed cache logs with emojis (👤 for auth, 📚 for study sets)
+            </p>
           </div>
         </div>
       </section>

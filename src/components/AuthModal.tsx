@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import GoogleSignInButton from './GoogleSignInButton';
 import client from '@/api/client';
+import { AUTH } from '@/api/endpoints';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -75,13 +76,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     setIsLoading(true);
 
     try {
-      const endpoint = activeTab === 'login' ? '/api/v1/auth/login' : '/api/v1/auth/register';
-      
-      const payload = activeTab === 'login' 
-        ? { email: formData.email, password: formData.password }
-        : { email: formData.email, password: formData.password, name: formData.name };
-
-      const response = await client.post(endpoint, payload);
+      const endpoint = activeTab === 'login' ? AUTH.LOGIN : AUTH.REGISTER;
+      const response = await client.post(endpoint, formData);
       
       const token = response.data.access_token;
       

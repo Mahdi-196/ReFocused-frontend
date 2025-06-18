@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import client, { initializeAuth } from '@/api/client';
+import { initializeAuth } from '@/api/client';
+import { authService } from '@/api/services/authService';
 
 interface User {
   id: number;
@@ -23,7 +24,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -57,16 +58,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Initialize auth headers
         initializeAuth();
         
-        // Try to fetch user data to verify token is valid
+        // First try to get cached user data
+        const cachedUser = authService.getCachedUser();
+        if (cachedUser) {
+          console.log('👤 Using cached user data in AuthContext');
+          setUser(cachedUser);
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
+        
+        // If no cached data, fetch from API
         try {
-          const response = await client.get('/api/v1/user/me');
-          setUser(response.data);
+          const userData = await authService.getCurrentUser();
+          setUser(userData);
           setIsAuthenticated(true);
         } catch (error) {
           // Token is invalid, clear it
-          localStorage.removeItem('REF_TOKEN');
-          localStorage.removeItem('REF_USER');
-          delete client.defaults.headers.common['Authorization'];
+          authService.logout();
           setUser(null);
           setIsAuthenticated(false);
         }
@@ -85,23 +94,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await client.post('/api/v1/auth/login', {
-        email,
-        password,
-      });
-
-      const token = response.data.access_token;
+      const response = await authService.login({ email, password });
       
-      if (!token) {
-        throw new Error('No access token received from server');
-      }
-
-      // Store token and set auth header
-      localStorage.setItem('REF_TOKEN', token);
-      client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      // Fetch user data
-      await refreshUser();
+      // Save auth data and cache user
+      authService.saveAuthData(response);
+      
+      // Update state
+      setUser(response.user);
+      setIsAuthenticated(true);
       
     } catch (error) {
       console.error('Login error:', error);
@@ -111,24 +111,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      const response = await client.post('/api/v1/auth/register', {
+      const response = await authService.register({ 
+        username: email, // Use email as username for now
         email,
         password,
-        name,
+        name 
       });
-
-      const token = response.data.access_token;
       
-      if (!token) {
-        throw new Error('No access token received from server');
-      }
+      // Save auth data and cache user
+      authService.saveAuthData(response);
 
-      // Store token and set auth header
-      localStorage.setItem('REF_TOKEN', token);
-      client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      // Fetch user data
-      await refreshUser();
+      // Update state
+      setUser(response.user);
+      setIsAuthenticated(true);
       
     } catch (error) {
       console.error('Registration error:', error);
@@ -138,12 +133,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const response = await client.get('/api/v1/user/me');
-      setUser(response.data);
+      const userData = await authService.getCurrentUser();
+      setUser(userData);
       setIsAuthenticated(true);
-      
-      // Also store user data in localStorage for quick access
-      localStorage.setItem('REF_USER', JSON.stringify(response.data));
     } catch (error) {
       console.error('Error fetching user data:', error);
       throw error;
@@ -151,12 +143,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    // Clear local storage
-    localStorage.removeItem('REF_TOKEN');
-    localStorage.removeItem('REF_USER');
-    
-    // Clear axios auth header
-    delete client.defaults.headers.common['Authorization'];
+    // Use auth service to clear everything
+    authService.logout();
     
     // Reset state
     setUser(null);

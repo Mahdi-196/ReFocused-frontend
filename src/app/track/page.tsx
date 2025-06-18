@@ -5,6 +5,11 @@ import NumberMood from '@/components/NumberMood';
 import PageTransition from '@/components/PageTransition';
 import AuthGuard from '@/components/AuthGuard';
 import client from '@/api/client';
+import { HABITS, DASHBOARD } from '@/api/endpoints';
+import { getMoodEntries } from '@/services/moodService';
+import { getHabits, createHabit, updateHabit, deleteHabit } from '@/services/habitsService';
+import { getDailyEntries } from '@/services/dashboardService';
+import { cacheService } from '@/services/cacheService';
 
 // Removed unused DayData interface
 
@@ -34,6 +39,7 @@ export default function TrackPage() {
   // State for user data
   const [habits, setHabits] = useState<UserHabit[]>([]);
   const [dailyEntries, setDailyEntries] = useState<{[key: string]: DailyEntry}>({});
+  const [moodEntries, setMoodEntries] = useState<{[key: string]: any}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -48,33 +54,59 @@ export default function TrackPage() {
   const [habitModalOpen, setHabitModalOpen] = useState(false);
   const [selectedHabitIndex, setSelectedHabitIndex] = useState<number | null>(null);
   const [simpleFilter, setSimpleFilter] = useState<SimpleFilter>('all');
+  const [showCacheStats, setShowCacheStats] = useState(false);
 
-  // Load user data on component mount
+  // Load user data on component mount (with caching)
   const loadUserData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Load habits
-      const habitsResponse = await client.get('/api/v1/habits');
-      setHabits(habitsResponse.data || []);
+      // Load habits - gracefully handle if endpoint doesn't exist
+      try {
+        const habitsData = await getHabits();
+        setHabits(habitsData || []);
+      } catch (habitsError) {
+        console.warn('Habits endpoint not available yet:', habitsError);
+        setHabits([]); // Empty array so mood tracking still works
+      }
       
-      // Load daily entries for current month
+      // Load daily entries for current month - gracefully handle if endpoint doesn't exist
+      try {
       const monthStr = currentMonth.toISOString().slice(0, 7); // YYYY-MM
-      const entriesResponse = await client.get(`/api/v1/dashboard/daily-entries?month=${monthStr}`);
+        const entriesMap = await getDailyEntries(monthStr);
+        setDailyEntries(entriesMap);
+      } catch (entriesError) {
+        console.warn('Daily entries endpoint not available yet:', entriesError);
+        setDailyEntries({}); // Empty object so mood tracking still works
+      }
+
+      // Load mood entries for current month (cached)
+      try {
+        const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+        
+        const startDate = firstDay.toISOString().split('T')[0]; // YYYY-MM-DD
+        const endDate = lastDay.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        const moodData = await getMoodEntries(startDate, endDate);
       
       // Convert array to object with date as key
-      const entriesMap: {[key: string]: DailyEntry} = {};
-      if (entriesResponse.data) {
-        entriesResponse.data.forEach((entry: DailyEntry) => {
-          entriesMap[entry.date] = entry;
+        const moodMap: {[key: string]: any} = {};
+        if (moodData) {
+          moodData.forEach((entry: any) => {
+            moodMap[entry.date] = entry;
         });
       }
-      setDailyEntries(entriesMap);
+        setMoodEntries(moodMap);
+      } catch (moodError) {
+        console.warn('Failed to load mood entries:', moodError);
+        setMoodEntries({}); // Empty object if mood data fails
+      }
       
     } catch (err) {
       console.error('Failed to load user data:', err);
-      setError('Failed to load your data. Please try refreshing the page.');
+      setError('Some features may not be available. Mood tracking is still functional.');
     } finally {
       setLoading(false);
     }
@@ -135,14 +167,21 @@ export default function TrackPage() {
       setNewHabit('');
       setHabitError('');
 
-      client.post('/api/v1/habits', { name: habitName })
+      createHabit({ name: habitName })
         .then(response => {
-          console.log('🎉 Habit created on server:', response.data);
-          loadUserData(); 
+          console.log('🎉 Habit created on server:', response);
+          // Update local state with server response
+          setHabits((prevHabits) => 
+            prevHabits.map(h => h.id === optimisticHabit.id ? response : h)
+          );
         })
         .catch((err) => {
           console.error('API call failed:', err);
+          if (err.message.includes('Failed to create habit')) {
+            setHabitError('Habit tracking feature coming soon. Mood tracking is available now.');
+          } else {
           setHabitError('Failed to add habit. Please try again.');
+          }
           setHabits((prevHabits) => prevHabits.filter(h => h.id !== optimisticHabit.id));
           setNewHabit(habitName);
         });
@@ -157,7 +196,7 @@ export default function TrackPage() {
     if (!habitToDelete) return;
     
     try {
-      await client.delete(`/api/v1/habits/${habitToDelete.id}`);
+      await deleteHabit(habitToDelete.id);
       
       // Remove habit from state
       const newHabits = habits.filter((_, index) => index !== indexToDelete);
@@ -197,14 +236,14 @@ export default function TrackPage() {
     }
     
     try {
-      await client.put(`/api/v1/habits/${currentHabit.id}`, {
+      const updatedHabit = await updateHabit(currentHabit.id, {
         isFavorite: !currentHabit.isFavorite
       });
       
       setHabits(prev => 
         prev.map((habit, index) => 
           index === selectedHabitIndex 
-            ? { ...habit, isFavorite: !habit.isFavorite }
+            ? updatedHabit
             : habit
         )
       );
@@ -225,6 +264,16 @@ export default function TrackPage() {
       default:
         return habits;
     }
+  };
+
+  // Cache management functions
+  const handleRefreshCache = () => {
+    cacheService.clear();
+    loadUserData();
+  };
+
+  const getCacheStats = () => {
+    return cacheService.getStats();
   };
 
   // Sort habits to show favorites (pinned) at the top, then by streak length
@@ -317,14 +366,34 @@ export default function TrackPage() {
     return Math.round((daysWithHabits / currentMonthEntries.length) * 100);
   };
 
+  // Calculate overall mood score from happiness, satisfaction, and stress
+  const calculateMoodScore = (happiness: number, satisfaction: number, stress: number) => {
+    // Convert to 0-10 scale: (happiness + satisfaction + (6-stress)) / 3 * 2
+    // Stress is inverted (higher stress = lower score)
+    const invertedStress = 6 - stress; // Convert 1-5 stress to 5-1 scale
+    return ((happiness + satisfaction + invertedStress) / 3) * 2;
+  };
+
   const getDayClass = (dateStr: string) => {
-    const entry = dailyEntries[dateStr];
-    if (!entry || !entry.dayRating) return '';
+    // Check for mood data first
+    const moodEntry = moodEntries[dateStr];
+    if (moodEntry && moodEntry.happiness && moodEntry.satisfaction && moodEntry.stress) {
+      const moodScore = calculateMoodScore(moodEntry.happiness, moodEntry.satisfaction, moodEntry.stress);
+      if (moodScore >= 7) return 'mood-good';
+      if (moodScore >= 5) return 'mood-neutral';
+      return 'mood-poor';
+    }
     
+    // Fallback to daily entries if available
+    const entry = dailyEntries[dateStr];
+    if (entry && entry.dayRating) {
     const dayRating = entry.dayRating;
-    if (dayRating >= 8) return 'bg-gradient-to-br from-green-500 to-green-700 border-green-400 shadow-lg shadow-green-900/30 relative overflow-hidden';
-    if (dayRating >= 5) return 'bg-gradient-to-br from-yellow-500 to-yellow-600 border-yellow-400 shadow-lg shadow-yellow-900/30 relative overflow-hidden';
-    return 'bg-gradient-to-br from-red-500 to-red-700 border-red-400 shadow-lg shadow-red-900/30 relative overflow-hidden';
+      if (dayRating >= 8) return 'mood-good';
+      if (dayRating >= 5) return 'mood-neutral';
+      return 'mood-poor';
+    }
+    
+    return '';
   };
 
   const getRatingColor = (rating: number) => {
@@ -396,52 +465,77 @@ export default function TrackPage() {
     for (let date = 1; date <= lastDay.getDate(); date++) {
       const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
       const dayClass = getDayClass(dateStr);
+      const moodEntry = moodEntries[dateStr];
+      
+      // Get styling based on mood
+      const getMoodStyling = () => {
+        if (selectedDate === dateStr) {
+          return {
+            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+            border: '1px solid #3b82f6'
+          };
+        }
+        
+        switch (dayClass) {
+          case 'mood-good':
+            return {
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+              border: '1px solid #10b981'
+            };
+          case 'mood-neutral':
+            return {
+              background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 50%, #a16207 100%)',
+              boxShadow: '0 4px 12px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+              border: '1px solid #eab308'
+            };
+          case 'mood-poor':
+            return {
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+              border: '1px solid #ef4444'
+            };
+          default:
+            return {
+              background: 'linear-gradient(135deg, #4b5563 0%, #374151 50%, #1f2937 100%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              border: '1px solid #4b5563'
+            };
+        }
+      };
+      
+      // Check if this is today or future date
+      const today = new Date().toISOString().split('T')[0];
+      const isToday = dateStr === today;
+      const isFuture = dateStr > today;
       
       currentRow.push(
         <div
           key={date}
-          className={`aspect-square flex items-center justify-center cursor-pointer rounded border transition-all text-xs text-white relative ${
-            dayClass
-          } ${
-            selectedDate === dateStr ? 'border-blue-400' : dayClass ? '' : 'border-gray-500'
+          className={`aspect-square flex flex-col items-center justify-center rounded transition-all text-xs text-white relative ${
+            isToday || isFuture ? 'cursor-pointer' : 'cursor-pointer'
           }`}
           onClick={() => setSelectedDate(dateStr)}
-          style={{
-            ...(dayClass.includes('gradient') && {
-              background: dayClass.includes('green') 
-                ? 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)'
-                : dayClass.includes('yellow')
-                ? 'linear-gradient(135deg, #eab308 0%, #ca8a04 50%, #a16207 100%)'
-                : 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
-              boxShadow: dayClass.includes('green')
-                ? '0 4px 12px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-                : dayClass.includes('yellow')
-                ? '0 4px 12px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-                : '0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-            }),
-            ...(selectedDate === dateStr && {
-              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25)'
-            }),
-            ...(!dayClass && selectedDate !== dateStr && {
-              background: 'linear-gradient(135deg, #4b5563 0%, #374151 50%, #1f2937 100%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-            })
-          }}
+          style={getMoodStyling()}
         >
-          {(dayClass.includes('gradient') || selectedDate === dateStr || !dayClass) && (
+          {/* Mood indicator dots */}
+          {moodEntry && (
+            <div className="absolute top-1 right-1 flex gap-0.5">
+              <div className={`w-1.5 h-1.5 rounded-full ${getMoodBadgeColor(moodEntry.happiness, 'happiness')}`} title="Happiness" />
+              <div className={`w-1.5 h-1.5 rounded-full ${getMoodBadgeColor(moodEntry.satisfaction, 'satisfaction')}`} title="Satisfaction" />
+              <div className={`w-1.5 h-1.5 rounded-full ${getMoodBadgeColor(moodEntry.stress, 'stress')}`} title="Stress" />
+            </div>
+          )}
+          
+          {/* Gloss effect */}
             <div className="absolute inset-0 rounded opacity-20 pointer-events-none"
                  style={{
-                   background: dayClass.includes('green')
-                     ? 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
-                     : dayClass.includes('yellow')
-                     ? 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
-                     : dayClass.includes('red') || selectedDate === dateStr
-                     ? 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
-                     : 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 50%)'
-                 }}
-            />
-          )}
+                 background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
+               }}
+          />
+          
+          {/* Date number */}
           <span className="relative z-10 font-medium">{date}</span>
         </div>
       );
@@ -481,11 +575,100 @@ export default function TrackPage() {
   };
 
   const renderDayDetails = () => {
-    if (!selectedDate || !dailyEntries[selectedDate]) {
-      return <p className="text-center text-gray-400 py-8 text-sm">Click a date to view details</p>;
+    if (!selectedDate) {
+      return (
+        <div className="p-6">
+          <div className="text-center text-gray-400 py-8">
+            <svg className="w-12 h-12 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm">Click a date to view details</p>
+          </div>
+        </div>
+      );
     }
 
-    const data = dailyEntries[selectedDate];
+    // Check if selected date is today or future
+    const today = new Date().toISOString().split('T')[0];
+    const isToday = selectedDate === today;
+    const isFuture = selectedDate > today;
+
+    // Show motivational message for today
+    if (isToday) {
+      return (
+        <div className="p-6">
+          <div className="text-center py-8">
+            <div className="mb-6">
+              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Keep Pushing Today!</h3>
+              <p className="text-gray-300 text-sm mb-4">Today is your chance to make progress</p>
+              <div className="flex justify-center space-x-2 mb-4">
+                <span className="text-2xl">💪</span>
+                <span className="text-2xl">🔥</span>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg p-4 border border-blue-500/30">
+              <p className="text-white font-medium mb-2">Focus on today's goals:</p>
+              <div className="text-left space-y-2 text-sm text-gray-300">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Track your mood</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400">○</span>
+                  <span>Complete your habits</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-400">○</span>
+                  <span>Stay consistent</span>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-xs text-gray-400 mt-4">
+              Check back tomorrow to see today's progress!
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Show message for future dates
+    if (isFuture) {
+      return (
+        <div className="p-6">
+          <div className="text-center text-gray-400 py-8">
+            <svg className="w-12 h-12 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm">Future date selected</p>
+            <p className="text-xs text-gray-500 mt-2">Data will be available after this date passes</p>
+          </div>
+        </div>
+      );
+    }
+
+    const dailyData = dailyEntries[selectedDate];
+    const moodData = moodEntries[selectedDate];
+    
+    if (!dailyData && !moodData) {
+      return (
+        <div className="p-6">
+          <div className="text-center text-gray-400 py-8">
+            <svg className="w-12 h-12 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm">No data available for this date</p>
+            <p className="text-xs text-gray-500 mt-2">Track your mood to see data here</p>
+          </div>
+        </div>
+      );
+    }
     const date = new Date(selectedDate);
     const formattedDate = date.toLocaleDateString('en-US', { 
       month: 'long',
@@ -493,125 +676,220 @@ export default function TrackPage() {
       year: 'numeric'
     });
 
-    const renderTabContent = () => {
+    return (
+      <div className="p-6">
+        <div className="mb-8">
+          <h3 className="text-xl font-light text-white">{formattedDate}</h3>
+        </div>
+
+        <div className="space-y-6">
+          {renderTabContent()}
+        </div>
+      </div>
+    );
+
+    function renderTabContent() {
       return (
         <div className="flex flex-col gap-6">
-          {/* Day Rating */}
-          <div className="bg-gray-700/50 rounded-lg p-4">
-            <div className="font-medium text-white mb-3">Day Rating:</div>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-3 bg-gray-600 rounded-full overflow-hidden">
+          {/* Mood Data - Show prominently if available */}
+          {moodData && (
+            <div className="space-y-6">
+              {/* Overall Score */}
+              <div className="text-center">
+                <div className="text-3xl font-light text-white mb-2">
+                  {Math.round(calculateMoodScore(moodData.happiness, moodData.satisfaction, moodData.stress) * 10) / 10}<span className="text-gray-400">/10</span>
+                </div>
+                <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full transition-all duration-300 ${getRatingBarColor(data.dayRating || 0)}`}
-                  style={{ width: `${((data.dayRating || 0) / 10) * 100}%` }}
+                    className={`h-full transition-all duration-500 ${getRatingBarColor(calculateMoodScore(moodData.happiness, moodData.satisfaction, moodData.stress))}`}
+                    style={{ width: `${(calculateMoodScore(moodData.happiness, moodData.satisfaction, moodData.stress) / 10) * 100}%` }}
                 />
               </div>
-              <div className={`px-3 py-1 rounded-full text-white font-medium text-sm ${getRatingColor(data.dayRating || 0)}`}>
-                {data.dayRating || 0}/10
               </div>
-            </div>
-          </div>
 
-          {/* Mood */}
-          <div className="bg-gray-700/50 rounded-lg p-4">
-            <div className="font-medium text-white mb-3">Mood:</div>
-            <div className="space-y-3">
-              {/* Happy */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-gray-300 text-sm">Happy:</span>
-                  <span className="text-white text-sm font-medium">{data.happiness || 0}/5</span>
+              {/* Mood Metrics */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Happiness</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-20 h-1 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-300 ${getMoodBadgeColor(moodData.happiness, 'happiness')}`}
+                        style={{ width: `${(moodData.happiness / 5) * 100}%` }}
+                      />
+            </div>
+                    <span className="text-white text-sm w-8">{moodData.happiness}/5</span>
+          </div>
                 </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Satisfaction</span>
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
+                    <div className="w-20 h-1 bg-gray-700 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.happiness || 0, 'happiness').replace('bg-', 'bg-')}`}
-                      style={{ width: `${((data.happiness || 0) / 5) * 100}%` }}
+                        className={`h-full transition-all duration-300 ${getMoodBadgeColor(moodData.satisfaction, 'satisfaction')}`}
+                        style={{ width: `${(moodData.satisfaction / 5) * 100}%` }}
                     />
+                  </div>
+                    <span className="text-white text-sm w-8">{moodData.satisfaction}/5</span>
+                </div>
+              </div>
+              
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Stress</span>
+                <div className="flex items-center gap-3">
+                    <div className="w-20 h-1 bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                        className={`h-full transition-all duration-300 ${getMoodBadgeColor(moodData.stress, 'stress')}`}
+                        style={{ width: `${(moodData.stress / 5) * 100}%` }}
+                    />
+                    </div>
+                    <span className="text-white text-sm w-8">{moodData.stress}/5</span>
                   </div>
                 </div>
               </div>
               
-              {/* Satisfied */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-gray-300 text-sm">Satisfied:</span>
-                  <span className="text-white text-sm font-medium">{data.satisfaction || 0}/5</span>
+              {/* Date only - no time */}
+              <div className="text-center">
+                <span className="text-gray-400 text-xs">
+                  {new Date(moodData.created_at || moodData.updated_at).toLocaleDateString()}
+                </span>
                 </div>
+            </div>
+          )}
+
+          {/* Day Rating - Show if available from daily entries */}
+          {dailyData && dailyData.dayRating && (
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <div className="font-medium text-white mb-3">Day Rating:</div>
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
+                <div className="flex-1 h-3 bg-gray-600 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.satisfaction || 0, 'satisfaction').replace('bg-', 'bg-')}`}
-                      style={{ width: `${((data.satisfaction || 0) / 5) * 100}%` }}
+                    className={`h-full transition-all duration-300 ${getRatingBarColor(dailyData.dayRating || 0)}`}
+                    style={{ width: `${((dailyData.dayRating || 0) / 10) * 100}%` }}
                     />
                   </div>
-                </div>
-              </div>
-              
-              {/* Stress */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-gray-300 text-sm">Stress:</span>
-                  <span className="text-white text-sm font-medium">{data.stress || 0}/5</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full transition-all duration-300 ${getMoodBadgeColor(data.stress || 0, 'stress').replace('bg-', 'bg-')}`}
-                      style={{ width: `${((data.stress || 0) / 5) * 100}%` }}
-                    />
-                  </div>
+                <div className={`px-3 py-1 rounded-full text-white font-medium text-sm ${getRatingColor(dailyData.dayRating || 0)}`}>
+                  {dailyData.dayRating || 0}/10
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Habits */}
+          {/* Habits - Show all habits with completion status */}
+          {habits.length > 0 && (
           <div className="bg-gray-700/50 rounded-lg p-4">
-            <div className="font-medium text-white mb-3">Habits:</div>
+              <div className="font-medium text-white mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Habits for {formattedDate}
+              </div>
+              
+              {/* Progress Summary */}
             <div className="flex items-center justify-between mb-3 p-2 bg-gray-600/50 rounded">
               <span className="text-gray-300 text-sm">Progress:</span>
               <span className="text-white font-medium">
-                {data.habitCompletions?.filter(h => h.completed).length}/{data.habitCompletions?.length} completed
+                  {(() => {
+                    const completedCount = dailyData?.habitCompletions?.filter(h => h.completed).length || 0;
+                    const totalFromData = dailyData?.habitCompletions?.length || 0;
+                    const totalHabits = habits.length;
+                    
+                    // If we have completion data, use it; otherwise show 0/total
+                    return totalFromData > 0 ? `${completedCount}/${totalFromData} completed` : `0/${totalHabits} completed`;
+                  })()}
               </span>
             </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-              {data.habitCompletions?.map((completion, index) => {
-                const habit = habits.find(h => h.id === completion.habitId);
-                return (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-600/30 rounded-lg hover:bg-gray-600/50 transition-colors">
-                    <span className="text-white text-sm flex-1">{habit?.name || 'Unknown Habit'}</span>
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                      completion.completed 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-red-500/80 text-white'
-                    }`}>
-                      {completion.completed ? '✓' : '✗'}
+
+              {/* Completed Habits */}
+              {(() => {
+                const completedHabits = habits.filter(habit => {
+                  const completion = dailyData?.habitCompletions?.find(h => h.habitId === habit.id);
+                  return completion?.completed === true;
+                });
+                
+                return completedHabits.length > 0 && (
+                  <div className="mb-4">
+                    <div className="text-green-400 text-sm font-medium mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Completed ({completedHabits.length})
                     </div>
+                    <div className="space-y-2">
+                      {completedHabits.map((habit) => (
+                        <div key={habit.id} className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold">
+                              ✓
                   </div>
-                );
-              })}
+                            <span className="text-white text-sm">{habit.name}</span>
+                            {habit.isFavorite && (
+                              <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                            )}
             </div>
+                          <span className="text-green-400 text-xs">Done</span>
+                        </div>
+                      ))}
           </div>
         </div>
       );
-    };
+              })()}
 
-    return (
-      <div className="p-4">
-        {!selectedDate || !dailyEntries[selectedDate] ? (
-          <p className="text-center text-gray-400 py-8 text-sm">Click a date to view details</p>
-        ) : (
-          <>
-            <h3 className="text-lg font-medium text-white mb-4">{formattedDate}</h3>
-
-            <div className="text-gray-300 text-sm">
-              {renderTabContent()}
+              {/* Pending Habits */}
+              {(() => {
+                const pendingHabits = habits.filter(habit => {
+                  const completion = dailyData?.habitCompletions?.find(h => h.habitId === habit.id);
+                  return !completion || completion.completed === false;
+                });
+                
+                return pendingHabits.length > 0 && (
+                  <div>
+                    <div className="text-orange-400 text-sm font-medium mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Pending ({pendingHabits.length})
             </div>
-          </>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                      {pendingHabits.map((habit) => (
+                        <div key={habit.id} className="flex items-center justify-between p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-600 text-gray-300 text-xs font-bold">
+                              ○
+                            </div>
+                            <span className="text-white text-sm">{habit.name}</span>
+                            {habit.isFavorite && (
+                              <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
         )}
+                          </div>
+                          <span className="text-orange-400 text-xs">Pending</span>
+                        </div>
+                      ))}
+                    </div>
       </div>
     );
+              })()}
+
+              {/* No Habits Message */}
+              {habits.length === 0 && (
+                <div className="text-center text-gray-400 py-4">
+                  <svg className="w-8 h-8 mx-auto mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm">No habits to track</p>
+                  <p className="text-xs text-gray-500 mt-1">Add habits to start tracking</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
   };
 
   // Show loading state
@@ -685,8 +963,55 @@ export default function TrackPage() {
       >
         <div className="container mx-auto px-4">
         <header className="mb-8">
+          <div className="flex justify-between items-start">
+            <div>
           <h1 className="text-3xl font-bold text-white mb-2">Tracking Dashboard</h1>
           <p className="text-white">Monitor your mood, habits, and daily progress</p>
+            </div>
+            
+            {/* Cache Controls */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCacheStats(!showCacheStats)}
+                className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-700/50"
+                title="Cache Status"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </button>
+              
+              <button
+                onClick={handleRefreshCache}
+                className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-700/50"
+                title="Clear Cache & Refresh"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          {/* Cache Stats Panel */}
+          {showCacheStats && (
+            <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-600">
+              <h3 className="text-sm font-medium text-white mb-2">Cache Status</h3>
+              <div className="text-xs text-gray-300 space-y-1">
+                <div>Cached entries: {getCacheStats().size}/{getCacheStats().maxSize}</div>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {getCacheStats().entries.map((key, index) => (
+                    <span key={index} className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded text-xs">
+                      {key.length > 20 ? `${key.substring(0, 20)}...` : key}
+                    </span>
+                  ))}
+                </div>
+                {getCacheStats().entries.length === 0 && (
+                  <div className="text-gray-400 italic">No cached data</div>
+                )}
+              </div>
+            </div>
+          )}
         </header>
 
           {/* Stats Section */}

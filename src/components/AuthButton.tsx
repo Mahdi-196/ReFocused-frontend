@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import client, { initializeAuth } from '@/api/client';
+import { initializeAuth } from '@/api/client';
+import { authService } from '@/api/services/authService';
 import AuthModal from './AuthModal';
 
 const AuthButton = () => {
@@ -25,15 +26,22 @@ const AuthButton = () => {
       
       if (token && token !== 'dummy-auth-token') {
         setIsLoggedIn(true);
-        client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
+        // First try to get cached user data
+        const cachedUser = authService.getCachedUser();
+        if (cachedUser) {
+          console.log('👤 Using cached user data in AuthButton');
+          const avatarUrl = cachedUser.avatar || 
+            `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(cachedUser.name || cachedUser.email)}&backgroundColor=transparent`;
+          setUserAvatar(avatarUrl);
+          setUserName(cachedUser.name || cachedUser.email || 'User');
+        } else {
         // Try to fetch user profile to get avatar
         try {
-          const response = await client.get('/api/v1/user/me');
-          const userData = response.data;
+            const userData = await authService.getCurrentUser();
           
           // Set avatar from user data or generate one
-          const avatarUrl = userData.profile_picture || 
+          const avatarUrl = userData.avatar || 
             `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
           setUserAvatar(avatarUrl);
           setUserName(userData.name || userData.email || 'User');
@@ -44,12 +52,13 @@ const AuthButton = () => {
           if (storedUser) {
             try {
               const userData = JSON.parse(storedUser);
-              const avatarUrl = userData.profile_picture || 
+              const avatarUrl = userData.avatar || 
                 `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
               setUserAvatar(avatarUrl);
               setUserName(userData.name || userData.email || 'User');
             } catch (parseError) {
               console.error('Failed to parse stored user data:', parseError);
+              }
             }
           }
         }
@@ -76,11 +85,11 @@ const AuthButton = () => {
       if (e.key === 'REF_TOKEN') {
         checkAuth();
       } else if (e.key === 'REF_USER') {
-        // Update avatar when user data changes
-        const userData = e.newValue ? JSON.parse(e.newValue) : null;
-        if (userData && userData.profile_picture) {
-          setUserAvatar(userData.profile_picture);
-        }
+              // Update avatar when user data changes
+      const userData = e.newValue ? JSON.parse(e.newValue) : null;
+      if (userData && userData.avatar) {
+        setUserAvatar(userData.avatar);
+      }
       }
     };
     

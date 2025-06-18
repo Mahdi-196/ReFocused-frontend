@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   X,
   Play,
@@ -9,40 +9,89 @@ import {
   ChevronsRight,
   UserRoundCog,
 } from "lucide-react";
+import { addFocusTime, incrementSessions } from "@/services/statisticsService";
 
-const Pomodoro = () => {
+interface PomodoroSettings {
+  pomodoroTime: number;
+  shortBreakTime: number;
+  longBreakTime: number;
+  longBreakInterval: number;
+  autoStartBreaks: boolean;
+  autoStartPomodoros: boolean;
+  soundOn: boolean;
+}
+
+type TimerMode = "pomodoro" | "short" | "long";
+
+const Pomodoro: React.FC = () => {
   // === Timer Preferences ===
-  const [pomodoroTime, setPomodoroTime] = useState(25);
-  const [shortBreakTime, setShortBreakTime] = useState(5);
-  const [longBreakTime, setLongBreakTime] = useState(15);
-  const [longBreakInterval, setLongBreakInterval] = useState(3);
+  const [pomodoroTime, setPomodoroTime] = useState<number>(25);
+  const [shortBreakTime, setShortBreakTime] = useState<number>(5);
+  const [longBreakTime, setLongBreakTime] = useState<number>(15);
+  const [longBreakInterval, setLongBreakInterval] = useState<number>(3);
 
-  const [autoStartBreaks, setAutoStartBreaks] = useState(false);
-  const [autoStartPomodoros, setAutoStartPomodoros] = useState(false);
-  const [soundOn, setSoundOn] = useState(false);
+  const [autoStartBreaks, setAutoStartBreaks] = useState<boolean>(false);
+  const [autoStartPomodoros, setAutoStartPomodoros] = useState<boolean>(false);
+  const [soundOn, setSoundOn] = useState<boolean>(false);
   
   // === Temporary settings state (only applied when saved) ===
-  const [tempPomodoroTime, setTempPomodoroTime] = useState(25);
-  const [tempShortBreakTime, setTempShortBreakTime] = useState(5);
-  const [tempLongBreakTime, setTempLongBreakTime] = useState(15);
-  const [tempLongBreakInterval, setTempLongBreakInterval] = useState(3);
-  const [tempAutoStartBreaks, setTempAutoStartBreaks] = useState(false);
-  const [tempAutoStartPomodoros, setTempAutoStartPomodoros] = useState(false);
-  const [tempSoundOn, setTempSoundOn] = useState(false);
+  const [tempPomodoroTime, setTempPomodoroTime] = useState<number>(25);
+  const [tempShortBreakTime, setTempShortBreakTime] = useState<number>(5);
+  const [tempLongBreakTime, setTempLongBreakTime] = useState<number>(15);
+  const [tempLongBreakInterval, setTempLongBreakInterval] = useState<number>(3);
+  const [tempAutoStartBreaks, setTempAutoStartBreaks] = useState<boolean>(false);
+  const [tempAutoStartPomodoros, setTempAutoStartPomodoros] = useState<boolean>(false);
+  const [tempSoundOn, setTempSoundOn] = useState<boolean>(false);
 
   // === Timer Logic ===
-  // timeLeft (in seconds, may be fractional for smooth animation)
-  const [isRunning, setIsRunning] = useState(false);
-  const [mode, setMode] = useState<"pomodoro" | "short" | "long">("pomodoro");
-  const [rounds, setRounds] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(pomodoroTime * 60);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [mode, setMode] = useState<TimerMode>("pomodoro");
+  const [rounds, setRounds] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(pomodoroTime * 60);
 
   // === Additional State ===
-  // Determines whether the stored settings have finished loading.
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  // Settings Modal Visibility
-  const [showSettings, setShowSettings] = useState(false);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isClient, setIsClient] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+
+  // === COMPLETE SESSION HELPER - Defined immediately after state to avoid reference errors ===
+  const completeSession = async (autoStart: boolean): Promise<void> => {
+    if (mode === "pomodoro") {
+      // Track completed focus session
+      const completedTime = pomodoroTime; // Already in minutes, no conversion needed
+      try {
+        console.log('🎯 [POMODORO] Session completed! Focus time:', completedTime, 'minutes');
+        
+        // Record the focus time (original duration, not time left)
+        await addFocusTime(completedTime);
+        
+        // Increment the session counter
+        await incrementSessions();
+        
+        console.log('✅ [POMODORO] Statistics updated successfully');
+      } catch (error) {
+        console.error('Failed to record session statistics:', error);
+      }
+
+      setRounds((prev: number) => {
+        const newRounds = prev + 1;
+        const nextMode: TimerMode = newRounds % longBreakInterval === 0 ? "long" : "short";
+        setMode(nextMode);
+        // Only auto start if the session naturally ended (autoStart true)
+        setIsRunning(autoStart ? autoStartBreaks : false);
+        return newRounds;
+      });
+    } else {
+      setMode("pomodoro");
+      setIsRunning(autoStart ? autoStartPomodoros : false);
+    }
+  };
+
+  // Use ref to store the current completeSession function
+  const completeSessionRef = useRef<((autoStart: boolean) => Promise<void>) | null>(null);
+
+  // Update ref whenever component renders - simpler approach
+  completeSessionRef.current = completeSession;
 
   // Initialize client-side rendering flag
   useEffect(() => {
@@ -129,6 +178,55 @@ const Pomodoro = () => {
     loadSettings();
   }, [isClient]);
 
+  // === SMOOTH COUNTDOWN (update every 100ms) ===
+  useEffect(() => {
+    if (!isRunning) return;
+    
+    // Store the exact end time when timer starts
+    const timerEndTime = Date.now() + timeLeft * 1000;
+    
+    // Save target time to localStorage immediately 
+    if (isClient) {
+      localStorage.setItem("pomodoroTargetTime", timerEndTime.toString());
+    }
+    
+    // Handle visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // When tab becomes visible again, recalculate timeLeft based on endTime
+        const newTimeLeft = Math.max((timerEndTime - Date.now()) / 1000, 0);
+        setTimeLeft(newTimeLeft);
+        
+        // If time is up while user was away
+        if (newTimeLeft <= 0) {
+          completeSession(true);
+        }
+      }
+    };
+    
+    // Add visibility change listener
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    
+    const interval = setInterval(() => {
+      // Only update UI normally when tab is visible
+      if (document.visibilityState === 'visible') {
+        // Calculate remaining time based on end time instead of decrementing
+        const newTimeLeft = Math.max((timerEndTime - Date.now()) / 1000, 0);
+        setTimeLeft(newTimeLeft);
+        
+        if (newTimeLeft <= 0.1) {
+          clearInterval(interval);
+          completeSession(true);
+        }
+      }
+    }, 100);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isRunning, timeLeft, isClient]);
+
   // === PERSIST STATE ON CHANGES ===
   useEffect(() => {
     if (!isLoaded || !isClient) return;
@@ -138,10 +236,8 @@ const Pomodoro = () => {
       localStorage.setItem("pomodoroRounds", rounds.toString());
       localStorage.setItem("pomodoroTimeLeft", timeLeft.toString());
       localStorage.setItem("pomodoroIsRunning", isRunning.toString());
-      if (isRunning) {
-        const targetTime = Date.now() + timeLeft * 1000;
-        localStorage.setItem("pomodoroTargetTime", targetTime.toString());
-      } else {
+      // Target time gets set in the timer effect instead of here
+      if (!isRunning) {
         localStorage.removeItem("pomodoroTargetTime");
       }
     } catch (error) {
@@ -155,39 +251,6 @@ const Pomodoro = () => {
     else if (mode === "short") setTimeLeft(shortBreakTime * 60);
     else setTimeLeft(longBreakTime * 60);
   }, [pomodoroTime, shortBreakTime, longBreakTime, mode]);
-
-  // === COMPLETE SESSION HELPER ===
-  const completeSession = useCallback((autoStart: boolean) => {
-    if (mode === "pomodoro") {
-      setRounds((prev) => {
-        const newRounds = prev + 1;
-        const nextMode = newRounds % longBreakInterval === 0 ? "long" : "short";
-        setMode(nextMode);
-        // Only auto start if the session naturally ended (autoStart true)
-        setIsRunning(autoStart ? autoStartBreaks : false);
-        return newRounds;
-      });
-    } else {
-      setMode("pomodoro");
-      setIsRunning(autoStart ? autoStartPomodoros : false);
-    }
-  }, [mode, longBreakInterval, autoStartBreaks, autoStartPomodoros]);
-
-  // === SMOOTH COUNTDOWN (update every 100ms) ===
-  useEffect(() => {
-    if (!isRunning) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 0.1) {
-          clearInterval(interval);
-          completeSession(true);
-          return 0;
-        }
-        return prev - 0.1;
-      });
-    }, 100);
-    return () => clearInterval(interval);
-  }, [isRunning, completeSession]);
 
   // Initialize temporary settings when opening the modal
   const openSettings = () => {
