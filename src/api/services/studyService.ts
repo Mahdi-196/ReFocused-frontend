@@ -34,9 +34,12 @@ export const studyService = {
     try {
       const response = await client.get<StudySetResponse[]>(STUDY.SETS);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${STUDY.SETS}]:`, error);
-      throw new Error(error.response?.data?.message || 'Failed to load study sets from server.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to load study sets from server.'
+        : 'Failed to load study sets from server.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -47,9 +50,12 @@ export const studyService = {
     try {
       const response = await client.post<StudySetResponse>(STUDY.SETS, studySet);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${STUDY.SETS}]:`, error);
-      throw new Error(error.response?.data?.message || 'Failed to create study set.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to create study set.'
+        : 'Failed to create study set.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -61,9 +67,12 @@ export const studyService = {
       const endpoint = STUDY.SET_DETAIL(id);
       const response = await client.put<StudySetResponse>(endpoint, studySet);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${STUDY.SET_DETAIL(id)}]:`, error);
-      throw new Error(error.response?.data?.message || 'Failed to update study set.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to update study set.'
+        : 'Failed to update study set.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -75,9 +84,12 @@ export const studyService = {
       const endpoint = STUDY.SET_DETAIL(id);
       const response = await client.delete(endpoint);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${STUDY.SET_DETAIL(id)}]:`, error);
-      throw new Error(error.response?.data?.message || 'Failed to delete study set.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to delete study set.'
+        : 'Failed to delete study set.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -89,9 +101,12 @@ export const studyService = {
       const endpoint = STUDY.CARDS(setId);
       const response = await client.post(endpoint, card);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${STUDY.CARDS(setId)}]:`, error);
-      throw new Error(error.response?.data?.message || 'Failed to add card to study set.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to add card to study set.'
+        : 'Failed to add card to study set.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -103,9 +118,12 @@ export const studyService = {
       const endpoint = STUDY.CARD_DETAIL(setId, cardId);
       const response = await client.delete(endpoint);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${STUDY.CARD_DETAIL(setId, cardId)}]:`, error);
-      throw new Error(error.response?.data?.message || 'Failed to delete card from study set.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to delete card from study set.'
+        : 'Failed to delete card from study set.';
+      throw new Error(errorMessage);
     }
   }
 }; 

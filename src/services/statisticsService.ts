@@ -1,5 +1,6 @@
 import { cacheService, CacheKeys, CacheTTL } from './cacheService';
-import { statisticsApiService, StatisticsEntry, StatisticsRequest } from '@/api/services/statisticsService';
+import { statisticsApiService, StatisticsEntry } from '@/api/services/statisticsService';
+import logger from '@/utils/logger';
 
 /**
  * Statistics Display Types
@@ -26,7 +27,7 @@ class CacheInvalidation {
     
     keys.forEach(key => {
       cacheService.delete(key);
-      console.log(`🗑️ [CACHE] Invalidated: ${key}`);
+      logger.debug(`Cache invalidated: ${key}`, undefined, 'CACHE');
     });
   }
 }
@@ -53,9 +54,9 @@ class LocalStorageFallback {
   static set(stats: Statistics): void {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stats));
-      console.log('💾 [FALLBACK] Saved to localStorage:', stats);
+      logger.debug('Saved to localStorage', stats, 'FALLBACK');
     } catch (error) {
-      console.warn('🚨 [FALLBACK] Error saving to localStorage:', error);
+      logger.warn('Error saving to localStorage', error, 'FALLBACK');
     }
   }
 
@@ -89,7 +90,7 @@ class LocalStorageFallback {
 
   static clear(): void {
     localStorage.removeItem(this.STORAGE_KEY);
-    console.log('🗑️ [FALLBACK] Cleared localStorage');
+    logger.debug('Cleared localStorage', undefined, 'FALLBACK');
   }
 }
 
@@ -145,7 +146,7 @@ class StatisticsService {
 
     try {
       this.isApiAvailable = await statisticsApiService.healthCheck();
-             console.log(`🔍 [SERVICE] API availability: ${this.isApiAvailable ? 'Available ✅' : 'Unavailable ❌'}`);
+      logger.info(`API availability: ${this.isApiAvailable ? 'Available' : 'Unavailable'}`, undefined, 'SERVICE');
      } catch {
        this.isApiAvailable = false;
     }
@@ -193,16 +194,16 @@ class StatisticsService {
   async getFilteredStats(filter: TimeFilter = 'D'): Promise<Statistics> {
     const cacheKey = this.getCacheKey(filter);
     
-    console.log(`📊 [SERVICE] getFilteredStats called, filter: ${filter}, cache key: ${cacheKey}`);
+    logger.debug(`getFilteredStats called, filter: ${filter}, cache key: ${cacheKey}`, undefined, 'SERVICE');
     
     // Check cache first
     const cached = cacheService.get<Statistics>(cacheKey);
     if (cached) {
-      console.log(`✅ [SERVICE] Using cached statistics:`, cached);
+      logger.cacheHit(cacheKey);
       return cached;
     }
 
-    console.log(`🌐 [SERVICE] Cache miss - Fetching from API`);
+    logger.cacheMiss(cacheKey);
 
     // Check API availability
     const apiAvailable = await this.checkApiAvailability();
@@ -215,18 +216,18 @@ class StatisticsService {
         
         // Cache the result
         cacheService.set(cacheKey, stats, CacheTTL.SHORT);
-        console.log(`✅ [SERVICE] Statistics loaded from API and cached:`, stats);
+        logger.info('Statistics loaded from API and cached', stats, 'SERVICE');
         
         return stats;
       } catch (error) {
-        console.warn(`🚨 [SERVICE] API failed, using fallback:`, error);
+        logger.warn('API failed, using fallback', error, 'SERVICE');
         this.isApiAvailable = false; // Mark API as unavailable
       }
     }
 
     // Fallback to localStorage
     const fallbackStats = LocalStorageFallback.get();
-    console.log(`💾 [SERVICE] Using localStorage fallback:`, fallbackStats);
+    logger.debug('Using localStorage fallback', fallbackStats, 'SERVICE');
     return fallbackStats;
   }
 
@@ -234,7 +235,7 @@ class StatisticsService {
    * Add focus time
    */
   async addFocusTime(minutes: number): Promise<Statistics> {
-    console.log(`⏱️ [SERVICE] Adding ${minutes} minutes focus time`);
+    logger.info(`Adding ${minutes} minutes focus time`, undefined, 'SERVICE');
 
     const apiAvailable = await this.checkApiAvailability();
     
@@ -248,10 +249,10 @@ class StatisticsService {
         // Dispatch UI update event
         window.dispatchEvent(new CustomEvent('statisticsUpdated'));
         
-        console.log(`✅ [SERVICE] Focus time added via API`);
+        logger.info('Focus time added via API', undefined, 'SERVICE');
         return await this.getFilteredStats('D');
       } catch (error) {
-        console.warn(`🚨 [SERVICE] API failed for focus time, using fallback:`, error);
+        logger.warn('API failed for focus time, using fallback', error, 'SERVICE');
         this.isApiAvailable = false;
       }
     }
@@ -259,7 +260,7 @@ class StatisticsService {
     // Fallback to localStorage
     const fallbackStats = LocalStorageFallback.addFocusTime(minutes);
     window.dispatchEvent(new CustomEvent('statisticsUpdated'));
-    console.log(`💾 [SERVICE] Focus time added via fallback:`, fallbackStats);
+    logger.debug('Focus time added via fallback', fallbackStats, 'SERVICE');
     return fallbackStats;
   }
 
@@ -267,7 +268,7 @@ class StatisticsService {
    * Increment sessions
    */
   async incrementSessions(): Promise<Statistics> {
-    console.log(`📊 [SERVICE] Incrementing sessions`);
+    logger.info('Incrementing sessions', undefined, 'SERVICE');
 
     const apiAvailable = await this.checkApiAvailability();
     
@@ -281,10 +282,10 @@ class StatisticsService {
         // Dispatch UI update event
         window.dispatchEvent(new CustomEvent('statisticsUpdated'));
         
-        console.log(`✅ [SERVICE] Sessions incremented via API`);
+        logger.info('Sessions incremented via API', undefined, 'SERVICE');
         return await this.getFilteredStats('D');
       } catch (error) {
-        console.warn(`🚨 [SERVICE] API failed for sessions, using fallback:`, error);
+        logger.warn('API failed for sessions, using fallback', error, 'SERVICE');
         this.isApiAvailable = false;
       }
     }
@@ -292,7 +293,7 @@ class StatisticsService {
     // Fallback to localStorage
     const fallbackStats = LocalStorageFallback.incrementSessions();
     window.dispatchEvent(new CustomEvent('statisticsUpdated'));
-    console.log(`💾 [SERVICE] Sessions incremented via fallback:`, fallbackStats);
+    logger.debug('Sessions incremented via fallback', fallbackStats, 'SERVICE');
     return fallbackStats;
   }
 
@@ -300,7 +301,7 @@ class StatisticsService {
    * Increment tasks done
    */
   async incrementTasksDone(): Promise<Statistics> {
-    console.log(`✅ [SERVICE] Incrementing tasks done`);
+    logger.info('Incrementing tasks done', undefined, 'SERVICE');
 
     const apiAvailable = await this.checkApiAvailability();
     
@@ -314,10 +315,10 @@ class StatisticsService {
         // Dispatch UI update event
         window.dispatchEvent(new CustomEvent('statisticsUpdated'));
         
-        console.log(`✅ [SERVICE] Tasks incremented via API`);
+        logger.info('Tasks incremented via API', undefined, 'SERVICE');
         return await this.getFilteredStats('D');
       } catch (error) {
-        console.warn(`🚨 [SERVICE] API failed for tasks, using fallback:`, error);
+        logger.warn('API failed for tasks, using fallback', error, 'SERVICE');
         this.isApiAvailable = false;
       }
     }
@@ -325,7 +326,7 @@ class StatisticsService {
     // Fallback to localStorage
     const fallbackStats = LocalStorageFallback.incrementTasks();
     window.dispatchEvent(new CustomEvent('statisticsUpdated'));
-    console.log(`💾 [SERVICE] Tasks incremented via fallback:`, fallbackStats);
+    logger.debug('Tasks incremented via fallback', fallbackStats, 'SERVICE');
     return fallbackStats;
   }
 
@@ -333,7 +334,7 @@ class StatisticsService {
    * Force refresh statistics (bypass cache)
    */
   async refreshStatistics(filter: TimeFilter = 'D'): Promise<Statistics> {
-    console.log(`🔄 [SERVICE] Force refreshing statistics for filter: ${filter}`);
+    logger.info(`Force refreshing statistics for filter: ${filter}`, undefined, 'SERVICE');
     
     // Clear cache first
     const cacheKey = this.getCacheKey(filter);
@@ -350,7 +351,7 @@ class StatisticsService {
    * Clear all statistics data
    */
   async clearAllData(): Promise<void> {
-    console.log(`🗑️ [SERVICE] Clearing all statistics data`);
+    logger.info('Clearing all statistics data', undefined, 'SERVICE');
     
     // Clear cache
     CacheInvalidation.invalidateStatsData('current');
@@ -364,13 +365,13 @@ class StatisticsService {
     // Dispatch update event
     window.dispatchEvent(new CustomEvent('statisticsUpdated'));
     
-    console.log(`✅ [SERVICE] All statistics data cleared`);
+    logger.info('All statistics data cleared', undefined, 'SERVICE');
   }
 
   /**
    * Debug: Get comprehensive service information
    */
-  async getDebugInfo(): Promise<any> {
+  async getDebugInfo(): Promise<Record<string, unknown>> {
     const today = DateUtils.getCurrentDate();
     const apiAvailable = await this.checkApiAvailability();
     const fallbackData = LocalStorageFallback.get();

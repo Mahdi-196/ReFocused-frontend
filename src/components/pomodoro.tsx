@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   X,
   Play,
@@ -11,15 +11,7 @@ import {
 } from "lucide-react";
 import { addFocusTime, incrementSessions } from "@/services/statisticsService";
 
-interface PomodoroSettings {
-  pomodoroTime: number;
-  shortBreakTime: number;
-  longBreakTime: number;
-  longBreakInterval: number;
-  autoStartBreaks: boolean;
-  autoStartPomodoros: boolean;
-  soundOn: boolean;
-}
+
 
 type TimerMode = "pomodoro" | "short" | "long";
 

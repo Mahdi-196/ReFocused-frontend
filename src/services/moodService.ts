@@ -157,7 +157,7 @@ export async function getMoodStats(startDate: string, endDate: string): Promise<
   
   try {
     // Try to get from cache first
-    const cached = cacheService.get<any>(cacheKey);
+    const cached = cacheService.get<typeof stats>(cacheKey);
     if (cached) {
       return cached;
     }

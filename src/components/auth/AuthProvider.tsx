@@ -46,7 +46,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const response = await client.get('/api/v1/user/me');
           setUser(response.data);
           setIsAuthenticated(true);
-        } catch (error) {
+        } catch {
           // Token is invalid, clear it
           localStorage.removeItem('REF_TOKEN');
           localStorage.removeItem('REF_USER');

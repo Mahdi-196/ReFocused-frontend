@@ -1,6 +1,7 @@
 import client from "@/api/client";
 import { STUDY } from "@/api/endpoints";
 import { cacheService, CacheKeys, CacheTTL, CacheInvalidation } from "./cacheService";
+import logger from "@/utils/logger";
 
 interface Card {
   id: string;
@@ -50,12 +51,13 @@ function getCurrentUserId(): string | undefined {
 }
 
 // Check if endpoints are available
-const isEndpointAvailable = (error: any): boolean => {
-  return !(error.code === 'ERR_NETWORK' || 
-           error.response?.status === 404 || 
-           error.response?.status === 500 ||
-           error.response?.status === 502 ||
-           error.response?.status === 503);
+const isEndpointAvailable = (error: unknown): boolean => {
+  const apiError = error as { code?: string; response?: { status?: number } };
+  return !(apiError.code === 'ERR_NETWORK' || 
+           apiError.response?.status === 404 || 
+           apiError.response?.status === 500 ||
+           apiError.response?.status === 502 ||
+           apiError.response?.status === 503);
 };
 
 // Get all study sets (with enhanced caching)
@@ -63,52 +65,58 @@ export const getStudySets = async (): Promise<StudySet[]> => {
   const userId = getCurrentUserId();
   const cacheKey = CacheKeys.STUDY_SETS(userId);
   
-  console.log('🔍 getStudySets called, cache key:', cacheKey);
-  console.log('📊 Cache stats:', cacheService.getStats());
+  logger.debug('getStudySets called', { cacheKey }, 'STUDY');
   
   // Check cache first
   const cachedSets = cacheService.get<StudySet[]>(cacheKey);
   if (cachedSets) {
-    console.log('✅ Using cached study sets (', cachedSets.length, 'sets)');
+    logger.cacheHit(cacheKey);
     return cachedSets;
   }
 
   try {
-    console.log('🌐 Cache miss - Fetching study sets from API');
+    logger.cacheMiss(cacheKey);
     const response = await client.get(STUDY.SETS);
     
     if (response.status === 200 && response.data) {
-      let fetchedSets: any = response.data;
+      let fetchedSets: unknown = response.data;
       
       // Handle possible array wrapping
-      if (!Array.isArray(fetchedSets) && fetchedSets && typeof fetchedSets === 'object' && fetchedSets.data && Array.isArray(fetchedSets.data)) {
-        fetchedSets = fetchedSets.data;
+      const responseWithData = fetchedSets as { data?: unknown };
+      if (!Array.isArray(fetchedSets) && fetchedSets && typeof fetchedSets === 'object' && responseWithData.data && Array.isArray(responseWithData.data)) {
+        fetchedSets = responseWithData.data;
       }
       
       if (Array.isArray(fetchedSets)) {
         // Transform the backend data format to our frontend format
-        const transformedSets: StudySet[] = fetchedSets.map(set => ({
-          id: set.id.toString(),
-          name: set.title || 'Untitled Set',
-          cards: (set.cards || []).map((card: any) => ({
-            id: card.id.toString(),
-            front: card.front_content || '',
-            back: card.back_content || ''
+        const transformedSets: StudySet[] = (fetchedSets as unknown[]).map((rawSet: unknown) => {
+          const set = rawSet as Record<string, unknown>;
+          return {
+          id: String(set.id),
+          name: String(set.title || 'Untitled Set'),
+          cards: ((set.cards as Record<string, unknown>[]) || []).map((card: Record<string, unknown>) => ({
+            id: String(card.id),
+            front: String(card.front_content || ''),
+            back: String(card.back_content || '')
           })),
-          user_id: set.user_id,
-          last_updated: set.updated_at || set.created_at
-        }));
+          user_id: typeof set.user_id === 'string' || typeof set.user_id === 'number' ? set.user_id : undefined,
+          last_updated: String(set.updated_at || set.created_at)
+        };
+        });
         
         // Cache the results with user-specific key and appropriate TTL
         cacheService.set(cacheKey, transformedSets, CacheTTL.MEDIUM);
-        console.log('💾 Cached', transformedSets.length, 'study sets for', CacheTTL.MEDIUM / 1000, 'seconds');
+        logger.debug('Cached study sets', { 
+          count: transformedSets.length, 
+          ttlSeconds: CacheTTL.MEDIUM / 1000 
+        }, 'STUDY');
         
         return transformedSets;
       }
     }
     
     return [];
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.warn('Study sets endpoint not available:', error);
     
     // Always return empty array if backend endpoint fails
@@ -131,22 +139,28 @@ export const createStudySet = async (studySetData: CreateStudySetRequest): Promi
     return {
       id: newSet.id.toString(),
       name: newSet.title || 'Untitled Set',
-      cards: (newSet.cards || []).map((card: any) => ({
-        id: card.id.toString(),
-        front: card.front_content || '',
-        back: card.back_content || ''
-      })),
+      cards: (newSet.cards || []).map((rawCard: unknown) => {
+        const card = rawCard as Record<string, unknown>;
+        return {
+          id: String(card.id),
+          front: String(card.front_content || ''),
+          back: String(card.back_content || '')
+        };
+      }),
       user_id: newSet.user_id,
       last_updated: newSet.updated_at || newSet.created_at
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to create study set:', error);
     
     if (!isEndpointAvailable(error)) {
       throw new Error('Study sets backend not available yet');
     }
     
-    throw new Error(error.response?.data?.message || 'Failed to create study set');
+    const errorMessage = error instanceof Error && 'response' in error 
+      ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to create study set'
+      : 'Failed to create study set';
+    throw new Error(errorMessage);
   }
 };
 
@@ -167,22 +181,28 @@ export const updateStudySet = async (setId: string, updates: UpdateStudySetReque
     return {
       id: updatedSet.id.toString(),
       name: updatedSet.title || 'Untitled Set',
-      cards: (updatedSet.cards || []).map((card: any) => ({
-        id: card.id.toString(),
-        front: card.front_content || '',
-        back: card.back_content || ''
-      })),
+      cards: (updatedSet.cards || []).map((rawCard: unknown) => {
+        const card = rawCard as Record<string, unknown>;
+        return {
+          id: String(card.id),
+          front: String(card.front_content || ''),
+          back: String(card.back_content || '')
+        };
+      }),
       user_id: updatedSet.user_id,
       last_updated: updatedSet.updated_at || updatedSet.created_at
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update study set:', error);
     
     if (!isEndpointAvailable(error)) {
       throw new Error('Study sets backend not available yet');
     }
     
-    throw new Error(error.response?.data?.message || 'Failed to update study set');
+    const errorMessage = error instanceof Error && 'response' in error 
+      ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to update study set'
+      : 'Failed to update study set';
+    throw new Error(errorMessage);
   }
 };
 
@@ -197,19 +217,22 @@ export const deleteStudySet = async (setId: string): Promise<void> => {
     
     // Also invalidate specific set cache if it exists
     cacheService.delete(CacheKeys.STUDY_SET_DETAIL(setId));
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete study set:', error);
     
     if (!isEndpointAvailable(error)) {
       throw new Error('Study sets backend not available yet');
     }
     
-    throw new Error(error.response?.data?.message || 'Failed to delete study set');
+    const errorMessage = error instanceof Error && 'response' in error 
+      ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to delete study set'
+      : 'Failed to delete study set';
+    throw new Error(errorMessage);
   }
 };
 
 // Add a card to a study set
-export const addCardToSet = async (setId: string, cardData: { front_content: string; back_content: string }): Promise<any> => {
+export const addCardToSet = async (setId: string, cardData: { front_content: string; back_content: string }): Promise<unknown> => {
   try {
     const response = await client.post(STUDY.CARDS(setId), cardData);
     
@@ -221,14 +244,17 @@ export const addCardToSet = async (setId: string, cardData: { front_content: str
     cacheService.delete(CacheKeys.STUDY_SET_DETAIL(setId));
     
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to add card to study set:', error);
     
     if (!isEndpointAvailable(error)) {
       throw new Error('Study sets backend not available yet');
     }
     
-    throw new Error(error.response?.data?.message || 'Failed to add card to study set');
+    const errorMessage = error instanceof Error && 'response' in error 
+      ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to add card to study set'
+      : 'Failed to add card to study set';
+    throw new Error(errorMessage);
   }
 };
 
@@ -243,14 +269,17 @@ export const deleteCardFromSet = async (setId: string, cardId: string): Promise<
     
     // Also invalidate specific set cache if it exists
     cacheService.delete(CacheKeys.STUDY_SET_DETAIL(setId));
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete card from study set:', error);
     
     if (!isEndpointAvailable(error)) {
       throw new Error('Study sets backend not available yet');
     }
     
-    throw new Error(error.response?.data?.message || 'Failed to delete card from study set');
+    const errorMessage = error instanceof Error && 'response' in error 
+      ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to delete card from study set'
+      : 'Failed to delete card from study set';
+    throw new Error(errorMessage);
   }
 };
 
@@ -273,11 +302,14 @@ export const getStudySet = async (setId: string): Promise<StudySet | null> => {
     const transformedSet: StudySet = {
       id: set.id.toString(),
       name: set.title || 'Untitled Set',
-      cards: (set.cards || []).map((card: any) => ({
-        id: card.id.toString(),
-        front: card.front_content || '',
-        back: card.back_content || ''
-      })),
+      cards: (set.cards || []).map((rawCard: unknown) => {
+        const card = rawCard as Record<string, unknown>;
+        return {
+          id: String(card.id),
+          front: String(card.front_content || ''),
+          back: String(card.back_content || '')
+        };
+      }),
       user_id: set.user_id,
       last_updated: set.updated_at || set.created_at
     };
@@ -286,10 +318,10 @@ export const getStudySet = async (setId: string): Promise<StudySet | null> => {
     cacheService.set(cacheKey, transformedSet, CacheTTL.MEDIUM);
     
     return transformedSet;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to get study set:', error);
     
-    if (error.response?.status === 404) {
+    if (error instanceof Error && 'response' in error && (error as {response?: {status?: number}}).response?.status === 404) {
       return null;
     }
     
@@ -297,7 +329,10 @@ export const getStudySet = async (setId: string): Promise<StudySet | null> => {
       throw new Error('Study sets backend not available yet');
     }
     
-    throw new Error(error.response?.data?.message || 'Failed to get study set');
+    const errorMessage = error instanceof Error && 'response' in error 
+      ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to get study set'
+      : 'Failed to get study set';
+    throw new Error(errorMessage);
   }
 };
 

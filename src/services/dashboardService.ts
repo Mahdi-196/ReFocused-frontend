@@ -288,7 +288,7 @@ export async function getTodayOverview(): Promise<{
   
   try {
     // Try to get from cache first
-    const cached = cacheService.get<any>(cacheKey);
+    const cached = cacheService.get<typeof overview>(cacheKey);
     if (cached) {
       return cached;
     }

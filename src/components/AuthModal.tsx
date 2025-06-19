@@ -2,8 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
+import { X, FiMail, FiLock, FiUser, FiEye, FiEyeOff } from './icons';
 import GoogleSignInButton from './GoogleSignInButton';
 import client from '@/api/client';
 import { AUTH } from '@/api/endpoints';
@@ -116,7 +115,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
       scale: 1,
       y: 0,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         damping: 25,
         stiffness: 300,
         duration: 0.6,
@@ -128,7 +127,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
       y: 50,
       transition: {
         duration: 0.3,
-        ease: "easeInOut"
+        ease: "easeInOut" as const
       }
     }
   };

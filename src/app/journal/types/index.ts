@@ -29,7 +29,7 @@ export type DropdownState = {
   type: 'entry' | 'collection';
   id: string;
   rect: DOMRect | null;
-  collection?: Collection;
+  collection?: Collection | null;
   entry?: Entry;
 };
 

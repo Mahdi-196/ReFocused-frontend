@@ -51,7 +51,7 @@ const Profile = () => {
     message: '',
     contact: ''
   });
-  const [appSettingsActiveSection, setAppSettingsActiveSection] = useState('audio');
+  // Removed unused state: appSettingsActiveSection
   
   // User data state
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -62,7 +62,7 @@ const Profile = () => {
   const [showAvatarSuccess, setShowAvatarSuccess] = useState(false);
   
   // Settings hook
-  const { settings, updateSettings, isLoaded } = useSettings();
+  const { settings, updateSettings } = useSettings();
   
   // Add authentication check for this page
   const [isAuthenticatedUser, setIsAuthenticatedUser] = useState(false);
@@ -106,7 +106,7 @@ const Profile = () => {
       try {
         const statsResponse = await client.get(USER.STATS);
         setUserStats(statsResponse.data);
-      } catch (statsErr) {
+      } catch {
         // If stats endpoint doesn't exist, create mock stats
         console.log('Stats endpoint not available, using mock data');
         setUserStats({
@@ -170,17 +170,17 @@ const Profile = () => {
       // Show success message
       setShowAvatarSuccess(true);
       setTimeout(() => setShowAvatarSuccess(false), 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update avatar:', error);
       
       // Check if it's an authentication error
-      if (error.response?.status === 401) {
+      if (error instanceof Error && 'response' in error && (error as {response?: {status?: number; data?: {error?: string}}}).response?.status === 401) {
         // Show specific auth error message
         alert('Session expired. Please login again to save your avatar.');
         
         // Only logout if it's actually an auth issue, not a temporary token problem
-        if (error.response?.data?.error?.includes('expired') || 
-            error.response?.data?.error?.includes('invalid')) {
+        if ((error as {response?: {data?: {error?: string}}}).response?.data?.error?.includes('expired') || 
+            (error as {response?: {data?: {error?: string}}}).response?.data?.error?.includes('invalid')) {
           // Clear local storage and redirect
           localStorage.removeItem('REF_TOKEN');
           localStorage.removeItem('REF_USER');

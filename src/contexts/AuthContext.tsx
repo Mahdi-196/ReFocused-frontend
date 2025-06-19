@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { initializeAuth } from '@/api/client';
 import { authService } from '@/api/services/authService';
+import logger from '@/utils/logger';
 
 interface User {
   id: number;
@@ -61,7 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // First try to get cached user data
         const cachedUser = authService.getCachedUser();
         if (cachedUser) {
-          console.log('👤 Using cached user data in AuthContext');
+          logger.debug('Using cached user data in AuthContext', undefined, 'AUTH');
           setUser(cachedUser);
           setIsAuthenticated(true);
           setIsLoading(false);
@@ -73,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userData = await authService.getCurrentUser();
           setUser(userData);
           setIsAuthenticated(true);
-        } catch (error) {
+        } catch {
           // Token is invalid, clear it
           authService.logout();
           setUser(null);

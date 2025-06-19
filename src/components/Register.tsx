@@ -50,16 +50,17 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
       if (onRegisterSuccess) {
         onRegisterSuccess();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Registration error:', err);
       
       // Handle different error types
-      if (err.name === 'AbortError') {
+      const error = err as { name?: string; message?: string; response?: { data?: { message?: string } } };
+      if (error.name === 'AbortError') {
         setError('Network error: Request timed out. Please try again later.');
-      } else if (err.message === 'Network Error' || err.name === 'TypeError') {
+      } else if (error.message === 'Network Error' || error.name === 'TypeError') {
         setError('Network error: Unable to connect to the server. Please check your connection or try again later.');
       } else {
-        setError(err.response?.data?.message || err.message || 'Failed to register. Please try again with different credentials.');
+        setError(error.response?.data?.message || error.message || 'Failed to register. Please try again with different credentials.');
       }
     } finally {
       setIsLoading(false);

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { UserHabit, DailyEntry, MoodEntry } from '../types';
+import { UserHabit, DailyEntry } from '../types';
+import type { MoodEntry } from '@/services/moodService';
 
 interface CalendarViewProps {
   currentMonth: Date;
@@ -51,7 +52,10 @@ export default function CalendarView({
   const getDayClass = (dateStr: string) => {
     // Check for mood data first
     const moodEntry = moodEntries[dateStr];
-    if (moodEntry && moodEntry.happiness && moodEntry.satisfaction && moodEntry.stress) {
+    if (moodEntry && 
+        typeof moodEntry.happiness === 'number' && 
+        typeof moodEntry.satisfaction === 'number' && 
+        typeof moodEntry.stress === 'number') {
       const moodScore = calculateMoodScore(moodEntry.happiness, moodEntry.satisfaction, moodEntry.stress);
       if (moodScore >= 7) return 'mood-good';
       if (moodScore >= 5) return 'mood-neutral';
@@ -186,7 +190,10 @@ export default function CalendarView({
           style={getMoodStyling()}
         >
           {/* Mood indicator dots */}
-          {moodEntry && (
+          {moodEntry && 
+           typeof moodEntry.happiness === 'number' && 
+           typeof moodEntry.satisfaction === 'number' && 
+           typeof moodEntry.stress === 'number' && (
             <div className="absolute top-1 right-1 flex gap-0.5">
               <div className={`w-1.5 h-1.5 rounded-full ${getMoodBadgeColor(moodEntry.happiness, 'happiness')}`} title="Happiness" />
               <div className={`w-1.5 h-1.5 rounded-full ${getMoodBadgeColor(moodEntry.satisfaction, 'satisfaction')}`} title="Satisfaction" />
@@ -351,7 +358,10 @@ export default function CalendarView({
 
         <div className="space-y-6">
           {/* Mood Data */}
-          {moodData && (
+          {moodData && 
+           typeof moodData.happiness === 'number' && 
+           typeof moodData.satisfaction === 'number' && 
+           typeof moodData.stress === 'number' && (
             <div className="space-y-6">
               {/* Overall Score */}
               <div className="text-center">
@@ -411,7 +421,7 @@ export default function CalendarView({
               {/* Date only - no time */}
               <div className="text-center">
                 <span className="text-gray-400 text-xs">
-                  {new Date(moodData.created_at || moodData.updated_at || selectedDate).toLocaleDateString()}
+                  {new Date(moodData.createdAt || moodData.updatedAt || selectedDate || Date.now()).toLocaleDateString()}
                 </span>
               </div>
             </div>

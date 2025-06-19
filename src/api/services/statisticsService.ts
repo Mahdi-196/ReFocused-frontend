@@ -1,5 +1,6 @@
 import client from "@/api/client";
 import { STATISTICS } from "@/api/endpoints";
+import logger from "@/utils/logger";
 
 /**
  * Statistics API Models - Backend Response Types
@@ -31,47 +32,56 @@ export interface ApiResponse<T> {
 /**
  * Enhanced error logging for debugging API issues
  */
-function logApiError(endpoint: string, error: any, payload?: any) {
-  console.error(`🔍 [API DEBUG] Endpoint: ${endpoint}`);
-  console.error(`🔍 [API DEBUG] Payload sent:`, payload);
-  console.error(`🔍 [API DEBUG] Error status:`, error.response?.status);
-  console.error(`🔍 [API DEBUG] Error data:`, error.response?.data);
-  console.error(`🔍 [API DEBUG] Error message:`, error.response?.data?.message || error.message);
+function logApiError(endpoint: string, error: unknown, payload?: unknown) {
+  const apiError = error as { response?: { status?: number; data?: { message?: string } }; message?: string };
+  logger.error(`API Error - Endpoint: ${endpoint}`, {
+    endpoint,
+    payload,
+    status: apiError.response?.status,
+    data: apiError.response?.data,
+    message: apiError.response?.data?.message || apiError.message
+  }, 'API');
   
-  if (error.response?.status === 422) {
-    console.error(`🔍 [API DEBUG] 422 Details:`, {
-      status: error.response.status,
-      statusText: error.response.statusText,
-      data: error.response.data,
-      headers: error.response.headers,
+  if (apiError.response?.status === 422) {
+    const response = apiError.response as { 
+      status: number; 
+      statusText?: string; 
+      data?: { detail?: unknown; errors?: unknown; message?: string };
+      headers?: unknown;
+    };
+    const config = (apiError as { config?: { method?: string; url?: string; data?: unknown } }).config;
+    
+    logger.error('API Validation Error (422)', {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data,
+      headers: response.headers,
       config: {
-        method: error.config?.method,
-        url: error.config?.url,
-        data: error.config?.data
+        method: config?.method,
+        url: config?.url,
+        data: config?.data
       }
-    });
+    }, 'API');
     
     // Try to parse and show validation errors with more detail
-    if (error.response.data?.detail) {
-      console.error(`🔍 [API DEBUG] Validation errors:`, error.response.data.detail);
+    if (response.data?.detail) {
+      logger.error('Validation errors', response.data.detail, 'API');
       
       // If it's an array, expand each item
-      if (Array.isArray(error.response.data.detail)) {
-        error.response.data.detail.forEach((errorItem: any, index: number) => {
-          console.error(`🔍 [API DEBUG] Validation Error ${index + 1}:`, errorItem);
-          if (errorItem.loc) console.error(`🔍 [API DEBUG] Field Location:`, errorItem.loc);
-          if (errorItem.msg) console.error(`🔍 [API DEBUG] Error Message:`, errorItem.msg);
-          if (errorItem.type) console.error(`🔍 [API DEBUG] Error Type:`, errorItem.type);
-          if (errorItem.input) console.error(`🔍 [API DEBUG] Input Value:`, errorItem.input);
+      if (Array.isArray(response.data.detail)) {
+        response.data.detail.forEach((errorItem: { loc?: unknown; msg?: unknown; type?: unknown; input?: unknown }, index: number) => {
+          logger.error(`Validation Error ${index + 1}`, {
+            location: errorItem.loc,
+            message: errorItem.msg,
+            type: errorItem.type,
+            input: errorItem.input
+          }, 'API');
         });
       }
     }
-    if (error.response.data?.errors) {
-      console.error(`🔍 [API DEBUG] Field errors:`, error.response.data.errors);
+    if (response.data?.errors) {
+      logger.error('Field errors', response.data.errors, 'API');
     }
-    
-    // Show the full error object structure
-    console.error(`🔍 [API DEBUG] Full Error Object Keys:`, Object.keys(error.response.data));
   }
 }
 
@@ -85,15 +95,18 @@ export const statisticsApiService = {
    */
   async getStatistics(startDate: string, endDate: string): Promise<StatisticsEntry[]> {
     try {
-      console.log(`🌐 [API] GET statistics: ${startDate} to ${endDate}`);
+      logger.apiCall(STATISTICS.BASE, 'GET', { startDate, endDate });
       const response = await client.get<StatisticsEntry[]>(STATISTICS.BASE, {
         params: { startDate, endDate }
       });
-      console.log(`✅ [API] Statistics retrieved: ${response.data?.length || 0} entries`);
+      logger.info(`Statistics retrieved: ${response.data?.length || 0} entries`, undefined, 'API');
       return response.data || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       logApiError(STATISTICS.BASE, error, { startDate, endDate });
-      throw new Error(error.response?.data?.message || 'Failed to load statistics from server.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to load statistics from server.'
+        : 'Failed to load statistics from server.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -102,15 +115,18 @@ export const statisticsApiService = {
    */
   async addFocusTime(minutes: number): Promise<StatisticsEntry> {
     try {
-      console.log(`🌐 [API] POST focus time: ${minutes} minutes`);
+      logger.apiCall(STATISTICS.FOCUS, 'POST', { minutes });
       const response = await client.post<StatisticsEntry>(STATISTICS.FOCUS, {
         minutes: minutes  // Backend expects: {"minutes": int}
       });
-      console.log(`✅ [API] Focus time added successfully`);
+      logger.info('Focus time added successfully', undefined, 'API');
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logApiError(STATISTICS.FOCUS, error, { minutes });
-      throw new Error(error.response?.data?.message || 'Failed to record focus time.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to record focus time.'
+        : 'Failed to record focus time.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -119,15 +135,18 @@ export const statisticsApiService = {
    */
   async incrementSessions(count: number = 1): Promise<StatisticsEntry> {
     try {
-      console.log(`🌐 [API] POST sessions: increment by ${count}`);
+      logger.apiCall(STATISTICS.SESSIONS, 'POST', { increment: count });
       const response = await client.post<StatisticsEntry>(STATISTICS.SESSIONS, {
         increment: count  // Backend expects: {"increment": int}
       });
-      console.log(`✅ [API] Sessions incremented successfully`);
+      logger.info('Sessions incremented successfully', undefined, 'API');
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logApiError(STATISTICS.SESSIONS, error, { increment: count });
-      throw new Error(error.response?.data?.message || 'Failed to record session.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to record session.'
+        : 'Failed to record session.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -136,15 +155,18 @@ export const statisticsApiService = {
    */
   async incrementTasks(count: number = 1): Promise<StatisticsEntry> {
     try {
-      console.log(`🌐 [API] POST tasks: increment by ${count}`);
+      logger.apiCall(STATISTICS.TASKS, 'POST', { increment: count });
       const response = await client.post<StatisticsEntry>(STATISTICS.TASKS, {
         increment: count  // Backend expects: {"increment": int}
       });
-      console.log(`✅ [API] Tasks incremented successfully`);
+      logger.info('Tasks incremented successfully', undefined, 'API');
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logApiError(STATISTICS.TASKS, error, { increment: count });
-      throw new Error(error.response?.data?.message || 'Failed to record task completion.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to record task completion.'
+        : 'Failed to record task completion.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -153,13 +175,16 @@ export const statisticsApiService = {
    */
   async updateStatistics(date: string, updates: StatisticsRequest): Promise<StatisticsEntry> {
     try {
-      console.log(`🌐 [API] PUT statistics for ${date}:`, updates);
+      logger.apiCall(`${STATISTICS.BASE}/${date}`, 'PUT', updates);
       const response = await client.put<StatisticsEntry>(`${STATISTICS.BASE}/${date}`, updates);
-      console.log(`✅ [API] Statistics updated successfully`);
+      logger.info('Statistics updated successfully', undefined, 'API');
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logApiError(`${STATISTICS.BASE}/${date}`, error, updates);
-      throw new Error(error.response?.data?.message || 'Failed to update statistics.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to update statistics.'
+        : 'Failed to update statistics.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -172,7 +197,7 @@ export const statisticsApiService = {
       await this.getStatistics(today, today);
       return true;
     } catch (error) {
-      console.warn('🔍 [API] Health check failed - API not available');
+      logger.warn('Health check failed - API not available', error, 'API');
       return false;
     }
   }

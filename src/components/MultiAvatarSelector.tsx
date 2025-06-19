@@ -77,7 +77,7 @@ const MultiAvatarSelector = ({ isOpen, onClose, onSelect, currentAvatar, userNam
           avatarUrl = `https://api.multiavatar.com/${seed}.svg`;
           break;
         
-        case 'robohash':
+        case 'robohash': {
           const sets = {
             'robots': 'set1',
             'monsters': 'set2', 
@@ -86,12 +86,14 @@ const MultiAvatarSelector = ({ isOpen, onClose, onSelect, currentAvatar, userNam
           };
           avatarUrl = `https://robohash.org/${seed}?set=${sets[style as keyof typeof sets]}&size=200x200`;
           break;
+        }
         
-        case 'ui-avatars':
+        case 'ui-avatars': {
           const colors = ['0D8ABC', '2DD4BF', 'F59E0B', 'EF4444', '8B5CF6', 'EC4899'];
           const bgColor = colors[i % colors.length];
           avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=${bgColor}&color=fff&size=200&font-size=0.6&rounded=true&bold=true`;
           break;
+        }
       }
 
       avatars.push({ seed, url: avatarUrl, service, style });

@@ -10,8 +10,7 @@ const nextConfig = {
     optimizePackageImports: [
       'lucide-react',
       'framer-motion',
-      'react-icons',
-      'lottie-react'
+      'react-icons'
     ],
     // Enable server components HMR cache for faster development
     serverComponentsHmrCache: true,

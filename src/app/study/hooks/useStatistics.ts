@@ -53,8 +53,8 @@ export function useStatistics() {
   useEffect(() => {
     if (!isClient) return;
 
-    const handleStatisticsUpdate = async (event: CustomEvent) => {
-      console.log('🔔 Statistics update event received:', event.detail);
+    const handleStatisticsUpdate = async (event: Event) => {
+      console.log('🔔 Statistics update event received:', (event as CustomEvent).detail);
       
       try {
         const filteredStats = await statisticsService.getFilteredStats(timeFilter);
@@ -70,10 +70,10 @@ export function useStatistics() {
       }
     };
 
-    window.addEventListener('statistics-updated', handleStatisticsUpdate);
+    window.addEventListener('statisticsUpdated', handleStatisticsUpdate);
 
     return () => {
-      window.removeEventListener('statistics-updated', handleStatisticsUpdate);
+      window.removeEventListener('statisticsUpdated', handleStatisticsUpdate);
     };
   }, [isClient, timeFilter]);
 

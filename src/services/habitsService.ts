@@ -226,30 +226,33 @@ export async function getHabitStats(habitId: number, startDate?: string, endDate
   const cacheKey = `${HABITS_CACHE_PREFIX}_stats_${habitId}_${startDate || 'all'}_${endDate || 'all'}`;
   
   try {
-    // Try to get from cache first
-    const cached = cacheService.get<any>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    // Fetch from API
-    const params: any = {};
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-    
-    const response = await client.get(`/api/habits/${habitId}/stats`, { params });
-    
-    const stats = response.data || {
+    // Define default stats
+    const stats = {
       currentStreak: 0,
       longestStreak: 0,
       totalCompletions: 0,
       completionRate: 0
     };
     
-    // Cache the results
-    cacheService.set(cacheKey, stats, HABITS_CACHE_TTL);
+    // Try to get from cache first
+    const cached = cacheService.get<typeof stats>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from API
+    const params: Record<string, string> = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
     
-    return stats;
+    const response = await client.get(`/api/habits/${habitId}/stats`, { params });
+    
+    const responseStats = response.data || stats;
+    
+    // Cache the results
+    cacheService.set(cacheKey, responseStats, HABITS_CACHE_TTL);
+    
+    return responseStats;
   } catch (error) {
     console.warn('Failed to fetch habit stats:', error);
     
@@ -275,30 +278,33 @@ export async function getOverallHabitsStats(startDate?: string, endDate?: string
   const cacheKey = `${HABITS_CACHE_PREFIX}_overall_stats_${startDate || 'all'}_${endDate || 'all'}`;
   
   try {
-    // Try to get from cache first
-    const cached = cacheService.get<any>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    // Fetch from API
-    const params: any = {};
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-    
-    const response = await client.get('/api/habits/stats', { params });
-    
-    const stats = response.data || {
+    // Define default stats
+    const stats = {
       totalHabits: 0,
       activeHabits: 0,
       totalCompletions: 0,
       averageCompletionRate: 0
     };
     
-    // Cache the results
-    cacheService.set(cacheKey, stats, HABITS_CACHE_TTL);
+    // Try to get from cache first
+    const cached = cacheService.get<typeof stats>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from API
+    const params: Record<string, string> = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
     
-    return stats;
+    const response = await client.get('/api/habits/stats', { params });
+    
+    const responseStats = response.data || stats;
+    
+    // Cache the results
+    cacheService.set(cacheKey, responseStats, HABITS_CACHE_TTL);
+    
+    return responseStats;
   } catch (error) {
     console.warn('Failed to fetch overall habits stats:', error);
     

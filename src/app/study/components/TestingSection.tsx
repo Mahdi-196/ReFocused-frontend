@@ -19,6 +19,11 @@ export default function TestingSection({
   setStatsLoading
 }: TestingSectionProps) {
   
+  // Only render in development environment
+  if (process.env.NODE_ENV !== 'development') {
+    return null;
+  }
+  
   // Testing functions
   const refreshStats = async () => {
     try {

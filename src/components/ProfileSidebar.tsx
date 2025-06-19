@@ -1,4 +1,4 @@
-import { User, Settings, Award, CreditCard, HelpCircle, Share2, LogOut } from 'lucide-react';
+import { User, Settings, Award, CreditCard, HelpCircle, Share2, LogOut } from './icons';
 
 interface MenuItem {
   icon: React.ReactNode;

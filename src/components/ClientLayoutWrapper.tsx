@@ -17,8 +17,6 @@ export default function ClientLayoutWrapper({
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isClient, setIsClient] = useState(false);
-  
   const isLandingPage = pathname === '/';
   const isProfilePage = pathname === '/profile';
   const shouldShowFooter = isLandingPage || isProfilePage;
@@ -48,7 +46,6 @@ export default function ClientLayoutWrapper({
   }, [isAuthenticated, isLoading, isLandingPage, router]);
 
   useEffect(() => {
-    setIsClient(true);
     initializeAuth();
   }, []);
 

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from 'react-icons/fi';
+import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from '@/components/icons';
 import { FaBrain, FaRobot } from 'react-icons/fa';
-import SimpleFooter from '@/components/SimpleFooter';
+import Footer from '@/components/footer';
 import AuthModal from '@/components/AuthModal';
 import { getStudySets } from '@/services/studyService';
 import { authService } from '@/api/services/authService';
@@ -66,7 +66,7 @@ export default function HomePage() {
       
       // Second call - should use cache
       const start2 = Date.now();
-      const sets2 = await getStudySets();
+      await getStudySets(); // Cache warmup
       const time2 = Date.now() - start2;
       console.log('🧪 [CACHE TEST] Second call took:', time2 + 'ms');
       
@@ -442,7 +442,7 @@ Is authenticated: ${authService.isAuthenticated()}`);
         </div>
       </section>
 
-      <SimpleFooter />
+              <Footer />
       
       {/* Auth Modal */}
       <AuthModal

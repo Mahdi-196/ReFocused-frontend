@@ -1,3 +1,5 @@
+import logger from '@/utils/logger';
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -18,7 +20,7 @@ interface CacheInvalidationOptions {
 }
 
 class CacheService {
-  private cache = new Map<string, CacheEntry<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
   private config: CacheConfig = {
     defaultTTL: 5 * 60 * 1000, // 5 minutes default
     maxSize: 200, // Increased cache size
@@ -214,7 +216,7 @@ class CacheService {
         this.cleanup();
       }
     } catch (error) {
-      console.warn('Failed to load cache from persistence:', error);
+      logger.warn('Failed to load cache from persistence', error, 'CACHE');
     }
   }
 
@@ -228,7 +230,7 @@ class CacheService {
       const serializable = Array.from(this.cache.entries());
       localStorage.setItem(this.persistenceKey, JSON.stringify(serializable));
     } catch (error) {
-      console.warn('Failed to persist cache to disk:', error);
+      logger.warn('Failed to persist cache to disk', error, 'CACHE');
     }
   }
 

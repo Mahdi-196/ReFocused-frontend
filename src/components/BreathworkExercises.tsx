@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain, ChevronRight, X } from 'lucide-react';
+import { Play, Pause, Clock, Box, Star, Infinity as InfinityIcon, Heart, Sun, Wind, Activity, Brain, ChevronRight, X } from './icons';
 import {
   BoxBreathing,
   StarBreathing,
@@ -116,7 +116,6 @@ interface BreathworkExercisesProps {
 }
 
 export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES }: BreathworkExercisesProps) {
-  const [selectedCategory, setSelectedCategory] = useState<'meditation' | 'breathing'>('meditation');
   const [selectedTechnique, setSelectedTechnique] = useState<Technique | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -193,21 +192,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
     };
   }, [isModalOpen]);
 
-  const handleCategorySelect = (category: 'meditation' | 'breathing') => {
-    setSelectedCategory(category);
-    setSelectedTechnique(null);
-    setIsPlaying(false);
-    setTimeLeft(0);
-    setProgress(0);
-  };
 
-  const handleTechniqueSelect = (technique: Technique) => {
-    setSelectedTechnique(technique);
-    setTimeLeft(technique.durationSec);
-    setIsPlaying(false);
-    setProgress(0);
-    setBreathPhase('inhale');
-  };
 
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -217,11 +202,6 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleMeditationComplete = () => {
-    // Future: Implement completion tracking
-    // Could track meditation sessions, update streaks, etc.
   };
 
   const openFocusedSession = (technique: Technique) => {

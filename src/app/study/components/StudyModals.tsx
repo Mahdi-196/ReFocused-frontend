@@ -133,7 +133,7 @@ export default function StudyModals({
              <textarea
                placeholder="Question or term"
                value={newCard.front}
-               onChange={(e) => setNewCard(prev => ({ ...prev, front: e.target.value }))}
+                               onChange={(e) => setNewCard({ ...newCard, front: e.target.value })}
                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md resize-none h-24"
                autoFocus
              />
@@ -143,7 +143,7 @@ export default function StudyModals({
              <textarea
                placeholder="Answer or definition"
                value={newCard.back}
-               onChange={(e) => setNewCard(prev => ({ ...prev, back: e.target.value }))}
+                               onChange={(e) => setNewCard({ ...newCard, back: e.target.value })}
                className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md resize-none h-24"
              />
            </div>

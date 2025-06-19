@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Activity, Brain, Info, Lock, Unlock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Activity, Brain, Info } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import BreathworkExercises from '@/components/BreathworkExercises';
 import MeditationTimer from '@/components/MeditationTimer';
@@ -12,7 +12,6 @@ import AmbientSounds from '@/components/AmbientSounds';
 
 // Constants
 const STORAGE_KEY = 'relaxMode';
-const DEFAULT_MODE: RelaxMode = 'breathing';
 const MEDITATION_DURATION = 300; // 5 minutes in seconds
 
 
@@ -39,11 +38,8 @@ type RelaxMode = 'breathing' | 'meditation';
 
 export default function RelaxPage() {
   const [currentThemeIndex, setCurrentThemeIndex] = useState(0);
-  const [mantra, setMantra] = useState('');
-  const [pinnedMantra, setPinnedMantra] = useState('');
   const [activeMode, setActiveMode] = useState<RelaxMode>('breathing');
   const [showMeditationGuide, setShowMeditationGuide] = useState(false);
-  const [isMantraLocked, setIsMantraLocked] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   // Initialize client-side rendering flag
@@ -60,7 +56,7 @@ export default function RelaxPage() {
       if (savedMode === 'breathing' || savedMode === 'meditation') {
         setActiveMode(savedMode as RelaxMode);
       }
-    } catch (error) {
+    } catch {
       // Silent fail - use default mode if localStorage is not available
     }
   }, [isClient]);
@@ -71,7 +67,7 @@ export default function RelaxPage() {
     
     try {
       localStorage.setItem(STORAGE_KEY, activeMode);
-    } catch (error) {
+    } catch {
       // Silent fail - continue without persistence if localStorage is not available
     }
   }, [activeMode, isClient]);
@@ -80,11 +76,7 @@ export default function RelaxPage() {
 
 
 
-  const handleSaveMantra = () => {
-    setPinnedMantra(mantra);
-    // Future: Implement actual save functionality
-    // Could save to localStorage, database, or external service
-  };
+  // Removed unused handleSaveMantra function
 
   const nextTheme = () => {
     setCurrentThemeIndex((prev) => (prev + 1) % WEEKLY_THEMES.length);
@@ -372,14 +364,7 @@ export default function RelaxPage() {
           </div>
         </div>
 
-        {/* Pinned Mantra */}
-        {pinnedMantra && (
-          <div className="w-full max-w-2xl mx-auto mt-6">
-            <div className="bg-gradient-to-br from-blue-900/60 to-purple-900/60 border border-blue-700/50 backdrop-blur-sm rounded-xl p-6 text-center animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-400">
-              <p className="text-xl font-medium bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">{pinnedMantra}</p>
-            </div>
-          </div>
-        )}
+{/* Pinned Mantra feature removed for optimization */}
       </div>
     </PageTransition>
   );

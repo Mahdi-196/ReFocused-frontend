@@ -28,11 +28,11 @@ export default function NumberMood() {
         const todaysMood = await getTodaysMood();
         if (todaysMood) {
           setMoodRatings({
-            happiness: todaysMood.happiness,
-            satisfaction: todaysMood.satisfaction,
-            stress: todaysMood.stress
+            happiness: todaysMood.happiness ?? null,
+            satisfaction: todaysMood.satisfaction ?? null,
+            stress: todaysMood.stress ?? null
           });
-          setLastSaved(new Date(todaysMood.updated_at || todaysMood.created_at || ''));
+          setLastSaved(new Date(todaysMood.updatedAt || todaysMood.createdAt || Date.now()));
         }
       } catch (error) {
         console.error('Failed to load today\'s mood:', error);
@@ -58,8 +58,15 @@ export default function NumberMood() {
     setError(null); // Clear any previous errors
 
     // Only save if we have all three values and not in initial loading state
-    if (!loading && newRatings.happiness && newRatings.satisfaction && newRatings.stress) {
-      await saveWithRetry(newRatings);
+    if (!loading && 
+        typeof newRatings.happiness === 'number' && 
+        typeof newRatings.satisfaction === 'number' && 
+        typeof newRatings.stress === 'number') {
+      await saveWithRetry({
+        happiness: newRatings.happiness,
+        satisfaction: newRatings.satisfaction,
+        stress: newRatings.stress
+      });
     }
   };
 
@@ -73,7 +80,7 @@ export default function NumberMood() {
       setLastSaved(new Date());
       setError(null);
       setRetryCount(0);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`Failed to save mood rating (attempt ${attempt + 1}):`, error);
       
       if (attempt < maxRetries) {
@@ -95,28 +102,7 @@ export default function NumberMood() {
     }
   };
 
-  const getRatingColor = (rating: number | null, type: 'normal' | 'stress' = 'normal') => {
-    if (rating === null) return 'bg-gray-600';
-    if (type === 'stress') {
-      switch (rating) {
-        case 1: return 'bg-green-500';
-        case 2: return 'bg-yellow-400';
-        case 3: return 'bg-orange-500';
-        case 4:
-        case 5: return 'bg-red-500';
-        default: return 'bg-green-500';
-      }
-    } else {
-      switch (rating) {
-        case 1:
-        case 2: return 'bg-red-500';
-        case 3: return 'bg-orange-500';
-        case 4: return 'bg-yellow-400';
-        case 5: return 'bg-green-500';
-        default: return 'bg-yellow-400';
-      }
-    }
-  };
+
 
   const getRatingStyle = (rating: number | null, type: 'normal' | 'stress' = 'normal') => {
     const defaultStyle = {

@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import logger from '@/utils/logger';
 
 // Create axios instance with proper TypeScript typing
 const client: AxiosInstance = axios.create({
@@ -33,13 +34,13 @@ client.interceptors.response.use(
   (error) => {
     // Handle timeout errors
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-      console.warn('⏰ API request timed out after 30 seconds:', error.config?.url);
+      logger.warn('API request timed out after 30 seconds', { url: error.config?.url }, 'API');
       error.isTimeout = true;
     }
     
     // Handle CORS errors
     if (error.code === 'ERR_NETWORK' && error.message === 'Network Error') {
-      console.warn('🌐 Network/CORS error - backend may be unavailable:', error.config?.url);
+      logger.warn('Network/CORS error - backend may be unavailable', { url: error.config?.url }, 'API');
       error.isNetworkError = true;
     }
     
@@ -62,9 +63,9 @@ export const initializeAuth = () => {
     const token = localStorage.getItem("REF_TOKEN");
     if (token && token !== 'dummy-auth-token') {
       client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      console.log('Auth initialized with token');
+      logger.debug('Auth initialized with token', undefined, 'AUTH');
     } else {
-      console.log('No valid token found for auth initialization');
+      logger.debug('No valid token found for auth initialization', undefined, 'AUTH');
     }
   }
 };

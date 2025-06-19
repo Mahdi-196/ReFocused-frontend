@@ -42,9 +42,12 @@ export const authService = {
     try {
       const response = await client.post<AuthResponse>(AUTH.LOGIN, credentials);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${AUTH.LOGIN}]:`, error);
-      throw new Error(error.response?.data?.message || 'Login failed. Please check your credentials.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Login failed. Please check your credentials.'
+        : 'Login failed. Please check your credentials.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -55,9 +58,12 @@ export const authService = {
     try {
       const response = await client.post<AuthResponse>(AUTH.REGISTER, userData);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${AUTH.REGISTER}]:`, error);
-      throw new Error(error.response?.data?.message || 'Registration failed. Please try again with different credentials.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Registration failed. Please try again with different credentials.'
+        : 'Registration failed. Please try again with different credentials.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -68,9 +74,12 @@ export const authService = {
     try {
       const response = await client.post<AuthResponse>(AUTH.GOOGLE, data);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${AUTH.GOOGLE}]:`, error);
-      throw new Error(error.response?.data?.message || 'Google authentication failed. Please try again.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Google authentication failed. Please try again.'
+        : 'Google authentication failed. Please try again.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -94,7 +103,7 @@ export const authService = {
       cacheService.set(CacheKeys.USER_PROFILE(), response.data, CacheTTL.LONG);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error [${AUTH.ME}]:`, error);
       
       // Try to return cached data even if API fails
@@ -104,7 +113,10 @@ export const authService = {
         return cachedUser;
       }
       
-      throw new Error(error.response?.data?.message || 'Failed to fetch user profile.');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to fetch user profile.'
+        : 'Failed to fetch user profile.';
+      throw new Error(errorMessage);
     }
   },
 

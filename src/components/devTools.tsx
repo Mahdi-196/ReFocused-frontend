@@ -5,6 +5,11 @@ import { useState } from "react";
 const DevTools = () => {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Only render DevTools in development environment
+  if (process.env.NODE_ENV !== 'development') {
+    return null;
+  }
+
   const clearLocalStorage = () => {
     localStorage.clear();
     alert("Local storage cleared");

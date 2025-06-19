@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Trees, Waves, CloudRain, Zap, Wind, Bird, Droplets, Flame, Coffee, Music, Clock, Infinity } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Play, Pause, Trees, Waves, CloudRain, Zap, Wind, Bird, Droplets, Flame, Coffee, Music, Infinity as InfinityIcon } from 'lucide-react';
 import { addFocusTime, incrementSessions } from "@/services/statisticsService";
 
 interface Sound {
@@ -111,7 +111,7 @@ export default function AmbientSounds() {
   }, []);
 
   // Complete session helper - Following exact same pattern as Pomodoro
-  const completeSession = useCallback(async (autoStart: boolean): Promise<void> => {
+  const completeSession = useCallback(async (): Promise<void> => {
     if (duration && duration > 0) {
       // Track completed focus session - same logic as Pomodoro
       const completedTime = duration; // Already in minutes
@@ -172,7 +172,7 @@ export default function AmbientSounds() {
           }
         } else {
           // Timer finished while away, handle session completion
-          completeSession(false);
+          completeSession();
         }
       }
     } catch (error) {
@@ -192,7 +192,7 @@ export default function AmbientSounds() {
         
         if (newTimeLeft <= 0.1) {
           clearInterval(interval);
-          completeSession(true);
+          completeSession();
         } else {
           setTimeLeft(newTimeLeft);
         }
@@ -338,7 +338,6 @@ export default function AmbientSounds() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {AMBIENT_SOUNDS.map((sound) => {
           const isActive = currentSound?.id === sound.id;
-          const isCurrentlyPlaying = isActive && isPlaying;
           
           return (
             <button
@@ -413,7 +412,7 @@ export default function AmbientSounds() {
               onClick={() => startPlaying(null)}
               className="w-full p-2 bg-gray-700/60 hover:bg-gray-600/60 rounded flex items-center justify-center gap-2 text-gray-300 text-sm transition-colors h-8"
             >
-              <Infinity className="w-4 h-4" />
+              <InfinityIcon className="w-4 h-4" />
               Forever
             </button>
           </div>

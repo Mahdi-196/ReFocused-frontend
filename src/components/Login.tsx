@@ -15,7 +15,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleGoogleSuccess = (_token: string) => {
+  const handleGoogleSuccess = () => {
     setError('');
     if (onLogin) {
       onLogin();

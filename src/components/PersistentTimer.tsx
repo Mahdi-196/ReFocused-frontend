@@ -26,6 +26,47 @@ export default function PersistentTimer() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Start the timer
+  const startTimer = useCallback((durationMinutes: number) => {
+    const targetTime = Date.now() + durationMinutes * 60 * 1000;
+    localStorage.setItem("pomodoroTargetTime", targetTime.toString());
+    localStorage.setItem("pomodoroIsRunning", "true");
+    setIsRunning(true);
+  }, []);
+
+  // Complete session helper
+  const completeSession = useCallback((autoStart: boolean) => {
+    if (mode === "pomodoro") {
+      const newRounds = rounds + 1;
+      const nextMode = newRounds % longBreakInterval === 0 ? "long" : "short";
+      setMode(nextMode);
+      setRounds(newRounds);
+      localStorage.setItem("pomodoroRounds", newRounds.toString());
+      localStorage.setItem("pomodoroMode", nextMode);
+      
+      if (autoStart && autoStartBreaks) {
+        startTimer(nextMode === "short" ? shortBreakTime : longBreakTime);
+      } else {
+        setIsRunning(false);
+        setTimeLeft(nextMode === "short" ? shortBreakTime * 60 : longBreakTime * 60);
+        localStorage.removeItem("pomodoroTargetTime");
+        localStorage.setItem("pomodoroIsRunning", "false");
+      }
+    } else {
+      setMode("pomodoro");
+      localStorage.setItem("pomodoroMode", "pomodoro");
+      
+      if (autoStart && autoStartPomodoros) {
+        startTimer(pomodoroTime);
+      } else {
+        setIsRunning(false);
+        setTimeLeft(pomodoroTime * 60);
+        localStorage.removeItem("pomodoroTargetTime");
+        localStorage.setItem("pomodoroIsRunning", "false");
+      }
+    }
+  }, [mode, rounds, longBreakInterval, autoStartBreaks, autoStartPomodoros, pomodoroTime, shortBreakTime, longBreakTime, startTimer]);
   
   // Load state from localStorage on component mount
   useEffect(() => {
@@ -129,47 +170,6 @@ export default function PersistentTimer() {
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [isClient]);
-
-  // Complete session helper - Define before it's used
-  const completeSession = useCallback((autoStart: boolean) => {
-    if (mode === "pomodoro") {
-      const newRounds = rounds + 1;
-      const nextMode = newRounds % longBreakInterval === 0 ? "long" : "short";
-      setMode(nextMode);
-      setRounds(newRounds);
-      localStorage.setItem("pomodoroRounds", newRounds.toString());
-      localStorage.setItem("pomodoroMode", nextMode);
-      
-      if (autoStart && autoStartBreaks) {
-        startTimer(nextMode === "short" ? shortBreakTime : longBreakTime);
-      } else {
-        setIsRunning(false);
-        setTimeLeft(nextMode === "short" ? shortBreakTime * 60 : longBreakTime * 60);
-        localStorage.removeItem("pomodoroTargetTime");
-        localStorage.setItem("pomodoroIsRunning", "false");
-      }
-    } else {
-      setMode("pomodoro");
-      localStorage.setItem("pomodoroMode", "pomodoro");
-      
-      if (autoStart && autoStartPomodoros) {
-        startTimer(pomodoroTime);
-      } else {
-        setIsRunning(false);
-        setTimeLeft(pomodoroTime * 60);
-        localStorage.removeItem("pomodoroTargetTime");
-        localStorage.setItem("pomodoroIsRunning", "false");
-      }
-    }
-  }, [mode, rounds, longBreakInterval, autoStartBreaks, autoStartPomodoros, pomodoroTime, shortBreakTime, longBreakTime]);
-
-  // Start the timer
-  const startTimer = useCallback((durationMinutes: number) => {
-    const targetTime = Date.now() + durationMinutes * 60 * 1000;
-    localStorage.setItem("pomodoroTargetTime", targetTime.toString());
-    localStorage.setItem("pomodoroIsRunning", "true");
-    setIsRunning(true);
-  }, []);
 
   // Pause the timer
   const pauseTimer = () => {

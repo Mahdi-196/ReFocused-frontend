@@ -1,7 +1,6 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { ComponentType } from 'react';
 
 // Dynamically import all breathing components with loading fallbacks
 export const BoxBreathing = dynamic(() => import('./breathing/BoxBreathing'), {

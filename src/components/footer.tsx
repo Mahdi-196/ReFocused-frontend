@@ -14,16 +14,13 @@ import {
   ArrowUp,
   Heart,
   Send
-} from "lucide-react";
+} from "./icons";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
-  const [currentDate, setCurrentDate] = useState("");
-
   useEffect(() => {
-    // Set the date only on the client side
-    setCurrentDate(new Date().toLocaleDateString());
+    // Component initialization
   }, []);
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { UserHabit, DailyEntry, MoodEntry, TrackingStats } from '../types';
+import { UserHabit, DailyEntry, TrackingStats } from '../types';
+import type { MoodEntry as ServiceMoodEntry } from '@/services/moodService';
 import { getMoodEntries } from '@/services/moodService';
 import { getHabits, createHabit, updateHabit, deleteHabit } from '@/services/habitsService';
 import { getDailyEntries } from '@/services/dashboardService';
@@ -8,7 +9,7 @@ import { cacheService } from '@/services/cacheService';
 export function useTrackingData(currentMonth: Date) {
   const [habits, setHabits] = useState<UserHabit[]>([]);
   const [dailyEntries, setDailyEntries] = useState<{[key: string]: DailyEntry}>({});
-  const [moodEntries, setMoodEntries] = useState<{[key: string]: MoodEntry}>({});
+  const [moodEntries, setMoodEntries] = useState<{[key: string]: ServiceMoodEntry}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,9 +49,9 @@ export function useTrackingData(currentMonth: Date) {
         const moodData = await getMoodEntries(startDate, endDate);
       
         // Convert array to object with date as key
-        const moodMap: {[key: string]: MoodEntry} = {};
+        const moodMap: {[key: string]: ServiceMoodEntry} = {};
         if (moodData) {
-          moodData.forEach((entry: any) => {
+          moodData.forEach((entry: ServiceMoodEntry) => {
             moodMap[entry.date] = entry;
           });
         }
