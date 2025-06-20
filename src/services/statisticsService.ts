@@ -1,5 +1,5 @@
 import { cacheService, CacheKeys, CacheTTL } from './cacheService';
-import { statisticsApiService, StatisticsEntry } from '@/api/services/statisticsService';
+import { statisticsApiService, StatisticsEntry, BackendStatistics } from '@/api/services/statisticsService';
 import logger from '@/utils/logger';
 
 /**
@@ -18,17 +18,23 @@ export type TimeFilter = 'D' | 'W' | 'M';
  */
 class CacheInvalidation {
   static invalidateStatsData(userId: string | number) {
-    const today = new Date().toISOString().split('T')[0];
+    // Use the same local date logic as DateUtils
+    const today = DateUtils.getCurrentDate();
+    const weekStart = DateUtils.getStartOfWeek();
+    const monthStart = DateUtils.getStartOfMonth();
+    
     const keys = [
       `${CacheKeys.STATISTICS_DAILY}_${today}_${userId}`,
-      `${CacheKeys.STATISTICS_WEEKLY}_${today}_${userId}`,
-      `${CacheKeys.STATISTICS_MONTHLY}_${today}_${userId}`
+      `${CacheKeys.STATISTICS_WEEKLY}_${weekStart}_${userId}`,
+      `${CacheKeys.STATISTICS_MONTHLY}_${monthStart}_${userId}`
     ];
     
     keys.forEach(key => {
       cacheService.delete(key);
       logger.debug(`Cache invalidated: ${key}`, undefined, 'CACHE');
     });
+    
+    console.log(`🗑️ [CACHE] Invalidated cache for local date: ${today}`);
   }
 }
 
@@ -95,37 +101,100 @@ class LocalStorageFallback {
 }
 
 /**
- * Date calculation utilities
+ * Enhanced Date calculation utilities - User-Timezone Based
+ * Uses local date to match user expectations (June 19th when it's June 19th locally)
  */
 class DateUtils {
+  /**
+   * Get current date in user's local timezone
+   * This matches user expectations and local calendar
+   */
   static getCurrentDate(): string {
-    return new Date().toISOString().split('T')[0];
+    const now = new Date();
+    // Use local date (what the user sees on their calendar)
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    
+    const localDate = `${year}-${month}-${day}`;
+    console.log(`🕐 [DATE] Current local date: ${localDate} (Local time: ${now.toLocaleString()})`);
+    return localDate;
   }
 
   static getStartOfWeek(): string {
     const now = new Date();
-    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
-    return startOfWeek.toISOString().split('T')[0];
+    // Calculate start of week in local timezone
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday = 0
+    
+    const year = startOfWeek.getFullYear();
+    const month = String(startOfWeek.getMonth() + 1).padStart(2, '0');
+    const day = String(startOfWeek.getDate()).padStart(2, '0');
+    
+    const result = `${year}-${month}-${day}`;
+    console.log(`🕐 [DATE] Start of week (local): ${result}`);
+    return result;
   }
 
   static getStartOfMonth(): string {
     const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    // First day of current month in local timezone
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const year = startOfMonth.getFullYear();
+    const month = String(startOfMonth.getMonth() + 1).padStart(2, '0');
+    const day = String(startOfMonth.getDate()).padStart(2, '0');
+    
+    const result = `${year}-${month}-${day}`;
+    console.log(`🕐 [DATE] Start of month (local): ${result}`);
+    return result;
   }
 
   static getDateRange(filter: TimeFilter): { start: string; end: string } {
     const today = this.getCurrentDate();
     
+    let range;
     switch (filter) {
       case 'D':
-        return { start: today, end: today };
+        range = { start: today, end: today };
+        break;
       case 'W':
-        return { start: this.getStartOfWeek(), end: today };
+        range = { start: this.getStartOfWeek(), end: today };
+        break;
       case 'M':
-        return { start: this.getStartOfMonth(), end: today };
+        range = { start: this.getStartOfMonth(), end: today };
+        break;
       default:
-        return { start: today, end: today };
+        range = { start: today, end: today };
     }
+    
+    console.log(`🕐 [DATE] Filter ${filter} range (local):`, range);
+    return range;
+  }
+
+  /**
+   * Debug method to show all date calculations
+   */
+  static debugDates(): Record<string, string> {
+    const now = new Date();
+    return {
+      // Local timezone (what user sees)
+      localDate: now.toDateString(),
+      localTimeString: now.toLocaleString(),
+      localCalculatedDate: this.getCurrentDate(),
+      
+      // UTC timezone (what backend might use)
+      utcDate: now.toUTCString(),
+      utcISOString: now.toISOString(),
+      utcCalculatedDate: now.toISOString().split('T')[0],
+      
+      // System info
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timezoneOffset: now.getTimezoneOffset(),
+      
+      // Comparison
+      note: 'Using LOCAL date to match user calendar expectations'
+    };
   }
 }
 
@@ -155,6 +224,14 @@ class StatisticsService {
   }
 
   /**
+   * Reset API availability cache (forces a fresh check)
+   */
+  resetApiAvailability(): void {
+    console.log('🔄 [API] Resetting API availability cache...');
+    this.isApiAvailable = null;
+  }
+
+  /**
    * Generate cache key for statistics
    */
   private getCacheKey(filter: TimeFilter): string {
@@ -174,18 +251,14 @@ class StatisticsService {
   }
 
   /**
-   * Convert API entries to display format
+   * Convert API snake_case to frontend camelCase
    */
-  private aggregateApiEntries(entries: StatisticsEntry[]): Statistics {
-    if (!entries?.length) {
-      return { focusTime: 0, sessions: 0, tasksDone: 0 };
-    }
-
-    return entries.reduce((total, entry) => ({
-      focusTime: total.focusTime + (entry.focus_time || 0),
-      sessions: total.sessions + (entry.sessions || 0),
-      tasksDone: total.tasksDone + (entry.tasks_done || 0)
-    }), { focusTime: 0, sessions: 0, tasksDone: 0 });
+  private convertBackendStats(backendStats: BackendStatistics): Statistics {
+    return {
+      focusTime: backendStats.focus_time || 0,
+      sessions: backendStats.sessions || 0,
+      tasksDone: backendStats.tasks_done || 0,
+    };
   }
 
   /**
@@ -211,8 +284,8 @@ class StatisticsService {
     if (apiAvailable) {
       try {
         const { start, end } = DateUtils.getDateRange(filter);
-        const entries = await statisticsApiService.getStatistics(start, end);
-        const stats = this.aggregateApiEntries(entries);
+        const backendStats = await statisticsApiService.getStatistics(start, end);
+        const stats = this.convertBackendStats(backendStats);
         
         // Cache the result
         cacheService.set(cacheKey, stats, CacheTTL.SHORT);
@@ -369,34 +442,50 @@ class StatisticsService {
   }
 
   /**
-   * Debug: Get comprehensive service information
+   * Comprehensive debug information for troubleshooting
    */
   async getDebugInfo(): Promise<Record<string, unknown>> {
-    const today = DateUtils.getCurrentDate();
-    const apiAvailable = await this.checkApiAvailability();
-    const fallbackData = LocalStorageFallback.get();
+    const userId = 'current';
+    const filter = 'D';
+    const cacheKey = this.getCacheKey(filter);
+    const dateRange = DateUtils.getDateRange(filter);
     
-    return {
-      apiAvailable,
-      currentDate: today,
-      dateRanges: {
-        daily: DateUtils.getDateRange('D'),
-        weekly: DateUtils.getDateRange('W'),
-        monthly: DateUtils.getDateRange('M')
-      },
-      cacheKeys: {
-        daily: this.getCacheKey('D'),
-        weekly: this.getCacheKey('W'),
-        monthly: this.getCacheKey('M')
-      },
-      fallbackData,
-      cacheStats: cacheService.getStats(),
-      cachedData: {
-        daily: cacheService.get(this.getCacheKey('D')),
-        weekly: cacheService.get(this.getCacheKey('W')),
-        monthly: cacheService.get(this.getCacheKey('M'))
-      }
-    };
+    try {
+      return {
+        // Date and timezone information
+        dateDebug: DateUtils.debugDates(),
+        
+        // Current configuration
+        userId,
+        filter,
+        cacheKey,
+        dateRange,
+        
+        // API availability
+        apiAvailable: await this.checkApiAvailability(),
+        
+        // Cache status
+        cached: cacheService.get(cacheKey) !== null,
+        
+        // Raw API response (if available)
+        rawApiResponse: this.isApiAvailable ? 
+          await statisticsApiService.getStatistics(dateRange.start, dateRange.end).catch(e => `Error: ${e.message}`) : 
+          'API not available',
+          
+        // Current statistics
+        currentStats: await this.getFilteredStats(filter),
+        
+        // System info
+        timestamp: new Date().toISOString(),
+        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'Server-side'
+      };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+        dateDebug: DateUtils.debugDates()
+      };
+    }
   }
 }
 
@@ -413,6 +502,7 @@ export const incrementSessions = (): Promise<Statistics> => statisticsService.in
 export const incrementTasksDone = (): Promise<Statistics> => statisticsService.incrementTasksDone();
 export const refreshStatistics = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.refreshStatistics(filter);
 export const clearAllStatistics = (): Promise<void> => statisticsService.clearAllData();
+export const resetApiAvailability = (): void => statisticsService.resetApiAvailability();
 
 // Export utility classes
 export { LocalStorageFallback, DateUtils, CacheInvalidation }; 

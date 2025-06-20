@@ -224,6 +224,119 @@ export default function TestingSection({
     }
   };
 
+  // Quick test to add sample data
+  const handleQuickTest = async () => {
+    console.log('🚀 [QUICK TEST] Adding sample data for debugging...');
+    setStatsLoading(true);
+    
+    try {
+      // Add some sample data
+      await statisticsService.addFocusTime(25);
+      await statisticsService.incrementSessions();
+      await statisticsService.incrementTasksDone();
+      
+      console.log('✅ [QUICK TEST] Sample data added successfully!');
+      
+      // Wait a moment then refresh stats
+      setTimeout(async () => {
+        const refreshedStats = await statisticsService.getFilteredStats(timeFilter);
+        setStats(refreshedStats);
+        console.log('📊 [QUICK TEST] Stats after sample data:', refreshedStats);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('❌ [QUICK TEST] Failed to add sample data:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  // Clear cache and refresh
+  const handleClearCache = async () => {
+    console.log('🗑️ [TEST] Clearing all cache and refreshing...');
+    setStatsLoading(true);
+    
+    try {
+      // Clear the statistics cache
+      await statisticsService.clearAllData();
+      
+      // Wait a moment then refresh
+      setTimeout(async () => {
+        const refreshedStats = await statisticsService.getFilteredStats(timeFilter);
+        setStats(refreshedStats);
+        console.log('📊 [TEST] Stats after cache clear:', refreshedStats);
+        setStatsLoading(false);
+      }, 500);
+      
+    } catch (error) {
+      console.error('❌ [TEST] Failed to clear cache:', error);
+      setStatsLoading(false);
+    }
+  };
+
+  // Reset API availability and refresh
+  const handleResetAPI = async () => {
+    console.log('🔄 [API RESET] Resetting API availability and refreshing...');
+    setStatsLoading(true);
+    
+    try {
+      // Clear ALL cache first
+      await statisticsService.clearAllData();
+      console.log('🗑️ [API RESET] Cache cleared');
+      
+      // Reset the API availability cache to force a fresh health check
+      statisticsService.resetApiAvailability();
+      console.log('🔄 [API RESET] API availability reset');
+      
+      // Wait a moment then refresh statistics
+      setTimeout(async () => {
+        const refreshedStats = await statisticsService.getFilteredStats(timeFilter);
+        setStats(refreshedStats);
+        console.log('📊 [API RESET] Stats after API reset:', refreshedStats);
+        setStatsLoading(false);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('❌ [API RESET] Failed to reset API:', error);
+      setStatsLoading(false);
+    }
+  };
+
+  // Direct API test (bypass all caching)
+  const handleDirectAPITest = async () => {
+    console.log('🔥 [DIRECT API] Testing API directly (bypass cache)...');
+    setStatsLoading(true);
+    
+    try {
+      // Import the direct API service
+      const { statisticsApiService } = await import('@/api/services/statisticsService');
+      
+      // Get local date directly
+      const now = new Date();
+      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      console.log(`🔥 [DIRECT API] Querying for local date: ${localDate}`);
+      
+      // Call API directly without any caching
+      const backendStats = await statisticsApiService.getStatistics(localDate, localDate);
+      console.log(`🔥 [DIRECT API] Raw API response:`, backendStats);
+      
+      // Convert to display format
+      const directStats = {
+        focusTime: backendStats.focus_time || 0,
+        sessions: backendStats.sessions || 0,
+        tasksDone: backendStats.tasks_done || 0
+      };
+      
+      setStats(directStats);
+      console.log(`🔥 [DIRECT API] Converted stats:`, directStats);
+      
+    } catch (error) {
+      console.error('❌ [DIRECT API] Failed to call API directly:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
   return (
     <section className="mb-8">
       <div className="flex justify-between items-center mb-4">
@@ -322,6 +435,34 @@ export default function TestingSection({
               </svg>
               Sync Offline Data
             </button>
+
+            <button onClick={handleQuickTest} className="flex items-center gap-2 px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L15.232 5.232z" />
+              </svg>
+              Quick Test
+            </button>
+
+            <button onClick={handleClearCache} className="flex items-center gap-2 px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L15.232 5.232z" />
+              </svg>
+              Clear Cache
+            </button>
+
+            <button onClick={handleResetAPI} className="flex items-center gap-2 px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L15.232 5.232z" />
+              </svg>
+              Reset API
+            </button>
+
+            <button onClick={handleDirectAPITest} className="flex items-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Direct API Test
+            </button>
           </div>
 
           <div className="bg-gray-800 rounded-lg p-4">
@@ -338,6 +479,10 @@ export default function TestingSection({
               <li><strong>Backend Debug:</strong> Tests API validation to see what the backend expects</li>
               <li><strong>Caching System:</strong> Tests the new caching system</li>
               <li><strong>Sync Offline Data:</strong> Manually syncs offline queue with backend</li>
+              <li><strong>Quick Test:</strong> Adds sample data for debugging</li>
+              <li><strong>Clear Cache:</strong> Clears the statistics cache and refreshes the data</li>
+              <li><strong>Reset API:</strong> Resets the API availability cache and refreshes the data</li>
+              <li><strong>Direct API Test:</strong> Bypasses all caching and calls the API directly</li>
             </ul>
             <p className="text-yellow-400 text-sm mt-3">
               💡 Try switching between Day/Week/Month filters to see how time-based filtering works!

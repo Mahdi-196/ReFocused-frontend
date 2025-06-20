@@ -11,6 +11,7 @@ import FlashcardDisplay from './components/FlashcardDisplay';
 import StatisticsSection from './components/StatisticsSection';
 import TestingSection from './components/TestingSection';
 import StudyModals from './components/StudyModals';
+import BackendDebugger from './components/BackendDebugger';
 
 // Import the custom hooks
 import { useStudyData } from './hooks/useStudyData';
@@ -72,6 +73,8 @@ export default function StudyPage() {
             stats={statistics.stats}
             statsLoading={statistics.statsLoading}
             onTimeFilterChange={statistics.setTimeFilter}
+            forceRefresh={statistics.forceRefresh}
+            isAuthenticated={statistics.isAuthenticated}
           />
 
           {/* Testing Section */}
@@ -100,6 +103,9 @@ export default function StudyPage() {
           />
         </div>
       </div>
+
+      {/* Backend Debugger */}
+      <BackendDebugger />
     </AuthGuard>
   );
 }

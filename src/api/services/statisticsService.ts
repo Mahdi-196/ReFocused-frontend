@@ -29,6 +29,12 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+export interface BackendStatistics {
+  focus_time: number;
+  sessions: number;
+  tasks_done: number;
+}
+
 /**
  * Enhanced error logging for debugging API issues
  */
@@ -93,20 +99,18 @@ export const statisticsApiService = {
   /**
    * Get statistics for a specific date range
    */
-  async getStatistics(startDate: string, endDate: string): Promise<StatisticsEntry[]> {
+  async getStatistics(startDate: string, endDate: string): Promise<BackendStatistics> {
     try {
       logger.apiCall(STATISTICS.BASE, 'GET', { startDate, endDate });
-      const response = await client.get<StatisticsEntry[]>(STATISTICS.BASE, {
+      const response = await client.get<BackendStatistics>(STATISTICS.BASE, {
         params: { startDate, endDate }
       });
-      logger.info(`Statistics retrieved: ${response.data?.length || 0} entries`, undefined, 'API');
-      return response.data || [];
+      // The API returns the aggregated object, or an object with zeros if no data.
+      return response.data || { focus_time: 0, sessions: 0, tasks_done: 0 };
     } catch (error: unknown) {
       logApiError(STATISTICS.BASE, error, { startDate, endDate });
-      const errorMessage = error instanceof Error && 'response' in error 
-        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to load statistics from server.'
-        : 'Failed to load statistics from server.';
-      throw new Error(errorMessage);
+      // On error, return a zeroed object to prevent crashes
+      return { focus_time: 0, sessions: 0, tasks_done: 0 };
     }
   },
 
@@ -193,7 +197,10 @@ export const statisticsApiService = {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // Use local date calculation to match frontend logic
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      console.log(`🔍 [HEALTH CHECK] Using local date: ${today}`);
       await this.getStatistics(today, today);
       return true;
     } catch (error) {
