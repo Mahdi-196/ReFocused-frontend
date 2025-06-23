@@ -1,6 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { UserHabit, DailyEntry } from '../types';
 import type { MoodEntry } from '@/services/moodService';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday as isToday_native } from 'date-fns';
+import { HabitModal } from './HabitModal';
+import { HabitCompletion, getHabits, getHabitCompletions, toggleHabitCompletion } from '@/services/habitsService';
+import { useCurrentDate } from '@/contexts/TimeContext';
 
 interface CalendarViewProps {
   currentMonth: Date;
@@ -20,6 +24,11 @@ export default function CalendarView({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [completions, setCompletions] = useState<HabitCompletion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedHabit, setSelectedHabit] = useState<UserHabit | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const currentDate = useCurrentDate();
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX);
@@ -491,6 +500,29 @@ export default function CalendarView({
         </div>
       </div>
     );
+  };
+
+  // Custom isToday function using time service
+  const isToday = useCallback((date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return dateStr === currentDate;
+  }, [currentDate]);
+
+  // Handle completion toggle
+  const handleCompletionToggle = async (habitId: number, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const existingCompletion = completions.find(c => c.habitId === habitId && c.date === dateStr);
+    const newCompletedState = !existingCompletion?.completed;
+    
+    try {
+      console.log(`🔄 Toggling habit ${habitId} for ${dateStr}: ${newCompletedState}`);
+      await toggleHabitCompletion(habitId, dateStr, newCompletedState);
+      
+      // Refresh data
+      await Promise.all([loadHabits(), loadCompletions()]);
+    } catch (error) {
+      console.error('❌ Failed to toggle habit completion:', error);
+    }
   };
 
   return (

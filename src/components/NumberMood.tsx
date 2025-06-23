@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { saveMoodRating, getTodaysMood } from '@/services/moodService';
+import { useCurrentDate } from '@/contexts/TimeContext';
 
 interface MoodRating {
   happiness: number | null;
@@ -101,8 +102,6 @@ export default function NumberMood() {
       }
     }
   };
-
-
 
   const getRatingStyle = (rating: number | null, type: 'normal' | 'stress' = 'normal') => {
     const defaultStyle = {

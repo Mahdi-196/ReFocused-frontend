@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
+import { FiSearch, FiPlus, FiFilter, FiGrid, FiList, FiLock, FiUnlock } from 'react-icons/fi';
+import { useTime } from '@/contexts/TimeContext';
 
 export type Entry = {
   id: string;
@@ -50,6 +52,7 @@ export function useCollections() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [passwordHashes, setPasswordHashes] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const { getCurrentDateTime } = useTime();
 
   // Effect to load data from localStorage on client mount
   useEffect(() => {
@@ -188,7 +191,7 @@ export function useCollections() {
   };
 
   const saveEntry = (collectionId: string, entry: Entry) => {
-    const now = new Date().toISOString();
+    const now = getCurrentDateTime();
     setCollections((prev) =>
       prev.map((col) =>
         col.id === collectionId

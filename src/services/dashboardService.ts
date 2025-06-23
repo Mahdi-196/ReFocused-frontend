@@ -1,5 +1,7 @@
 import client from '@/api/client';
+import { DASHBOARD } from '@/api/endpoints';
 import { cacheService } from './cacheService';
+import { timeService } from './timeService';
 
 // Dashboard data interfaces
 export interface DailyEntry {
@@ -52,31 +54,30 @@ const DASHBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * Get daily entries for a specific month
  * Returns a map with date as key and DailyEntry as value
  */
-export async function getDailyEntries(monthStr: string): Promise<{[key: string]: DailyEntry}> {
-  const cacheKey = `${DASHBOARD_CACHE_PREFIX}_entries_${monthStr}`;
+export async function getDailyEntries(month: string): Promise<{[key: string]: DailyEntry}> {
+  const cacheKey = `dashboard_entries_${month}`;
   
   try {
     // Try to get from cache first
     const cached = cacheService.get<{[key: string]: DailyEntry}>(cacheKey);
     if (cached) {
+      console.log('📦 Returning cached dashboard entries for month:', month);
       return cached;
     }
 
-    // Fetch from API
-    const response = await client.get('/api/dashboard/entries', {
-      params: { month: monthStr }
-    });
+    console.log('🔄 Fetching dashboard entries from API for month:', month);
+    const response = await client.get(`/dashboard/entries?month=${month}`);
     
     const entries = response.data || {};
     
     // Cache the results
-    cacheService.set(cacheKey, entries, DASHBOARD_CACHE_TTL);
+    cacheService.set(cacheKey, entries, 10 * 60 * 1000); // 10 minutes
     
     return entries;
   } catch (error) {
-    console.warn('Failed to fetch daily entries:', error);
+    console.warn('❌ Failed to fetch dashboard entries:', error);
     
-    // Return empty object as fallback
+    // Return empty object instead of crashing
     return {};
   }
 }
@@ -95,7 +96,7 @@ export async function getDailyEntry(date: string): Promise<DailyEntry | null> {
     }
 
     // Fetch from API
-    const response = await client.get(`/api/dashboard/entries/${date}`);
+    const response = await client.get(`/dashboard/entries/${date}`);
     
     const entry = response.data;
     
@@ -116,7 +117,7 @@ export async function getDailyEntry(date: string): Promise<DailyEntry | null> {
  */
 export async function saveDailyEntry(entry: DailyEntry): Promise<DailyEntry> {
   try {
-    const response = await client.post('/api/dashboard/entries', entry);
+    const response = await client.post('/dashboard/entries', entry);
     
     const savedEntry = response.data;
     
@@ -141,7 +142,7 @@ export async function saveDailyEntry(entry: DailyEntry): Promise<DailyEntry> {
  */
 export async function updateDailyEntry(date: string, updates: Partial<DailyEntry>): Promise<DailyEntry> {
   try {
-    const response = await client.put(`/api/dashboard/entries/${date}`, updates);
+    const response = await client.put(`/dashboard/entries/${date}`, updates);
     
     const updatedEntry = response.data;
     
@@ -175,7 +176,7 @@ export async function getDashboardStats(startDate: string, endDate: string): Pro
     }
 
     // Fetch from API
-    const response = await client.get('/api/dashboard/stats', {
+    const response = await client.get('/dashboard/stats', {
       params: { startDate, endDate }
     });
     
@@ -221,7 +222,7 @@ export async function getWeeklyData(weeks: number = 4): Promise<WeeklyData[]> {
     }
 
     // Fetch from API
-    const response = await client.get('/api/dashboard/weekly', {
+    const response = await client.get('/dashboard/weekly', {
       params: { weeks }
     });
     
@@ -253,7 +254,7 @@ export async function getMonthlyData(months: number = 6): Promise<MonthlyData[]>
     }
 
     // Fetch from API
-    const response = await client.get('/api/dashboard/monthly', {
+    const response = await client.get('/dashboard/monthly', {
       params: { months }
     });
     
@@ -272,7 +273,7 @@ export async function getMonthlyData(months: number = 6): Promise<MonthlyData[]>
 }
 
 /**
- * Get today's dashboard overview
+ * Get today's overview with current dashboard data
  */
 export async function getTodayOverview(): Promise<{
   todayEntry: DailyEntry | null;
@@ -283,44 +284,31 @@ export async function getTodayOverview(): Promise<{
     habitsChange: number;
   };
 }> {
-  const today = new Date().toISOString().split('T')[0];
-  const cacheKey = `${DASHBOARD_CACHE_PREFIX}_today_${today}`;
+  const today = timeService.getCurrentDate();
+  const sevenDaysAgo = timeService.getRelativeDate(-7);
   
   try {
-    // Try to get from cache first
-    const cached = cacheService.get<typeof overview>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    // Fetch from API
-    const response = await client.get('/api/dashboard/today');
+    const [todayEntry, stats] = await Promise.all([
+      getDailyEntry(today),
+      getDashboardStats(sevenDaysAgo, today)
+    ]);
     
-    const overview = response.data || {
-      todayEntry: null,
-      stats: {
-        totalFocusTime: 0,
-        totalSessions: 0,
-        totalTasks: 0,
-        averageMood: 0,
-        habitStreak: 0,
-        weeklyGoalProgress: 0
-      },
-      recentTrends: {
-        focusTimeChange: 0,
-        moodChange: 0,
-        habitsChange: 0
-      }
+    // Calculate recent trends (mock data for now)
+    const recentTrends = {
+      focusTimeChange: 15, // +15%
+      moodChange: 8,      // +8%
+      habitsChange: -5    // -5%
     };
     
-    // Cache the results for a shorter time (today's data changes frequently)
-    cacheService.set(cacheKey, overview, 2 * 60 * 1000); // 2 minutes
-    
-    return overview;
+    return {
+      todayEntry,
+      stats,
+      recentTrends
+    };
   } catch (error) {
     console.warn('Failed to fetch today overview:', error);
     
-    // Return default overview as fallback
+    // Return fallback data
     return {
       todayEntry: null,
       stats: {

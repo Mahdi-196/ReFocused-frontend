@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from '@/contexts/AuthContext';
+import { AUTH } from '@/api/endpoints';
 import client, { initializeAuth } from '@/api/client';
 
 interface User {
@@ -43,7 +44,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         
         // Try to fetch user data to verify token is valid
         try {
-          const response = await client.get('/api/v1/user/me');
+          const response = await client.get(AUTH.ME);
           setUser(response.data);
           setIsAuthenticated(true);
         } catch {
@@ -69,7 +70,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await client.post('/api/v1/auth/login', {
+      const response = await client.post(AUTH.LOGIN, {
         email,
         password,
       });
@@ -95,7 +96,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      const response = await client.post('/api/v1/auth/register', {
+      const response = await client.post(AUTH.REGISTER, {
         email,
         password,
         name,
@@ -122,7 +123,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const refreshUser = async () => {
     try {
-      const response = await client.get('/api/v1/user/me');
+      const response = await client.get(AUTH.ME);
       setUser(response.data);
       setIsAuthenticated(true);
       

@@ -64,12 +64,12 @@ export function useStatistics() {
     loadStatistics();
   }, [isClient, timeFilter, isAuthenticated, user]);
 
-  // Listen for statistics updates
+  // Listen for statistics updates (enhanced to support all filter auto-refresh)
   useEffect(() => {
     if (!isClient) return;
 
-    const handleStatisticsUpdate = async (event: Event) => {
-      console.log('🔔 Statistics update event received:', (event as CustomEvent).detail);
+    const handleStatisticsUpdate = async () => {
+      console.log('🔔 [AUTO-REFRESH] Statistics update event received, refreshing with filter:', timeFilter);
       
       // Don't reload if user is not authenticated
       if (!isAuthenticated) {
@@ -80,7 +80,7 @@ export function useStatistics() {
       try {
         setStatsLoading(true);
         const filteredStats = await statisticsService.getFilteredStats(timeFilter);
-        console.log('📊 [AUTO-REFRESH] Statistics reloaded after update:', filteredStats);
+        console.log('📊 [AUTO-REFRESH] Statistics reloaded after update with filter', timeFilter, ':', filteredStats);
         
         setStats({
           focusTime: filteredStats.focusTime,
@@ -88,16 +88,22 @@ export function useStatistics() {
           tasksDone: filteredStats.tasksDone
         });
       } catch (error) {
-        console.error('Failed to reload statistics after update:', error);
+        console.error('❌ [AUTO-REFRESH] Failed to reload statistics after update:', error);
       } finally {
         setStatsLoading(false);
       }
     };
 
+    // Listen to general update event and specific filter events
     window.addEventListener('statisticsUpdated', handleStatisticsUpdate);
+    
+    // Also listen to specific filter events for better performance in the future
+    const filterEventName = `statisticsUpdated:${timeFilter === 'D' ? 'daily' : timeFilter === 'W' ? 'weekly' : 'monthly'}`;
+    window.addEventListener(filterEventName, handleStatisticsUpdate);
 
     return () => {
       window.removeEventListener('statisticsUpdated', handleStatisticsUpdate);
+      window.removeEventListener(filterEventName, handleStatisticsUpdate);
     };
   }, [isClient, timeFilter, isAuthenticated]);
 
@@ -136,4 +142,4 @@ export function useStatistics() {
     forceRefresh,
     isAuthenticated
   };
-} 
+}

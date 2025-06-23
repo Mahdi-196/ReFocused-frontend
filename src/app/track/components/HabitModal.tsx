@@ -31,6 +31,22 @@ export default function HabitModal({
           <p className="text-gray-300 text-center mb-2">
             What would you like to do with <span className="text-white font-medium">"{habit.name}"</span>?
           </p>
+          
+          {/* Streak Information */}
+          <div className="bg-gray-700/50 rounded-lg p-3 mb-3">
+            <div className="flex items-center justify-center gap-2">
+              {habit.streak > 0 ? (
+                <>
+                  <span className="text-orange-400">🔥</span>
+                  <span className="text-white font-medium">{habit.streak} day streak</span>
+                  <span className="text-orange-400">🔥</span>
+                </>
+              ) : (
+                <span className="text-gray-400">No current streak</span>
+              )}
+            </div>
+          </div>
+
           {(() => {
             if (habit.isFavorite) {
               return (

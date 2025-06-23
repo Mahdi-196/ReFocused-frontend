@@ -15,14 +15,26 @@ export default function TrackingStats({ stats }: TrackingStatsProps) {
           style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm text-gray-300">Current Streak</h3>
-            <div className="text-blue-400">
+            <h3 className="text-sm text-gray-300">Best Streak</h3>
+            <div className={`${stats.currentStreak > 0 ? 'text-orange-400' : 'text-gray-400'}`}>
+              {stats.currentStreak > 0 ? (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8z"/>
+                </svg>
+              ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
+              )}
             </div>
           </div>
-          <p className="text-2xl font-bold text-white">{stats.currentStreak} days</p>
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-bold text-white">{stats.currentStreak}</p>
+            <span className="text-gray-300 text-sm">day{stats.currentStreak !== 1 ? 's' : ''}</span>
+            {stats.currentStreak > 0 && (
+              <span className="text-orange-400 text-lg">🔥</span>
+            )}
+          </div>
         </div>
 
         {/* Habits Completed */}
@@ -31,16 +43,28 @@ export default function TrackingStats({ stats }: TrackingStatsProps) {
           style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm text-gray-300">Habits Completed</h3>
+            <h3 className="text-sm text-gray-300">Today's Progress</h3>
             <div className="text-green-400">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
           </div>
+          <div className="space-y-1">
           <p className="text-2xl font-bold text-white">
             {stats.habitsCompleted.completed}/{stats.habitsCompleted.total}
           </p>
+            {stats.habitsCompleted.total > 0 && (
+              <div className="w-full bg-gray-600 rounded-full h-2">
+                <div 
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${(stats.habitsCompleted.completed / stats.habitsCompleted.total) * 100}%` 
+                  }}
+                ></div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Days Tracked */}

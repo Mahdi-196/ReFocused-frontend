@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import Header from './Header';
 import Footer from './footer';
 import AnimatedLayout from './AnimatedLayout';
+import StatisticsInitializer from './StatisticsInitializer';
+import DevTools from './devTools';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { initializeAuth } from '@/api/client';
 
@@ -68,6 +70,7 @@ export default function ClientLayoutWrapper({
 
   return (
     <AuthProvider>
+      <StatisticsInitializer />
       <div className={isLandingPage ? '' : 'pt-20'}>
         {!isLandingPage && <Header />}
         <AnimatedLayout>
@@ -77,6 +80,9 @@ export default function ClientLayoutWrapper({
         </AnimatedLayout>
         {shouldShowFooter && <Footer />}
       </div>
+      
+      {/* DevTools - positioned at bottom-right globally */}
+      {process.env.NODE_ENV === 'development' && <DevTools isVisible={true} />}
     </AuthProvider>
   );
 } 

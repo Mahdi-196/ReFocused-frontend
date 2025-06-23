@@ -1,5 +1,7 @@
 import client from '@/api/client';
+import { MOOD } from '@/api/endpoints';
 import { cacheService } from './cacheService';
+import { timeService } from './timeService';
 
 // Mood entry interface
 export interface MoodEntry {
@@ -23,30 +25,49 @@ const MOOD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * Uses caching to improve performance
  */
 export async function getMoodEntries(startDate: string, endDate: string): Promise<MoodEntry[]> {
-  const cacheKey = `${MOOD_CACHE_PREFIX}_entries_${startDate}_${endDate}`;
+  const cacheKey = `mood_entries_${startDate}_${endDate}`;
   
   try {
+    // Validate date format
+    if (!startDate || !endDate || 
+        !/^\d{4}-\d{2}-\d{2}$/.test(startDate) || 
+        !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      console.warn('❌ Invalid date format for mood entries:', { startDate, endDate });
+      return [];
+    }
+
     // Try to get from cache first
     const cached = cacheService.get<MoodEntry[]>(cacheKey);
     if (cached) {
+      console.log('📦 Returning cached mood entries');
       return cached;
     }
 
-    // Fetch from API
-    const response = await client.get(`/api/mood/entries`, {
-      params: { startDate, endDate }
+    console.log('🔄 Fetching mood entries from API:', { startDate, endDate });
+    
+    // Get user timezone for header
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    const response = await client.get('/mood/entries', {
+      params: { 
+        start_date: startDate,  // Use snake_case to match backend
+        end_date: endDate 
+      },
+      headers: {
+        'X-User-Timezone': userTimezone
+      }
     });
     
-    const entries = response.data || [];
+    const entries = Array.isArray(response.data) ? response.data : [];
     
     // Cache the results
-    cacheService.set(cacheKey, entries, MOOD_CACHE_TTL);
+    cacheService.set(cacheKey, entries, 10 * 60 * 1000); // 10 minutes
     
     return entries;
   } catch (error) {
-    console.warn('Failed to fetch mood entries:', error);
+    console.warn('❌ Failed to fetch mood entries:', error);
     
-    // Return empty array as fallback
+    // Return empty array instead of crashing
     return [];
   }
 }
@@ -64,8 +85,15 @@ export async function getMoodEntry(date: string): Promise<MoodEntry | null> {
       return cached;
     }
 
+    // Get user timezone for header
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     // Fetch from API
-    const response = await client.get(`/api/mood/entries/${date}`);
+    const response = await client.get(`/mood/entries/${date}`, {
+      headers: {
+        'X-User-Timezone': userTimezone
+      }
+    });
     
     const entry = response.data;
     
@@ -86,7 +114,14 @@ export async function getMoodEntry(date: string): Promise<MoodEntry | null> {
  */
 export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
   try {
-    const response = await client.post('/api/mood/entries', moodEntry);
+    // Get user timezone for header
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    const response = await client.post('/mood/entries', moodEntry, {
+      headers: {
+        'X-User-Timezone': userTimezone
+      }
+    });
     
     const savedEntry = response.data;
     
@@ -109,7 +144,7 @@ export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
  */
 export async function updateMoodEntry(date: string, updates: Partial<MoodEntry>): Promise<MoodEntry> {
   try {
-    const response = await client.put(`/api/mood/entries/${date}`, updates);
+    const response = await client.put(`${MOOD.BASE}/entries/${date}`, updates);
     
     const updatedEntry = response.data;
     
@@ -132,7 +167,7 @@ export async function updateMoodEntry(date: string, updates: Partial<MoodEntry>)
  */
 export async function deleteMoodEntry(date: string): Promise<void> {
   try {
-    await client.delete(`/api/mood/entries/${date}`);
+    await client.delete(`${MOOD.BASE}/entries/${date}`);
     
     // Invalidate related cache entries
     cacheService.invalidateByPattern(`${MOOD_CACHE_PREFIX}_entries_*`);
@@ -163,7 +198,7 @@ export async function getMoodStats(startDate: string, endDate: string): Promise<
     }
 
     // Fetch from API
-    const response = await client.get(`/api/mood/stats`, {
+    const response = await client.get(`${MOOD.BASE}/stats`, {
       params: { startDate, endDate }
     });
     
@@ -194,41 +229,39 @@ export async function getMoodStats(startDate: string, endDate: string): Promise<
 }
 
 /**
- * Get current date safely (avoiding system clock issues)
+ * Get current date safely (respecting mock date for testing)
  */
-function getCurrentDateSafe(): string {
-  // Use reliable method with en-CA locale for YYYY-MM-DD format
-  return new Date(Date.now()).toLocaleDateString('en-CA');
+export function getCurrentDate(): string {
+  return timeService.getCurrentDate();
 }
 
 /**
  * Get today's mood entry
- * Helper function for NumberMood component
  */
 export async function getTodaysMood(): Promise<MoodEntry | null> {
-  const today = getCurrentDateSafe();
-  return await getMoodEntry(today);
+  const today = timeService.getCurrentDate();
+  return getMoodEntry(today);
 }
 
 /**
- * Save mood rating for today
- * Helper function for NumberMood component
+ * Save today's mood rating
  */
 export async function saveMoodRating(ratings: {
   happiness: number;
   satisfaction: number;
   stress: number;
 }): Promise<MoodEntry> {
-  const today = getCurrentDateSafe();
+  const today = timeService.getCurrentDate();
   
   const moodEntry: MoodEntry = {
     date: today,
     happiness: ratings.happiness,
     satisfaction: ratings.satisfaction,
-    stress: ratings.stress
+    stress: ratings.stress,
+    notes: ''
   };
   
-  return await saveMoodEntry(moodEntry);
+  return saveMoodEntry(moodEntry);
 }
 
 /**

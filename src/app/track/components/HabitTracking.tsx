@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UserHabit, SimpleFilter } from '../types';
 import HabitModal from './HabitModal';
+
+interface Toast {
+  id: number;
+  message: string;
+  type: 'success' | 'error';
+}
 
 interface HabitTrackingProps {
   habits: UserHabit[];
@@ -8,6 +14,8 @@ interface HabitTrackingProps {
   onAddHabit: (habitName: string) => Promise<{ success: boolean; error?: string }>;
   onDeleteHabit: (habitId: number) => Promise<{ success: boolean; error?: string }>;
   onToggleFavorite: (habitId: number) => Promise<{ success: boolean; error?: string }>;
+  onToggleCompletion: (habitId: number, date?: string) => Promise<{ success: boolean; error?: string }>;
+  isHabitCompleted: (habitId: number, date?: string) => boolean;
 }
 
 export default function HabitTracking({
@@ -15,24 +23,44 @@ export default function HabitTracking({
   loading,
   onAddHabit,
   onDeleteHabit,
-  onToggleFavorite
+  onToggleFavorite,
+  onToggleCompletion,
+  isHabitCompleted
 }: HabitTrackingProps) {
   const [newHabit, setNewHabit] = useState('');
   const [habitError, setHabitError] = useState('');
   const [simpleFilter, setSimpleFilter] = useState<SimpleFilter>('all');
   const [habitModalOpen, setHabitModalOpen] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<UserHabit | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    const id = Date.now();
+    const newToast = { id, message, type };
+    setToasts(prev => [...prev, newToast]);
+    
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 3000);
+  };
 
   const handleAddHabit = async () => {
-    console.log('🔤 Adding habit:', newHabit);
+    if (!newHabit.trim()) return;
+    
     const result = await onAddHabit(newHabit);
     
     if (result.success) {
-      setSimpleFilter('all');
       setNewHabit('');
       setHabitError('');
+      showToast('🎉 Habit added successfully!', 'success');
     } else {
       setHabitError(result.error || 'Failed to add habit');
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleAddHabit();
     }
   };
 
@@ -47,32 +75,87 @@ export default function HabitTracking({
   };
 
   const handleDeleteHabitFromModal = async () => {
-    if (selectedHabit) {
-      await onDeleteHabit(selectedHabit.id);
-      handleCloseHabitModal();
+    if (!selectedHabit) return;
+    
+    const result = await onDeleteHabit(selectedHabit.id);
+    if (result.success) {
+      showToast(`🗑️ "${selectedHabit.name}" deleted`, 'success');
+    } else {
+      showToast(result.error || 'Failed to delete habit', 'error');
     }
+    handleCloseHabitModal();
   };
 
   const handleToggleFavoriteFromModal = async () => {
-    if (selectedHabit) {
-      const result = await onToggleFavorite(selectedHabit.id);
-      if (result.success) {
-        handleCloseHabitModal();
-      }
+    if (!selectedHabit) return;
+    
+    const result = await onToggleFavorite(selectedHabit.id);
+    if (result.success) {
+      const wasPinned = selectedHabit.isFavorite;
+      const message = wasPinned 
+        ? `📍 "${selectedHabit.name}" unpinned` 
+        : `📌 "${selectedHabit.name}" pinned to top!`;
+      showToast(message, 'success');
+      handleCloseHabitModal();
+    } else {
+      showToast(result.error || 'Failed to update habit', 'error');
     }
   };
 
-  // Filter functions
-  const getFilteredHabits = () => {
-    switch (simpleFilter) {
-      case 'active':
-        return habits.filter(habit => habit.streak > 0);
-      case 'inactive':
-        return habits.filter(habit => habit.streak === 0);
-      default:
-        return habits;
+  const handleToggleCompletion = async (habitId: number) => {
+    const habit = habits.find(h => h.id === habitId);
+    const wasCompleted = isHabitCompleted(habitId);
+    
+    const result = await onToggleCompletion(habitId);
+    
+    if (result.success && habit) {
+      const message = wasCompleted 
+        ? `${habit.name} unmarked` 
+        : `🎉 ${habit.name} completed! Keep going!`;
+      showToast(message, 'success');
+    } else if (result.error) {
+      showToast(result.error, 'error');
     }
   };
+
+  // Memoized filtering and sorting
+  const filteredAndSortedHabits = useMemo(() => {
+    // Filter habits
+    let filtered = habits;
+    switch (simpleFilter) {
+      case 'active':
+        filtered = habits.filter(habit => habit.streak > 0);
+        break;
+      case 'inactive':
+        filtered = habits.filter(habit => habit.streak === 0);
+        break;
+      default:
+        filtered = habits;
+    }
+
+    // Sort habits
+    return filtered.sort((a, b) => {
+      // Pinned habits first
+      if (a.isFavorite && !b.isFavorite) return -1;
+      if (!a.isFavorite && b.isFavorite) return 1;
+      
+      // Highest streak first
+      if (a.streak !== b.streak) return b.streak - a.streak;
+      
+      // Oldest habits first
+      const aDate = new Date(a.createdAt).getTime();
+      const bDate = new Date(b.createdAt).getTime();
+      if (aDate !== bDate) return aDate - bDate;
+      
+      // Uncompleted first
+      const aCompleted = isHabitCompleted(a.id);
+      const bCompleted = isHabitCompleted(b.id);
+      if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+      
+      // Alphabetical
+      return a.name.localeCompare(b.name);
+    });
+  }, [habits, simpleFilter, isHabitCompleted]);
 
   const cycleFilter = () => {
     setSimpleFilter(prev => {
@@ -116,117 +199,148 @@ export default function HabitTracking({
     }
   };
 
-  // Sort habits to show favorites (pinned) at the top, then by streak length
-  const sortedHabits = getFilteredHabits().sort((a, b) => {
-    // First priority: pinned habits at the top
-    if (a.isFavorite && !b.isFavorite) return -1;
-    if (!a.isFavorite && b.isFavorite) return 1;
-    
-    // Second priority: sort by streak length (highest first)
-    return b.streak - a.streak;
-  });
-
   return (
     <>
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className={`px-4 py-2 rounded-lg shadow-lg text-white animate-slide-in-right ${
+              toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            }`}
+          >
+            {toast.message}
+          </div>
+        ))}
+      </div>
+
       <section className="mb-8">
-        <div 
-          className="rounded-lg p-6 shadow-md"
-          style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
-        >
-          <h2 className="text-2xl text-white mb-4">Habit Tracking</h2>
-          <div className="rounded-lg p-6">
-            <h3 className="text-xl font-medium text-white mb-2">Habit Tracker</h3>
-            <p className="text-gray-300 mb-4">Track your daily habits and build streaks</p>
-        
-            <div className="flex gap-2 mb-2">
+        <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-white">Daily Habits</h2>
+            <button
+              onClick={cycleFilter}
+              className="flex items-center gap-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-md transition-colors text-sm"
+              title={`Filter: ${getFilterLabel()}`}
+            >
+              {getFilterIcon()}
+              <span>{getFilterLabel()}</span>
+            </button>
+          </div>
+
+          {/* Add New Habit */}
+          <div className="mb-6">
+            <div className="flex gap-3">
               <input
                 type="text"
-                className={`flex-1 px-4 py-2 border bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  habitError ? 'border-red-300 focus:ring-red-500' : 'border-gray-600'
-                }`}
-                placeholder="Add a new habit..."
                 value={newHabit}
-                onChange={(e) => {
-                  setNewHabit(e.target.value);
-                  if (habitError) setHabitError(''); // Clear error when typing
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    console.log('🔤 Enter key pressed');
-                    handleAddHabit();
-                  }
-                }}
+                onChange={(e) => setNewHabit(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Add a new habit..."
+                className="flex-1 px-4 py-2 bg-gray-700 text-white placeholder-gray-400 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                maxLength={50}
               />
-              <button 
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transform transition-all duration-75"
-                onClick={(e) => {
-                  e.preventDefault();
-                  console.log('🖱️ Button clicked');
-                  handleAddHabit();
-                }}
+              <button
+                onClick={handleAddHabit}
+                disabled={!newHabit.trim()}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
               >
                 Add
               </button>
-              <button
-                onClick={cycleFilter}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg active:scale-95 transform transition-all duration-75 ${
-                  simpleFilter === 'all' 
-                    ? 'text-gray-300 hover:text-white hover:bg-gray-600' 
-                    : 'text-blue-300 bg-blue-500/20 hover:bg-blue-500/30'
-                }`}
-                title={`Filter: ${getFilterLabel()}`}
-              >
-                {getFilterIcon()}
-                <span className="text-sm">{getFilterLabel()}</span>
-              </button>
             </div>
-            
             {habitError && (
-              <div className="mb-4 text-red-400 text-sm">{habitError}</div>
+              <p className="text-red-400 text-sm mt-2">{habitError}</p>
             )}
+          </div>
 
-            {/* Habit List */}
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-              {loading && <div className="text-center text-gray-400 py-8">Loading habits...</div>}
-              {!loading && sortedHabits.length === 0 ? (
-                <div className="text-center text-gray-400 py-8">
-                  {simpleFilter !== 'all' ? `No habits with ${simpleFilter === 'active' ? 'active streaks' : 'zero streaks'}` : 'No habits yet'}
-                </div>
-              ) : (
-                sortedHabits.map((habit) => (
-                  <div key={habit.id} className="group flex items-center justify-between hover:bg-gray-700/50 rounded-md p-2 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="checkbox" 
-                        className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
-                        id={`habit-${habit.id}`} 
-                      />
-                      <label htmlFor={`habit-${habit.id}`} className="text-white flex items-center gap-2">
-                        {habit.name}
-                        {habit.isFavorite && (
-                          <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          {/* Habits List */}
+          <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+            {loading ? (
+              <div className="text-center text-gray-400 py-8">
+                <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                Loading habits...
+              </div>
+            ) : filteredAndSortedHabits.length === 0 ? (
+              <div className="text-center text-gray-400 py-8">
+                {simpleFilter !== 'all' 
+                  ? `No habits with ${simpleFilter === 'active' ? 'active streaks' : 'zero streaks'}`
+                  : 'No habits yet. Add one above to get started!'
+                }
+              </div>
+            ) : (
+              filteredAndSortedHabits.map((habit) => {
+                const isCompleted = isHabitCompleted(habit.id);
+                
+                return (
+                  <div
+                    key={habit.id}
+                    className="group flex items-center justify-between hover:bg-gray-700/50 rounded-md p-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      {/* Completion Checkbox */}
+                      <button
+                        onClick={() => handleToggleCompletion(habit.id)}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                          isCompleted
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'border-gray-400 hover:border-green-400 hover:bg-green-400/10'
+                        }`}
+                      >
+                        {isCompleted && (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}
-                      </label>
+                      </button>
+
+                      {/* Habit Name */}
+                      <div className="flex items-center gap-2">
+                        {habit.isFavorite && (
+                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                          </svg>
+                        )}
+                        <span className={`font-medium ${
+                          isCompleted ? 'text-gray-400 line-through' : 'text-white'
+                        }`}>
+                          {habit.name}
+                        </span>
+                      </div>
                     </div>
+
+                    {/* Streak and Actions */}
                     <div className="flex items-center gap-3">
-                      <span className="text-gray-300">{habit.streak} days</span>
+                      {/* Streak Display */}
+                      <div className="flex items-center gap-2">
+                        {habit.streak > 0 && (
+                          <div className="flex items-center gap-1 text-orange-400">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8z"/>
+                            </svg>
+                            <span className="text-sm font-medium">{habit.streak}</span>
+                          </div>
+                        )}
+                        <span className="text-gray-300 text-sm">
+                          {habit.streak === 0 ? '0 days' : `${habit.streak} day${habit.streak !== 1 ? 's' : ''}`}
+                        </span>
+                      </div>
+
+                      {/* Edit Button */}
                       <button
                         onClick={() => handleOpenHabitModal(habit)}
-                        className="text-gray-400 hover:text-blue-400 transition-all p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-600"
-                        title="Edit habit"
+                        className="text-gray-400 hover:text-blue-400 transition-colors p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-600"
+                        title="Manage habit"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                         </svg>
                       </button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                );
+              })
+            )}
           </div>
         </div>
       </section>
@@ -241,21 +355,19 @@ export default function HabitTracking({
         onToggleFavorite={handleToggleFavoriteFromModal}
       />
 
-      {/* Custom scrollbar styles */}
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+      <style jsx global>{`
+        @keyframes slide-in-right {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(55, 65, 81, 0.5);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(156, 163, 175, 0.5);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(156, 163, 175, 0.8);
+        .animate-slide-in-right {
+          animation: slide-in-right 0.3s ease-out;
         }
       `}</style>
     </>

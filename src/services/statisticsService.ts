@@ -1,5 +1,6 @@
 import { cacheService, CacheKeys, CacheTTL } from './cacheService';
-import { statisticsApiService, StatisticsEntry, BackendStatistics } from '@/api/services/statisticsService';
+import { statisticsApiService, BackendStatistics } from '@/api/services/statisticsService';
+import { timeService } from './timeService';
 import logger from '@/utils/logger';
 
 /**
@@ -18,10 +19,10 @@ export type TimeFilter = 'D' | 'W' | 'M';
  */
 class CacheInvalidation {
   static invalidateStatsData(userId: string | number) {
-    // Use the same local date logic as DateUtils
-    const today = DateUtils.getCurrentDate();
-    const weekStart = DateUtils.getStartOfWeek();
-    const monthStart = DateUtils.getStartOfMonth();
+    // Use timeService for consistent date handling
+    const today = timeService.getCurrentDate();
+    const weekStart = timeService.getStartOfWeek();
+    const monthStart = timeService.getStartOfMonth();
     
     const keys = [
       `${CacheKeys.STATISTICS_DAILY}_${today}_${userId}`,
@@ -34,7 +35,7 @@ class CacheInvalidation {
       logger.debug(`Cache invalidated: ${key}`, undefined, 'CACHE');
     });
     
-    console.log(`🗑️ [CACHE] Invalidated cache for local date: ${today}`);
+    console.log(`🗑️ [CACHE] Invalidated cache for time service date: ${today}`);
   }
 }
 
@@ -101,57 +102,27 @@ class LocalStorageFallback {
 }
 
 /**
- * Enhanced Date calculation utilities - User-Timezone Based
- * Uses local date to match user expectations (June 19th when it's June 19th locally)
+ * Enhanced Date calculation utilities - Time Service Based
+ * Uses time service to ensure consistency with backend time
  */
 class DateUtils {
   /**
-   * Get current date in user's local timezone
-   * This matches user expectations and local calendar
+   * Get current date using time service
    */
   static getCurrentDate(): string {
-    const now = new Date();
-    // Use local date (what the user sees on their calendar)
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    
-    const localDate = `${year}-${month}-${day}`;
-    console.log(`🕐 [DATE] Current local date: ${localDate} (Local time: ${now.toLocaleString()})`);
-    return localDate;
+    return timeService.getCurrentDate();
   }
 
   static getStartOfWeek(): string {
-    const now = new Date();
-    // Calculate start of week in local timezone
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday = 0
-    
-    const year = startOfWeek.getFullYear();
-    const month = String(startOfWeek.getMonth() + 1).padStart(2, '0');
-    const day = String(startOfWeek.getDate()).padStart(2, '0');
-    
-    const result = `${year}-${month}-${day}`;
-    console.log(`🕐 [DATE] Start of week (local): ${result}`);
-    return result;
+    return timeService.getStartOfWeek();
   }
 
   static getStartOfMonth(): string {
-    const now = new Date();
-    // First day of current month in local timezone
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    const year = startOfMonth.getFullYear();
-    const month = String(startOfMonth.getMonth() + 1).padStart(2, '0');
-    const day = String(startOfMonth.getDate()).padStart(2, '0');
-    
-    const result = `${year}-${month}-${day}`;
-    console.log(`🕐 [DATE] Start of month (local): ${result}`);
-    return result;
+    return timeService.getStartOfMonth();
   }
 
   static getDateRange(filter: TimeFilter): { start: string; end: string } {
-    const today = this.getCurrentDate();
+    const today = timeService.getCurrentDate();
     
     let range;
     switch (filter) {
@@ -159,41 +130,59 @@ class DateUtils {
         range = { start: today, end: today };
         break;
       case 'W':
-        range = { start: this.getStartOfWeek(), end: today };
+        range = { start: timeService.getStartOfWeek(), end: today };
         break;
       case 'M':
-        range = { start: this.getStartOfMonth(), end: today };
+        range = { start: timeService.getStartOfMonth(), end: today };
         break;
       default:
         range = { start: today, end: today };
     }
     
-    console.log(`🕐 [DATE] Filter ${filter} range (local):`, range);
+    console.log(`🕐 [DATE] Filter ${filter} range (time service):`, range);
     return range;
   }
 
   /**
-   * Debug method to show all date calculations
+   * Check if we're in a new week (Monday start)
    */
-  static debugDates(): Record<string, string> {
-    const now = new Date();
+  static isNewWeek(): boolean {
+    const lastWeekStart = localStorage.getItem('lastWeekStart');
+    const currentWeekStart = timeService.getStartOfWeek();
+    return lastWeekStart !== currentWeekStart;
+  }
+
+  /**
+   * Check if we're in a new month
+   */
+  static isNewMonth(): boolean {
+    const lastMonthStart = localStorage.getItem('lastMonthStart');
+    const currentMonthStart = timeService.getStartOfMonth();
+    return lastMonthStart !== currentMonthStart;
+  }
+
+  /**
+   * Update tracking for week/month changes
+   */
+  static updateResetTracking(): void {
+    localStorage.setItem('lastWeekStart', timeService.getStartOfWeek());
+    localStorage.setItem('lastMonthStart', timeService.getStartOfMonth());
+  }
+
+  static debugDates(): Record<string, string | number> {
+    const now = timeService.getCurrentDateTime();
+    const currentDate = timeService.getCurrentDate();
+    const weekStart = timeService.getStartOfWeek();
+    const monthStart = timeService.getStartOfMonth();
+    const isMock = timeService.isMockDate();
+    
     return {
-      // Local timezone (what user sees)
-      localDate: now.toDateString(),
-      localTimeString: now.toLocaleString(),
-      localCalculatedDate: this.getCurrentDate(),
-      
-      // UTC timezone (what backend might use)
-      utcDate: now.toUTCString(),
-      utcISOString: now.toISOString(),
-      utcCalculatedDate: now.toISOString().split('T')[0],
-      
-      // System info
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      timezoneOffset: now.getTimezoneOffset(),
-      
-      // Comparison
-      note: 'Using LOCAL date to match user calendar expectations'
+      currentDateTime: now,
+      currentDate,
+      weekStart,
+      monthStart,
+      isMockDate: isMock,
+      timezone: timeService.getUserTimezone()
     };
   }
 }
@@ -229,6 +218,21 @@ class StatisticsService {
   resetApiAvailability(): void {
     console.log('🔄 [API] Resetting API availability cache...');
     this.isApiAvailable = null;
+  }
+
+  /**
+   * Dispatch update events for all time filters to ensure all views refresh
+   */
+  private dispatchAllFiltersUpdate(): void {
+    // Dispatch generic update event for components listening to any changes
+    window.dispatchEvent(new CustomEvent('statisticsUpdated'));
+    
+    // Dispatch specific events for each time filter for future use
+    window.dispatchEvent(new CustomEvent('statisticsUpdated:daily'));
+    window.dispatchEvent(new CustomEvent('statisticsUpdated:weekly'));
+    window.dispatchEvent(new CustomEvent('statisticsUpdated:monthly'));
+    
+    logger.debug('Dispatched update events for all time filters', undefined, 'SERVICE');
   }
 
   /**
@@ -307,7 +311,7 @@ class StatisticsService {
   /**
    * Add focus time
    */
-  async addFocusTime(minutes: number): Promise<Statistics> {
+  async addFocusTime(minutes: number, filter: TimeFilter = 'D'): Promise<Statistics> {
     logger.info(`Adding ${minutes} minutes focus time`, undefined, 'SERVICE');
 
     const apiAvailable = await this.checkApiAvailability();
@@ -319,11 +323,11 @@ class StatisticsService {
         // Invalidate cache and refresh
         CacheInvalidation.invalidateStatsData('current');
         
-        // Dispatch UI update event
-        window.dispatchEvent(new CustomEvent('statisticsUpdated'));
+        // Dispatch update events for all time filters
+        this.dispatchAllFiltersUpdate();
         
         logger.info('Focus time added via API', undefined, 'SERVICE');
-        return await this.getFilteredStats('D');
+        return await this.getFilteredStats(filter);
       } catch (error) {
         logger.warn('API failed for focus time, using fallback', error, 'SERVICE');
         this.isApiAvailable = false;
@@ -332,15 +336,17 @@ class StatisticsService {
 
     // Fallback to localStorage
     const fallbackStats = LocalStorageFallback.addFocusTime(minutes);
-    window.dispatchEvent(new CustomEvent('statisticsUpdated'));
+    this.dispatchAllFiltersUpdate();
     logger.debug('Focus time added via fallback', fallbackStats, 'SERVICE');
-    return fallbackStats;
+    
+    // For fallback, always return the requested filter stats
+    return await this.getFilteredStats(filter);
   }
 
   /**
    * Increment sessions
    */
-  async incrementSessions(): Promise<Statistics> {
+  async incrementSessions(filter: TimeFilter = 'D'): Promise<Statistics> {
     logger.info('Incrementing sessions', undefined, 'SERVICE');
 
     const apiAvailable = await this.checkApiAvailability();
@@ -352,11 +358,11 @@ class StatisticsService {
         // Invalidate cache and refresh
         CacheInvalidation.invalidateStatsData('current');
         
-        // Dispatch UI update event
-        window.dispatchEvent(new CustomEvent('statisticsUpdated'));
+        // Dispatch update events for all time filters
+        this.dispatchAllFiltersUpdate();
         
         logger.info('Sessions incremented via API', undefined, 'SERVICE');
-        return await this.getFilteredStats('D');
+        return await this.getFilteredStats(filter);
       } catch (error) {
         logger.warn('API failed for sessions, using fallback', error, 'SERVICE');
         this.isApiAvailable = false;
@@ -365,15 +371,17 @@ class StatisticsService {
 
     // Fallback to localStorage
     const fallbackStats = LocalStorageFallback.incrementSessions();
-    window.dispatchEvent(new CustomEvent('statisticsUpdated'));
+    this.dispatchAllFiltersUpdate();
     logger.debug('Sessions incremented via fallback', fallbackStats, 'SERVICE');
-    return fallbackStats;
+    
+    // For fallback, always return the requested filter stats
+    return await this.getFilteredStats(filter);
   }
 
   /**
    * Increment tasks done
    */
-  async incrementTasksDone(): Promise<Statistics> {
+  async incrementTasksDone(filter: TimeFilter = 'D'): Promise<Statistics> {
     logger.info('Incrementing tasks done', undefined, 'SERVICE');
 
     const apiAvailable = await this.checkApiAvailability();
@@ -385,11 +393,11 @@ class StatisticsService {
         // Invalidate cache and refresh
         CacheInvalidation.invalidateStatsData('current');
         
-        // Dispatch UI update event
-        window.dispatchEvent(new CustomEvent('statisticsUpdated'));
+        // Dispatch update events for all time filters
+        this.dispatchAllFiltersUpdate();
         
         logger.info('Tasks incremented via API', undefined, 'SERVICE');
-        return await this.getFilteredStats('D');
+        return await this.getFilteredStats(filter);
       } catch (error) {
         logger.warn('API failed for tasks, using fallback', error, 'SERVICE');
         this.isApiAvailable = false;
@@ -398,9 +406,11 @@ class StatisticsService {
 
     // Fallback to localStorage
     const fallbackStats = LocalStorageFallback.incrementTasks();
-    window.dispatchEvent(new CustomEvent('statisticsUpdated'));
+    this.dispatchAllFiltersUpdate();
     logger.debug('Tasks incremented via fallback', fallbackStats, 'SERVICE');
-    return fallbackStats;
+    
+    // For fallback, always return the requested filter stats
+    return await this.getFilteredStats(filter);
   }
 
   /**
@@ -421,6 +431,85 @@ class StatisticsService {
   }
 
   /**
+   * Set statistics to specific values
+   */
+  async setStatistics(stats: Statistics): Promise<Statistics> {
+    logger.info('Setting statistics to specific values', stats, 'SERVICE');
+    
+    // Store in localStorage (always available)
+    LocalStorageFallback.set(stats);
+    
+    // Clear cache to force refresh
+    CacheInvalidation.invalidateStatsData('current');
+    
+    // Try to sync with API if available
+    const apiAvailable = await this.checkApiAvailability();
+    if (apiAvailable) {
+      try {
+        const today = DateUtils.getCurrentDate();
+        await statisticsApiService.updateStatistics(today, {
+          focus_time: stats.focusTime,
+          sessions: stats.sessions,
+          tasks_done: stats.tasksDone
+        });
+        logger.info('Statistics synced with API', stats, 'SERVICE');
+      } catch (error) {
+        logger.warn('Failed to sync with API, using localStorage only', error, 'SERVICE');
+      }
+    }
+    
+    // Dispatch update events for all time filters
+    this.dispatchAllFiltersUpdate();
+    
+    return stats;
+  }
+
+  /**
+   * Check if it's past midnight and reset if needed
+   * Also handles week and month resets
+   */
+  async checkAndResetAtMidnight(): Promise<void> {
+    const lastResetDate = localStorage.getItem('lastStatisticsReset');
+    const currentDate = DateUtils.getCurrentDate();
+    
+    let resetOccurred = false;
+    
+    // Check for new day (daily reset)
+    if (lastResetDate !== currentDate) {
+      logger.info('New day detected - resetting daily statistics', { lastResetDate, currentDate }, 'SERVICE');
+      
+      // Reset daily statistics
+      await this.setStatistics({ focusTime: 0, sessions: 0, tasksDone: 0 });
+      
+      // Update last reset date
+      localStorage.setItem('lastStatisticsReset', currentDate);
+      resetOccurred = true;
+      
+      logger.info('Daily statistics reset completed', undefined, 'SERVICE');
+    }
+    
+    // Check for new week
+    if (DateUtils.isNewWeek()) {
+      logger.info('New week detected - clearing weekly cache', undefined, 'SERVICE');
+      cacheService.delete(`${CacheKeys.STATISTICS_WEEKLY}_${DateUtils.getStartOfWeek()}_current`);
+      resetOccurred = true;
+    }
+    
+    // Check for new month
+    if (DateUtils.isNewMonth()) {
+      logger.info('New month detected - clearing monthly cache', undefined, 'SERVICE');
+      cacheService.delete(`${CacheKeys.STATISTICS_MONTHLY}_${DateUtils.getStartOfMonth()}_current`);
+      resetOccurred = true;
+    }
+    
+    // Update tracking
+    if (resetOccurred) {
+      DateUtils.updateResetTracking();
+      this.dispatchAllFiltersUpdate();
+    }
+  }
+
+  /**
    * Clear all statistics data
    */
   async clearAllData(): Promise<void> {
@@ -435,8 +524,11 @@ class StatisticsService {
     // Reset API availability
     this.isApiAvailable = null;
     
-    // Dispatch update event
-    window.dispatchEvent(new CustomEvent('statisticsUpdated'));
+    // Clear reset tracking
+    localStorage.removeItem('lastStatisticsReset');
+    
+    // Dispatch update events for all time filters
+    this.dispatchAllFiltersUpdate();
     
     logger.info('All statistics data cleared', undefined, 'SERVICE');
   }
@@ -497,9 +589,11 @@ export { statisticsService };
 
 // Legacy exports for backward compatibility
 export const getFilteredStats = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.getFilteredStats(filter);
-export const addFocusTime = (minutes: number): Promise<Statistics> => statisticsService.addFocusTime(minutes);
-export const incrementSessions = (): Promise<Statistics> => statisticsService.incrementSessions();
-export const incrementTasksDone = (): Promise<Statistics> => statisticsService.incrementTasksDone();
+export const addFocusTime = (minutes: number, filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.addFocusTime(minutes, filter);
+export const incrementSessions = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.incrementSessions(filter);
+export const incrementTasksDone = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.incrementTasksDone(filter);
+export const setStatistics = (stats: Statistics): Promise<Statistics> => statisticsService.setStatistics(stats);
+export const checkAndResetAtMidnight = (): Promise<void> => statisticsService.checkAndResetAtMidnight();
 export const refreshStatistics = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.refreshStatistics(filter);
 export const clearAllStatistics = (): Promise<void> => statisticsService.clearAllData();
 export const resetApiAvailability = (): void => statisticsService.resetApiAvailability();

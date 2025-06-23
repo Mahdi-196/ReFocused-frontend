@@ -5,6 +5,7 @@ import { inter } from './fonts';
 import '../globals.css';
 import ClientLayoutWrapper from '@/components/ClientLayoutWrapper';
 import PerformanceMonitor from '@/components/PerformanceMonitor';
+import { TimeProvider } from '@/contexts/TimeContext';
 
 export const metadata: Metadata = {
   title: 'Daily Mantra & Weekly Mindfulness Theme | ReFocused',
@@ -141,9 +142,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen" suppressHydrationWarning={true}>
         <PerformanceMonitor />
-        <ClientLayoutWrapper>
-          {children}
-        </ClientLayoutWrapper>
+        <TimeProvider>
+          <ClientLayoutWrapper>
+            {children}
+          </ClientLayoutWrapper>
+        </TimeProvider>
       </body>
     </html>
   );

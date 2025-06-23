@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from '@/components/icons';
 import { FaBrain, FaRobot } from 'react-icons/fa';
@@ -8,6 +8,22 @@ import Footer from '@/components/footer';
 import AuthModal from '@/components/AuthModal';
 import { getStudySets } from '@/services/studyService';
 import { authService } from '@/api/services/authService';
+import { useRouter } from 'next/navigation';
+import AuthGuard from '@/components/AuthGuard';
+import Header from '@/components/Header';
+import { DailyMomentum } from './homeComponents/DailyMomentum';
+import { GoalTracker } from './homeComponents/GoalTracker';
+import { QuickAccess } from './homeComponents/QuickAccess';
+import { TaskList } from './homeComponents/TaskList';
+import { ProductivityScore } from './homeComponents/ProductivityScore';
+import { CircularProgress } from './homeComponents/CircularProgress';
+import { WordOfTheDay } from './homeComponents/WordOfTheDay';
+import { HabitStreaks } from './homeComponents/HabitStreaks';
+import { MoodStats } from './homeComponents/MoodStats';
+import { MindFuel } from './homeComponents/MindFuel';
+import { useAuth } from '@/contexts/AuthContext';
+import { Task } from '@/components/textEditor';
+import { useCurrentDate, useTime } from '@/contexts/TimeContext';
 
 // Type for orb configuration
 type Orb = {
@@ -20,6 +36,14 @@ type Orb = {
 };
 
 export default function HomePage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const currentDate = useCurrentDate();
+  const { getCurrentDateTime } = useTime();
+  
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [completedTasksCount, setCompletedTasksCount] = useState(0);
+
   // State for orbs
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [isMounted, setIsMounted] = useState(false);
@@ -119,6 +143,18 @@ Is authenticated: ${authService.isAuthenticated()}`);
     }));
     
     setCacheTestResult('🧪 Test authentication set up! You can now test the study sets cache.');
+  };
+
+  const addTask = (text: string, priority: 'high' | 'medium' | 'low' = 'medium') => {
+    const newTask: Task = {
+      id: Date.now().toString(),
+      text,
+      completed: false,
+      priority,
+      createdAt: getCurrentDateTime() // Use time service for consistent timestamps
+    };
+    
+    setTasks(prev => [...prev, newTask]);
   };
 
   return (

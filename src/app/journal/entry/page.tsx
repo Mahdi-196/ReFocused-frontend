@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { useTime } from '@/contexts/TimeContext';
 
 // Import types and hooks
 import type { Entry } from "../types";
@@ -27,6 +28,7 @@ function EntryContent() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [entryId, setEntryId] = useState<string | null>(null);
+  const { getCurrentDateTime } = useTime();
 
   // Set collection ID and load entry data from URL
   useEffect(() => {
@@ -68,8 +70,8 @@ function EntryContent() {
         id: entryId || crypto.randomUUID(),
         title: title.trim() || "Untitled Entry",
         content,
-        createdAt: entryId ? undefined : new Date().toISOString(),
-        lastSavedAt: new Date().toISOString(),
+        createdAt: entryId ? undefined : getCurrentDateTime(),
+        lastSavedAt: getCurrentDateTime(),
       };
 
       saveEntry(selectedCollectionId, entry);

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, VolumeX, Menu, X } from "lucide-react";
-import DevTools from "./devTools";
 import AuthButton from "./AuthButton";
 
 import { useState } from "react";
@@ -61,7 +60,6 @@ const Header = () => {
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" />
               <span className="text-xl font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)]">ReFocused</span>
-              <DevTools />
             </motion.div>
           </div>
 

@@ -1,9 +1,26 @@
+/**
+ * Production Tracking Types
+ * Timezone-aware habit and mood tracking interfaces
+ */
+
 export interface UserHabit {
   id: number;
   name: string;
   streak: number;
   isFavorite: boolean;
   createdAt: Date;
+  updatedAt?: Date;
+  isActive?: boolean;
+  lastCompletedDate?: string; // ISO date string for timezone handling
+}
+
+export interface HabitCompletion {
+  id?: number;
+  habitId: number;
+  date: string; // ISO date string (YYYY-MM-DD)
+  completed: boolean;
+  completedAt?: Date;
+  timezone?: string;
 }
 
 export interface DailyEntry {
@@ -41,6 +58,7 @@ export interface CalendarDay {
   moodScore?: number;
   dayClass: string;
   hasData: boolean;
+  habitCompletions?: number; // Number of habits completed
 }
 
 export interface CacheStats {
@@ -48,5 +66,10 @@ export interface CacheStats {
   maxSize: number;
   expired: number;
   hitRate: number;
-  entries: { key: string; age: number; ttl: number; version: string | undefined; }[];
+  entries: { 
+    key: string; 
+    age: number; 
+    ttl: number; 
+    version: string | undefined; 
+  }[];
 } 

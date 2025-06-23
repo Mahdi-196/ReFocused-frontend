@@ -62,8 +62,8 @@ export default function TestingSection({
   const testAddFocusTime = async () => {
     try {
       setStatsLoading(true);
-      console.log('🔄 [TEST] Adding 25 minutes of focus time...');
-      const updatedStats = await statisticsService.addFocusTime(25);
+      console.log('🔄 [TEST] Adding 25 minutes of focus time with filter:', timeFilter);
+      const updatedStats = await statisticsService.addFocusTime(25, timeFilter);
       setStats(updatedStats);
       console.log('🎉 [TEST] Test completed! Check stats above for changes.');
     } catch (error) {
@@ -76,8 +76,8 @@ export default function TestingSection({
   const testIncrementSessions = async () => {
     try {
       setStatsLoading(true);
-      console.log('🔄 [TEST] Adding 1 session...');
-      const updatedStats = await statisticsService.incrementSessions();
+      console.log('🔄 [TEST] Adding 1 session with filter:', timeFilter);
+      const updatedStats = await statisticsService.incrementSessions(timeFilter);
       setStats(updatedStats);
       console.log('🎉 [TEST] Test completed! Check stats above for changes.');
     } catch (error) {
@@ -90,8 +90,8 @@ export default function TestingSection({
   const testIncrementTasks = async () => {
     try {
       setStatsLoading(true);
-      console.log('🔄 [TEST] Adding 1 completed task...');
-      const updatedStats = await statisticsService.incrementTasksDone();
+      console.log('🔄 [TEST] Adding 1 completed task with filter:', timeFilter);
+      const updatedStats = await statisticsService.incrementTasksDone(timeFilter);
       setStats(updatedStats);
       console.log('🎉 [TEST] Test completed! Check stats above for changes.');
     } catch (error) {
@@ -104,14 +104,14 @@ export default function TestingSection({
   const testSimulateDay = async () => {
     try {
       setStatsLoading(true);
-      console.log('🔄 [TEST] Starting productive day simulation...');
+      console.log('🔄 [TEST] Starting productive day simulation with filter:', timeFilter);
       
-      await statisticsService.addFocusTime(100);
+      await statisticsService.addFocusTime(100, timeFilter);
       for (let i = 0; i < 4; i++) {
-        await statisticsService.incrementSessions();
+        await statisticsService.incrementSessions(timeFilter);
       }
       for (let i = 0; i < 5; i++) {
-        await statisticsService.incrementTasksDone();
+        await statisticsService.incrementTasksDone(timeFilter);
       }
       
       await refreshStats();

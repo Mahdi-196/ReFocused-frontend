@@ -3,15 +3,24 @@
 import React, { useState } from 'react';
 import client from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getStudySets, createStudySet, deleteStudySet } from '@/services/studyService';
+import { useTime } from '@/contexts/TimeContext';
 
 interface DebugResult {
   timestamp: string;
   endpoint: string;
   method: string;
-  request?: any;
-  response?: any;
+  request?: unknown;
+  response?: unknown;
   error?: string;
   status?: number;
+}
+
+interface AxiosError {
+  response?: {
+    status?: number;
+  };
+  message?: string;
 }
 
 export default function BackendDebugger() {
@@ -19,6 +28,7 @@ export default function BackendDebugger() {
   const [results, setResults] = useState<DebugResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user, isAuthenticated } = useAuth();
+  const { getCurrentDateTime } = useTime();
 
   const addResult = (result: DebugResult) => {
     setResults(prev => [result, ...prev].slice(0, 10)); // Keep last 10 results
@@ -31,7 +41,7 @@ export default function BackendDebugger() {
   // Test GET statistics endpoint
   const testGetStatistics = async () => {
     setIsLoading(true);
-    const timestamp = new Date().toISOString();
+    const timestamp = getCurrentDateTime();
     
     try {
       const response = await client.get('/statistics', {
@@ -49,14 +59,14 @@ export default function BackendDebugger() {
         response: response.data,
         status: response.status
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       addResult({
         timestamp,
         endpoint: '/statistics',
         method: 'GET',
         request: { startDate: '2025-06-20', endDate: '2025-06-20' },
-        error: error.message,
-        status: error.response?.status
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: (error as AxiosError)?.response?.status
       });
     } finally {
       setIsLoading(false);
@@ -66,7 +76,7 @@ export default function BackendDebugger() {
   // Test POST focus endpoint
   const testPostFocus = async () => {
     setIsLoading(true);
-    const timestamp = new Date().toISOString();
+    const timestamp = getCurrentDateTime();
     
     try {
       const response = await client.post('/statistics/focus', {
@@ -81,14 +91,14 @@ export default function BackendDebugger() {
         response: response.data,
         status: response.status
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       addResult({
         timestamp,
         endpoint: '/statistics/focus',
         method: 'POST',
         request: { minutes: 25 },
-        error: error.message,
-        status: error.response?.status
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: (error as AxiosError)?.response?.status
       });
     } finally {
       setIsLoading(false);
@@ -98,7 +108,7 @@ export default function BackendDebugger() {
   // Test POST sessions endpoint
   const testPostSessions = async () => {
     setIsLoading(true);
-    const timestamp = new Date().toISOString();
+    const timestamp = getCurrentDateTime();
     
     try {
       const response = await client.post('/statistics/sessions', {
@@ -113,14 +123,14 @@ export default function BackendDebugger() {
         response: response.data,
         status: response.status
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       addResult({
         timestamp,
         endpoint: '/statistics/sessions',
         method: 'POST',
         request: { increment: 1 },
-        error: error.message,
-        status: error.response?.status
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: (error as AxiosError)?.response?.status
       });
     } finally {
       setIsLoading(false);
@@ -130,7 +140,7 @@ export default function BackendDebugger() {
   // Test POST tasks endpoint
   const testPostTasks = async () => {
     setIsLoading(true);
-    const timestamp = new Date().toISOString();
+    const timestamp = getCurrentDateTime();
     
     try {
       const response = await client.post('/statistics/tasks', {
@@ -145,14 +155,14 @@ export default function BackendDebugger() {
         response: response.data,
         status: response.status
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       addResult({
         timestamp,
         endpoint: '/statistics/tasks',
         method: 'POST',
         request: { increment: 1 },
-        error: error.message,
-        status: error.response?.status
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: (error as AxiosError)?.response?.status
       });
     } finally {
       setIsLoading(false);
@@ -222,6 +232,146 @@ export default function BackendDebugger() {
         backendFixNeeded: 'Backend should use server local date, not UTC date for daily statistics'
       }
     });
+  };
+
+  const testCreateStudySet = async () => {
+    try {
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: '/study-sets',
+        method: 'POST',
+        request: {
+          name: `Debug Test Set ${getCurrentDateTime()}`,
+          description: 'Created by debug tool',
+          flashcards: [
+            {
+              question: 'Test Question 1',
+              answer: 'Test Answer 1'
+            }
+          ]
+        },
+        response: null,
+        status: 200
+      });
+      
+      const createdSet = await createStudySet({
+        name: `Debug Test Set ${getCurrentDateTime()}`,
+        description: 'Created by debug tool',
+        flashcards: [
+          {
+            question: 'Test Question 1',
+            answer: 'Test Answer 1'
+          }
+        ]
+      });
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: '/study-sets',
+        method: 'POST',
+        request: {
+          name: `Debug Test Set ${getCurrentDateTime()}`,
+          description: 'Created by debug tool',
+          flashcards: [
+            {
+              question: 'Test Question 1',
+              answer: 'Test Answer 1'
+            }
+          ]
+        },
+        response: createdSet,
+        status: 200
+      });
+      return createdSet.id;
+    } catch (error) {
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: '/study-sets',
+        method: 'POST',
+        request: {
+          name: `Debug Test Set ${getCurrentDateTime()}`,
+          description: 'Created by debug tool',
+          flashcards: [
+            {
+              question: 'Test Question 1',
+              answer: 'Test Answer 1'
+            }
+          ]
+        },
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: 500
+      });
+      return null;
+    }
+  };
+
+  const testGetStudySets = async () => {
+    try {
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: '/study-sets',
+        method: 'GET',
+        request: null,
+        response: null,
+        status: 200
+      });
+      
+      const studySets = await getStudySets();
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: '/study-sets',
+        method: 'GET',
+        request: null,
+        response: studySets,
+        status: 200
+      });
+      
+      return studySets;
+    } catch (error) {
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: '/study-sets',
+        method: 'GET',
+        request: null,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: 500
+      });
+      return [];
+    }
+  };
+
+  const testDeleteStudySet = async (setId: number) => {
+    try {
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: `/study-sets/${setId}`,
+        method: 'DELETE',
+        request: null,
+        response: null,
+        status: 200
+      });
+      
+      await deleteStudySet(setId);
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: `/study-sets/${setId}`,
+        method: 'DELETE',
+        request: null,
+        response: null,
+        status: 200
+      });
+      
+      return true;
+    } catch (error) {
+      addResult({
+        timestamp: getCurrentDateTime(),
+        endpoint: `/study-sets/${setId}`,
+        method: 'DELETE',
+        request: null,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: 500
+      });
+      return false;
+    }
   };
 
   if (!isVisible) {
@@ -345,14 +495,14 @@ export default function BackendDebugger() {
                 {new Date(result.timestamp).toLocaleTimeString()}
               </div>
               
-              {result.request && (
+              {result.request != null && (
                 <div className="mb-1">
                   <span className="text-yellow-400">Request:</span>
                   <pre className="text-xs text-gray-300 ml-2">{JSON.stringify(result.request, null, 2)}</pre>
                 </div>
               )}
               
-              {result.response && (
+              {result.response != null && (
                 <div className="mb-1">
                   <span className="text-green-400">Response:</span>
                   <pre className="text-xs text-gray-300 ml-2">{JSON.stringify(result.response, null, 2)}</pre>

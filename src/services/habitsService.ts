@@ -1,7 +1,13 @@
 import client from '@/api/client';
+import { HABITS } from '@/api/endpoints';
 import { cacheService } from './cacheService';
 
-// Habit interfaces
+/**
+ * Production Habits Service
+ * Timezone-aware habit tracking with on-demand reset functionality
+ */
+
+// Core interfaces
 export interface UserHabit {
   id: number;
   name: string;
@@ -10,14 +16,16 @@ export interface UserHabit {
   createdAt: Date;
   updatedAt?: Date;
   isActive?: boolean;
+  lastCompletedDate?: string; // ISO date string for timezone handling
 }
 
 export interface HabitCompletion {
   id?: number;
   habitId: number;
-  date: string;
+  date: string; // ISO date string (YYYY-MM-DD)
   completed: boolean;
-  createdAt?: Date;
+  completedAt?: Date;
+  timezone?: string;
 }
 
 export interface CreateHabitRequest {
@@ -33,66 +41,82 @@ export interface UpdateHabitRequest {
 
 // Cache configuration
 const HABITS_CACHE_PREFIX = 'habits';
-const HABITS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const HABITS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Get all user habits
- * Uses caching to improve performance
+ * Send user's timezone with all requests that need it
+ */
+function getTimezoneHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  
+  try {
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return {
+      'X-User-Timezone': userTimezone
+    };
+  } catch (error) {
+    console.warn('Failed to get user timezone:', error);
+    return {};
+  }
+}
+
+/**
+ * Convert backend snake_case to frontend camelCase
+ */
+function transformHabitFromBackend(rawHabit: any): UserHabit {
+  return {
+    id: rawHabit.id,
+    name: rawHabit.name,
+    streak: rawHabit.streak || 0,
+    isFavorite: rawHabit.is_favorite || false,
+    isActive: rawHabit.is_active !== false, // Default to true
+    createdAt: new Date(rawHabit.created_at),
+    updatedAt: rawHabit.updated_at ? new Date(rawHabit.updated_at) : undefined,
+    lastCompletedDate: rawHabit.last_completed_date
+  };
+}
+
+/**
+ * Convert habit completion from backend
+ */
+function transformCompletionFromBackend(rawCompletion: any): HabitCompletion {
+  return {
+    id: rawCompletion.id,
+    habitId: rawCompletion.habit_id,
+    date: rawCompletion.date,
+    completed: rawCompletion.completed,
+    completedAt: rawCompletion.completed_at ? new Date(rawCompletion.completed_at) : undefined,
+    timezone: rawCompletion.timezone
+  };
+}
+
+/**
+ * Get all user habits with timezone-aware reset check
  */
 export async function getHabits(): Promise<UserHabit[]> {
   const cacheKey = `${HABITS_CACHE_PREFIX}_all`;
   
   try {
-    // Try to get from cache first
+    // Check cache first
     const cached = cacheService.get<UserHabit[]>(cacheKey);
     if (cached) {
       return cached;
     }
 
-    // Fetch from API
-    const response = await client.get('/api/habits');
+    // Fetch from API with timezone header
+    const response = await client.get(HABITS.BASE, {
+      headers: getTimezoneHeaders()
+    });
     
-    const habits = response.data || [];
+    // Transform and cache results
+    const rawHabits = response.data || [];
+    const habits: UserHabit[] = rawHabits.map(transformHabitFromBackend);
     
-    // Cache the results
     cacheService.set(cacheKey, habits, HABITS_CACHE_TTL);
-    
     return habits;
   } catch (error) {
     console.warn('Failed to fetch habits:', error);
-    
-    // Return empty array as fallback
     return [];
-  }
-}
-
-/**
- * Get a single habit by ID
- */
-export async function getHabit(habitId: number): Promise<UserHabit | null> {
-  const cacheKey = `${HABITS_CACHE_PREFIX}_${habitId}`;
-  
-  try {
-    // Try to get from cache first
-    const cached = cacheService.get<UserHabit>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    // Fetch from API
-    const response = await client.get(`/api/habits/${habitId}`);
-    
-    const habit = response.data;
-    
-    // Cache the result
-    if (habit) {
-      cacheService.set(cacheKey, habit, HABITS_CACHE_TTL);
-    }
-    
-    return habit || null;
-  } catch (error) {
-    console.warn('Failed to fetch habit:', error);
-    return null;
   }
 }
 
@@ -100,62 +124,54 @@ export async function getHabit(habitId: number): Promise<UserHabit | null> {
  * Create a new habit
  */
 export async function createHabit(habitData: CreateHabitRequest): Promise<UserHabit> {
-  try {
-    const response = await client.post('/api/habits', habitData);
-    
-    const newHabit = response.data;
-    
-    // Invalidate habits cache
-    cacheService.invalidateByPattern(`${HABITS_CACHE_PREFIX}_*`);
-    
-    // Cache the new habit
-    cacheService.set(`${HABITS_CACHE_PREFIX}_${newHabit.id}`, newHabit, HABITS_CACHE_TTL);
-    
-    return newHabit;
-  } catch (error) {
-    console.error('Failed to create habit:', error);
-    throw error;
-  }
+  const backendPayload = {
+    name: habitData.name,
+    is_favorite: habitData.isFavorite || false
+  };
+  
+  const response = await client.post(HABITS.BASE, backendPayload, {
+    headers: getTimezoneHeaders()
+  });
+  
+  const newHabit = transformHabitFromBackend(response.data);
+  
+  // Invalidate cache
+  cacheService.invalidateByPattern(`${HABITS_CACHE_PREFIX}_*`);
+  
+  return newHabit;
 }
 
 /**
  * Update an existing habit
  */
 export async function updateHabit(habitId: number, updates: UpdateHabitRequest): Promise<UserHabit> {
-  try {
-    const response = await client.put(`/api/habits/${habitId}`, updates);
-    
-    const updatedHabit = response.data;
-    
-    // Invalidate related cache entries
-    cacheService.invalidate(`${HABITS_CACHE_PREFIX}_all`);
-    cacheService.invalidate(`${HABITS_CACHE_PREFIX}_${habitId}`);
-    
-    // Cache the updated habit
-    cacheService.set(`${HABITS_CACHE_PREFIX}_${habitId}`, updatedHabit, HABITS_CACHE_TTL);
-    
-    return updatedHabit;
-  } catch (error) {
-    console.error('Failed to update habit:', error);
-    throw error;
-  }
+  const backendPayload: any = {};
+  if (updates.name !== undefined) backendPayload.name = updates.name;
+  if (updates.isFavorite !== undefined) backendPayload.is_favorite = updates.isFavorite;
+  if (updates.isActive !== undefined) backendPayload.is_active = updates.isActive;
+  
+  const response = await client.put(HABITS.DETAIL(habitId), backendPayload, {
+    headers: getTimezoneHeaders()
+  });
+  
+  const updatedHabit = transformHabitFromBackend(response.data);
+  
+  // Invalidate cache
+  cacheService.invalidateByPattern(`${HABITS_CACHE_PREFIX}_*`);
+  
+  return updatedHabit;
 }
 
 /**
  * Delete a habit
  */
 export async function deleteHabit(habitId: number): Promise<void> {
-  try {
-    await client.delete(`/api/habits/${habitId}`);
-    
-    // Invalidate related cache entries
-    cacheService.invalidate(`${HABITS_CACHE_PREFIX}_all`);
-    cacheService.invalidate(`${HABITS_CACHE_PREFIX}_${habitId}`);
-    cacheService.invalidateByPattern(`${HABITS_CACHE_PREFIX}_completions_*`);
-  } catch (error) {
-    console.error('Failed to delete habit:', error);
-    throw error;
-  }
+  await client.delete(HABITS.DETAIL(habitId), {
+    headers: getTimezoneHeaders()
+  });
+  
+  // Invalidate cache
+  cacheService.invalidateByPattern(`${HABITS_CACHE_PREFIX}_*`);
 }
 
 /**
@@ -165,57 +181,59 @@ export async function getHabitCompletions(startDate: string, endDate: string): P
   const cacheKey = `${HABITS_CACHE_PREFIX}_completions_${startDate}_${endDate}`;
   
   try {
-    // Try to get from cache first
+    // Check cache first
     const cached = cacheService.get<HabitCompletion[]>(cacheKey);
     if (cached) {
       return cached;
     }
 
-    // Fetch from API
-    const response = await client.get('/api/habits/completions', {
-      params: { startDate, endDate }
+    const response = await client.get(`${HABITS.BASE}/completions`, {
+      params: { start_date: startDate, end_date: endDate },
+      headers: getTimezoneHeaders()
     });
     
-    const completions = response.data || [];
+    const rawCompletions = response.data || [];
+    const completions = rawCompletions.map(transformCompletionFromBackend);
     
-    // Cache the results
-    cacheService.set(cacheKey, completions, HABITS_CACHE_TTL);
+    // Cache for shorter time since completions change frequently
+    cacheService.set(cacheKey, completions, 60000); // 1 minute
     
     return completions;
   } catch (error) {
     console.warn('Failed to fetch habit completions:', error);
-    
-    // Return empty array as fallback
     return [];
   }
 }
 
 /**
- * Mark a habit as completed or uncompleted for a specific date
+ * Mark habit completion/incompletion
+ * This is the core timezone-aware operation
  */
-export async function markHabitCompletion(habitId: number, date: string, completed: boolean): Promise<HabitCompletion> {
-  try {
-    const response = await client.post('/api/habits/completions', {
-      habitId,
-      date,
-      completed
-    });
-    
-    const completion = response.data;
-    
-    // Invalidate related cache entries
-    cacheService.invalidateByPattern(`${HABITS_CACHE_PREFIX}_completions_*`);
-    cacheService.invalidate(`${HABITS_CACHE_PREFIX}_all`); // Might affect streaks
-    
-    return completion;
-  } catch (error) {
-    console.error('Failed to mark habit completion:', error);
-    throw error;
-  }
+export async function markHabitCompletion(
+  habitId: number, 
+  date: string, 
+  completed: boolean
+): Promise<HabitCompletion> {
+  const payload = {
+    habitId: habitId,
+    date: date, // ISO date string (YYYY-MM-DD)
+    completed: completed
+  };
+  
+  const response = await client.post(`${HABITS.BASE}/completions`, payload, {
+    headers: getTimezoneHeaders()
+  });
+  
+  const completion = transformCompletionFromBackend(response.data);
+  
+  // Invalidate relevant caches
+  cacheService.invalidateByPattern(`${HABITS_CACHE_PREFIX}_*`);
+  
+  return completion;
 }
 
 /**
- * Get habit statistics for a specific habit
+ * Get habit statistics
  */
 export async function getHabitStats(habitId: number, startDate?: string, endDate?: string): Promise<{
   currentStreak: number;
@@ -223,97 +241,24 @@ export async function getHabitStats(habitId: number, startDate?: string, endDate
   totalCompletions: number;
   completionRate: number;
 }> {
-  const cacheKey = `${HABITS_CACHE_PREFIX}_stats_${habitId}_${startDate || 'all'}_${endDate || 'all'}`;
+  const params: any = {};
+  if (startDate) params.start_date = startDate;
+  if (endDate) params.end_date = endDate;
   
   try {
-    // Define default stats
-    const stats = {
-      currentStreak: 0,
-      longestStreak: 0,
-      totalCompletions: 0,
-      completionRate: 0
-    };
+    const response = await client.get(`${HABITS.BASE}/${habitId}/stats`, {
+      params,
+      headers: getTimezoneHeaders()
+    });
     
-    // Try to get from cache first
-    const cached = cacheService.get<typeof stats>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    // Fetch from API
-    const params: Record<string, string> = {};
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-    
-    const response = await client.get(`/api/habits/${habitId}/stats`, { params });
-    
-    const responseStats = response.data || stats;
-    
-    // Cache the results
-    cacheService.set(cacheKey, responseStats, HABITS_CACHE_TTL);
-    
-    return responseStats;
+    return response.data;
   } catch (error) {
     console.warn('Failed to fetch habit stats:', error);
-    
-    // Return default stats as fallback
     return {
       currentStreak: 0,
       longestStreak: 0,
       totalCompletions: 0,
       completionRate: 0
-    };
-  }
-}
-
-/**
- * Get overall habits statistics
- */
-export async function getOverallHabitsStats(startDate?: string, endDate?: string): Promise<{
-  totalHabits: number;
-  activeHabits: number;
-  totalCompletions: number;
-  averageCompletionRate: number;
-}> {
-  const cacheKey = `${HABITS_CACHE_PREFIX}_overall_stats_${startDate || 'all'}_${endDate || 'all'}`;
-  
-  try {
-    // Define default stats
-    const stats = {
-      totalHabits: 0,
-      activeHabits: 0,
-      totalCompletions: 0,
-      averageCompletionRate: 0
-    };
-    
-    // Try to get from cache first
-    const cached = cacheService.get<typeof stats>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    // Fetch from API
-    const params: Record<string, string> = {};
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-    
-    const response = await client.get('/api/habits/stats', { params });
-    
-    const responseStats = response.data || stats;
-    
-    // Cache the results
-    cacheService.set(cacheKey, responseStats, HABITS_CACHE_TTL);
-    
-    return responseStats;
-  } catch (error) {
-    console.warn('Failed to fetch overall habits stats:', error);
-    
-    // Return default stats as fallback
-    return {
-      totalHabits: 0,
-      activeHabits: 0,
-      totalCompletions: 0,
-      averageCompletionRate: 0
     };
   }
 }
@@ -323,4 +268,16 @@ export async function getOverallHabitsStats(startDate?: string, endDate?: string
  */
 export function clearHabitsCache(): void {
   cacheService.invalidateByPattern(`${HABITS_CACHE_PREFIX}_*`);
+}
+
+/**
+ * Toggle habit completion status
+ * Alias for markHabitCompletion for backwards compatibility
+ */
+export async function toggleHabitCompletion(
+  habitId: number, 
+  date: string, 
+  completed: boolean
+): Promise<HabitCompletion> {
+  return markHabitCompletion(habitId, date, completed);
 } 

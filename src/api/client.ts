@@ -21,6 +21,18 @@ client.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
+    
+    // Always add timezone header for better backend integration
+    if (typeof window !== 'undefined') {
+      try {
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        config.headers = config.headers || {};
+        config.headers['X-User-Timezone'] = userTimezone;
+      } catch (error) {
+        console.warn('Failed to get user timezone:', error);
+      }
+    }
+    
     return config;
   },
   (error) => {
@@ -31,7 +43,7 @@ client.interceptors.request.use(
 // Response interceptor for error handling
 client.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     // Handle timeout errors
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
       logger.warn('API request timed out after 30 seconds', { url: error.config?.url }, 'API');
@@ -45,11 +57,16 @@ client.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
-      // Handle unauthorized access
+      // Handle unauthorized access - token expired or invalid
+      logger.warn('Authentication failed - token may be expired', { url: error.config?.url }, 'API');
+      
       if (typeof window !== 'undefined') {
+        // Clear expired/invalid token
         localStorage.removeItem('REF_TOKEN');
         localStorage.removeItem('REF_USER');
         delete client.defaults.headers.common['Authorization'];
+        
+        // Redirect to home page for re-authentication
         window.location.href = '/';
       }
     }
@@ -63,8 +80,10 @@ export const initializeAuth = () => {
     const token = localStorage.getItem("REF_TOKEN");
     if (token && token !== 'dummy-auth-token') {
       client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      logger.debug('Auth initialized with token', undefined, 'AUTH');
+      logger.debug('Auth initialized with token', token.substring(0, 10) + '...', 'AUTH');
     } else {
+      // Clear any existing auth header
+      delete client.defaults.headers.common["Authorization"];
       logger.debug('No valid token found for auth initialization', undefined, 'AUTH');
     }
   }
