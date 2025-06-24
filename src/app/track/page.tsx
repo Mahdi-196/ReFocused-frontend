@@ -136,8 +136,6 @@ export default function TrackPage() {
               currentMonth={currentMonth}
               setCurrentMonth={setCurrentMonth}
               habits={habits}
-              dailyEntries={dailyEntries}
-              moodEntries={moodEntries}
             />
           </div>
         </div>

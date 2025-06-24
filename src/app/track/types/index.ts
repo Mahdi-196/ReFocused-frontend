@@ -61,6 +61,30 @@ export interface CalendarDay {
   habitCompletions?: number; // Number of habits completed
 }
 
+export interface DailyCalendarEntry {
+  id?: number;
+  date: string; // ISO date string (YYYY-MM-DD)
+  userId: number;
+  habitCompletions: DailyHabitCompletion[];
+  moodEntry?: {
+    happiness: number;
+    satisfaction: number;
+    stress: number;
+  };
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  isLocked?: boolean; // Prevents modification of past entries
+}
+
+export interface DailyHabitCompletion {
+  habitId: number;
+  habitName: string; // Store name for historical reference
+  completed: boolean;
+  completedAt?: Date;
+  wasActiveOnDate: boolean; // Was this habit active on this date
+}
+
 export interface CacheStats {
   size: number;
   maxSize: number;

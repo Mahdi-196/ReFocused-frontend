@@ -20,9 +20,6 @@ export default function HabitModal({
 }: HabitModalProps) {
   if (!isOpen || !habit) return null;
 
-  const currentFavoriteCount = habits.filter(h => h.isFavorite).length;
-  const isAtLimit = currentFavoriteCount >= 3;
-
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
       <div className="bg-gray-800 text-white rounded-lg p-6 w-96 shadow-lg">
@@ -47,27 +44,13 @@ export default function HabitModal({
             </div>
           </div>
 
-          {(() => {
-            if (habit.isFavorite) {
-              return (
-                <p className="text-xs text-blue-400 text-center">
-                  This habit is currently pinned to the top
-                </p>
-              );
-            } else if (isAtLimit) {
-              return (
-                <p className="text-xs text-yellow-400 text-center">
-                  Pin limit reached (3/3). Unpin another habit first.
-                </p>
-              );
-            } else {
-              return (
-                <p className="text-xs text-gray-400 text-center">
-                  Pinned habits ({currentFavoriteCount}/3) appear at the top
-                </p>
-              );
+          {/* Simplified favorite status - no limit checking */}
+          <p className="text-xs text-gray-400 text-center">
+            {habit.isFavorite 
+              ? 'This habit is currently pinned to the top'
+              : 'Pin habit to appear at the top of your list'
             }
-          })()}
+          </p>
         </div>
         <div className="flex justify-between">
           {/* Delete button on the left */}
@@ -86,8 +69,7 @@ export default function HabitModal({
           <div className="flex gap-2">
             <button
               onClick={onToggleFavorite}
-              disabled={!habit.isFavorite && isAtLimit}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md active:scale-95 transform transition-all duration-75 disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-md active:scale-95 transform transition-all duration-75 ${
                 habit.isFavorite
                   ? 'text-blue-300 hover:text-blue-200 hover:bg-blue-900/20'
                   : 'text-gray-300 hover:text-blue-300 hover:bg-blue-900/20'

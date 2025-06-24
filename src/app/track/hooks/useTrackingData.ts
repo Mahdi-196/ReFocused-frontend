@@ -90,15 +90,6 @@ export function useTrackingData(currentMonth: Date) {
         return { success: false, error: 'Please enter a habit name' };
       }
       
-      // Check for duplicates
-      const habitExists = habits.some(
-        habit => habit.name.toLowerCase() === habitName.trim().toLowerCase()
-      );
-
-      if (habitExists) {
-        return { success: false, error: 'This habit already exists' };
-      }
-
       // Create optimistic update
       const optimisticHabit: UserHabit = {
         id: Date.now(),
@@ -111,7 +102,7 @@ export function useTrackingData(currentMonth: Date) {
       setHabits(prev => [...prev, optimisticHabit]);
 
       try {
-        // Create on backend
+        // Create on backend - let backend handle validation
         const newHabit = await createHabit({ name: habitName.trim() });
         
         // Update with real data
@@ -123,7 +114,13 @@ export function useTrackingData(currentMonth: Date) {
       } catch (err) {
         // Revert optimistic update
         setHabits(prev => prev.filter(h => h.id !== optimisticHabit.id));
-        return { success: false, error: 'Failed to create habit. Please try again.' };
+        
+        // Extract error message from backend response
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : 'Failed to create habit. Please try again.';
+          
+        return { success: false, error: errorMessage };
       }
     } catch (err) {
       console.error('Unexpected error in addHabit:', err);
@@ -158,13 +155,6 @@ export function useTrackingData(currentMonth: Date) {
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return { success: false, error: 'Habit not found' };
     
-    const currentFavoriteCount = habits.filter(h => h.isFavorite).length;
-    
-    // Check favorite limit
-    if (!habit.isFavorite && currentFavoriteCount >= 3) {
-      return { success: false, error: 'Maximum 3 habits can be pinned' };
-    }
-    
     try {
       const newFavoriteState = !habit.isFavorite;
       
@@ -173,18 +163,24 @@ export function useTrackingData(currentMonth: Date) {
         prev.map(h => h.id === habitId ? { ...h, isFavorite: newFavoriteState } : h)
       );
       
-      // Update on backend
+      // Update on backend - let backend handle validation
       await updateHabit(habitId, { isFavorite: newFavoriteState });
       
       return { success: true };
     } catch (err) {
-      // Revert optimistic update
+      // Revert optimistic update on error
       setHabits(prev => 
         prev.map(h => h.id === habitId ? { ...h, isFavorite: habit.isFavorite } : h)
       );
       
       console.error('Failed to toggle habit favorite:', err);
-      return { success: false, error: 'Failed to update habit. Please try again.' };
+      
+      // Extract error message from backend response
+      const errorMessage = err instanceof Error && err.message.includes('favorite') 
+        ? err.message 
+        : 'Failed to update habit. Please try again.';
+      
+      return { success: false, error: errorMessage };
     }
   };
 
@@ -246,21 +242,44 @@ export function useTrackingData(currentMonth: Date) {
       total: habits.length 
     };
     
-    const daysTracked = Object.keys(dailyEntries).length;
+    // Calculate last 30 days stats
+    const today = new Date(todayString);
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
     
-    // Calculate monthly completion rate
-    const currentMonthEntries = Object.values(dailyEntries).filter(entry => {
-      const entryDate = new Date(entry.date);
-      const currentMonthDate = new Date(todayString);
-      return entryDate.getMonth() === currentMonthDate.getMonth() && 
-             entryDate.getFullYear() === currentMonthDate.getFullYear();
-    });
+    // Get all habit completions in last 30 days
+    let totalCompletedHabits = 0;
+    let daysWithActivity = 0;
+    const activeDays = new Set<string>();
     
-    const monthlyCompletion = currentMonthEntries.length === 0 
+    // Check habit completions for last 30 days
+    for (let d = new Date(thirtyDaysAgo); d <= today; d.setDate(d.getDate() + 1)) {
+      const dateString = d.toISOString().split('T')[0];
+      let dayHasActivity = false;
+      
+      habits.forEach(habit => {
+        const completionKey = `${habit.id}-${dateString}`;
+        if (habitCompletions[completionKey]) {
+          totalCompletedHabits++;
+          dayHasActivity = true;
+        }
+      });
+      
+      if (dayHasActivity) {
+        activeDays.add(dateString);
+      }
+    }
+    
+    daysWithActivity = activeDays.size;
+    
+    // Calculate completion percentage: completed habits / total possible habits on active days
+    const totalPossibleHabits = daysWithActivity * habits.length;
+    const monthlyCompletion = totalPossibleHabits === 0 
       ? 0 
-      : Math.round((currentMonthEntries.filter(entry => 
-          entry.habitCompletions && entry.habitCompletions.some(hc => hc.completed)
-        ).length / currentMonthEntries.length) * 100);
+      : Math.round((totalCompletedHabits / totalPossibleHabits) * 100);
+    
+    // Days tracked = days where at least one habit was checked
+    const daysTracked = daysWithActivity;
 
     return {
       currentStreak,

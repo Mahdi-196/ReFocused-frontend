@@ -66,3 +66,10 @@ export const STATISTICS = {
   SESSIONS: '/statistics/sessions',
   TASKS: '/statistics/tasks',
 }; 
+
+// Calendar endpoints
+export const CALENDAR = {
+  BASE: '/calendar',
+  ENTRIES: '/calendar/entries',
+  ENTRY_DETAIL: (date: string) => `/calendar/entries/${date}`,
+}; 

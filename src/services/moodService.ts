@@ -114,10 +114,37 @@ export async function getMoodEntry(date: string): Promise<MoodEntry | null> {
  */
 export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
   try {
+    // Validate required fields
+    if (!moodEntry.date || 
+        moodEntry.happiness === undefined || 
+        moodEntry.satisfaction === undefined || 
+        moodEntry.stress === undefined) {
+      throw new Error('Missing required fields: date, happiness, satisfaction, and stress are required');
+    }
+
+    // Validate field ranges (1-5)
+    const validateRange = (value: number, field: string) => {
+      if (value < 1 || value > 5) {
+        throw new Error(`${field} must be between 1 and 5`);
+      }
+    };
+    
+    validateRange(moodEntry.happiness, 'happiness');
+    validateRange(moodEntry.satisfaction, 'satisfaction');
+    validateRange(moodEntry.stress, 'stress');
+
     // Get user timezone for header
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
-    const response = await client.post('/mood/entries', moodEntry, {
+    // Prepare payload with required fields only
+    const payload = {
+      happiness: moodEntry.happiness,
+      satisfaction: moodEntry.satisfaction,
+      stress: moodEntry.stress,
+      date: moodEntry.date
+    };
+    
+    const response = await client.post('/mood/', payload, {
       headers: {
         'X-User-Timezone': userTimezone
       }
@@ -144,7 +171,20 @@ export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
  */
 export async function updateMoodEntry(date: string, updates: Partial<MoodEntry>): Promise<MoodEntry> {
   try {
-    const response = await client.put(`${MOOD.BASE}/entries/${date}`, updates);
+    // Get user timezone for header
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Prepare payload with only the fields that can be updated
+    const payload: any = {};
+    if (updates.happiness !== undefined) payload.happiness = updates.happiness;
+    if (updates.satisfaction !== undefined) payload.satisfaction = updates.satisfaction;
+    if (updates.stress !== undefined) payload.stress = updates.stress;
+    
+    const response = await client.put(`/mood/${date}`, payload, {
+      headers: {
+        'X-User-Timezone': userTimezone
+      }
+    });
     
     const updatedEntry = response.data;
     
@@ -167,7 +207,14 @@ export async function updateMoodEntry(date: string, updates: Partial<MoodEntry>)
  */
 export async function deleteMoodEntry(date: string): Promise<void> {
   try {
-    await client.delete(`${MOOD.BASE}/entries/${date}`);
+    // Get user timezone for header
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    await client.delete(`/mood/${date}`, {
+      headers: {
+        'X-User-Timezone': userTimezone
+      }
+    });
     
     // Invalidate related cache entries
     cacheService.invalidateByPattern(`${MOOD_CACHE_PREFIX}_entries_*`);

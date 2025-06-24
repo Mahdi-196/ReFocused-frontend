@@ -56,6 +56,30 @@ client.interceptors.response.use(
       error.isNetworkError = true;
     }
     
+    // Extract backend error messages for proper frontend display
+    if (error.response?.data) {
+      let backendMessage = null;
+      
+      // Try different common backend error message formats
+      if (error.response.data.detail) {
+        backendMessage = error.response.data.detail;
+      } else if (error.response.data.message) {
+        backendMessage = error.response.data.message;
+      } else if (error.response.data.error) {
+        backendMessage = error.response.data.error;
+      } else if (typeof error.response.data === 'string') {
+        backendMessage = error.response.data;
+      }
+      
+      // If we found a backend message, use it
+      if (backendMessage) {
+        const customError = new Error(backendMessage);
+        customError.name = 'BackendError';
+        customError.status = error.response.status;
+        return Promise.reject(customError);
+      }
+    }
+    
     if (error.response?.status === 401) {
       // Handle unauthorized access - token expired or invalid
       logger.warn('Authentication failed - token may be expired', { url: error.config?.url }, 'API');

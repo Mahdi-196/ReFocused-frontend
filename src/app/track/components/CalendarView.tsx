@@ -1,34 +1,37 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { UserHabit, DailyEntry } from '../types';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
+import { UserHabit, DailyCalendarEntry } from '../types';
 import type { MoodEntry } from '@/services/moodService';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday as isToday_native } from 'date-fns';
-import { HabitModal } from './HabitModal';
-import { HabitCompletion, getHabits, getHabitCompletions, toggleHabitCompletion } from '@/services/habitsService';
+import { useCalendarData } from '../hooks/useCalendarData';
 import { useCurrentDate } from '@/contexts/TimeContext';
 
 interface CalendarViewProps {
   currentMonth: Date;
   setCurrentMonth: (date: Date) => void;
   habits: UserHabit[];
-  dailyEntries: { [key: string]: DailyEntry };
-  moodEntries: { [key: string]: MoodEntry };
 }
 
 export default function CalendarView({
   currentMonth,
   setCurrentMonth,
-  habits,
-  dailyEntries,
-  moodEntries
+  habits
 }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
-  const [completions, setCompletions] = useState<HabitCompletion[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedHabit, setSelectedHabit] = useState<UserHabit | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const currentDate = useCurrentDate();
+  
+  // Use enhanced calendar data hook
+  const {
+    calendarEntries,
+    loading,
+    error,
+    toggleHabitCompletion,
+    saveMoodData,
+    getCalendarEntryForDate,
+    isDateReadOnly,
+    getHabitCompletionForDate,
+    getHabitsForDate
+  } = useCalendarData(currentMonth, habits);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX);
@@ -59,25 +62,19 @@ export default function CalendarView({
   };
 
   const getDayClass = (dateStr: string) => {
-    // Check for mood data first
-    const moodEntry = moodEntries[dateStr];
-    if (moodEntry && 
-        typeof moodEntry.happiness === 'number' && 
-        typeof moodEntry.satisfaction === 'number' && 
-        typeof moodEntry.stress === 'number') {
-      const moodScore = calculateMoodScore(moodEntry.happiness, moodEntry.satisfaction, moodEntry.stress);
+    // Check for calendar entry with mood data
+    const calendarEntry = getCalendarEntryForDate(dateStr);
+    if (calendarEntry?.moodEntry) {
+      const { happiness, satisfaction, stress } = calendarEntry.moodEntry;
+      const moodScore = calculateMoodScore(happiness, satisfaction, stress);
       if (moodScore >= 7) return 'mood-good';
       if (moodScore >= 5) return 'mood-neutral';
       return 'mood-poor';
     }
     
-    // Fallback to daily entries if available
-    const entry = dailyEntries[dateStr];
-    if (entry && entry.dayRating) {
-      const dayRating = entry.dayRating;
-      if (dayRating >= 8) return 'mood-good';
-      if (dayRating >= 5) return 'mood-neutral';
-      return 'mood-poor';
+    // Check if there's habit activity on this day
+    if (calendarEntry?.habitCompletions.some(hc => hc.completed)) {
+      return 'has-activity';
     }
     
     return '';
@@ -144,9 +141,10 @@ export default function CalendarView({
     for (let date = 1; date <= lastDay.getDate(); date++) {
       const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
       const dayClass = getDayClass(dateStr);
-      const moodEntry = moodEntries[dateStr];
+      const calendarEntry = getCalendarEntryForDate(dateStr);
+      const isReadOnly = isDateReadOnly(dateStr);
       
-      // Get styling based on mood
+      // Get styling based on mood and activity
       const getMoodStyling = () => {
         if (selectedDate === dateStr) {
           return {
@@ -175,6 +173,12 @@ export default function CalendarView({
               boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
               border: '1px solid #ef4444'
             };
+          case 'has-activity':
+            return {
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+              border: '1px solid #8b5cf6'
+            };
           default:
             return {
               background: 'linear-gradient(135deg, #4b5563 0%, #374151 50%, #1f2937 100%)',
@@ -184,29 +188,35 @@ export default function CalendarView({
         }
       };
       
-      // Check if this is today or future date
+      // Check if this is today
       const today = new Date().toISOString().split('T')[0];
       const isToday = dateStr === today;
-      const isFuture = dateStr > today;
+      
+      // Get habit completion stats for this day
+      const habitsOnDate = calendarEntry?.habitCompletions || [];
+      const completedHabits = habitsOnDate.filter(hc => hc.completed).length;
+      const totalHabits = habitsOnDate.length;
       
       currentRow.push(
         <div
           key={date}
-          className={`aspect-square flex flex-col items-center justify-center rounded transition-all text-xs text-white relative ${
-            isToday || isFuture ? 'cursor-pointer' : 'cursor-pointer'
+          className={`aspect-square flex flex-col items-center justify-center rounded transition-all text-xs text-white relative cursor-pointer ${
+            isReadOnly ? 'opacity-80' : ''
           }`}
           onClick={() => setSelectedDate(dateStr)}
           style={getMoodStyling()}
         >
-          {/* Mood indicator dots */}
-          {moodEntry && 
-           typeof moodEntry.happiness === 'number' && 
-           typeof moodEntry.satisfaction === 'number' && 
-           typeof moodEntry.stress === 'number' && (
-            <div className="absolute top-1 right-1 flex gap-0.5">
-              <div className={`w-1.5 h-1.5 rounded-full ${getMoodBadgeColor(moodEntry.happiness, 'happiness')}`} title="Happiness" />
-              <div className={`w-1.5 h-1.5 rounded-full ${getMoodBadgeColor(moodEntry.satisfaction, 'satisfaction')}`} title="Satisfaction" />
-              <div className={`w-1.5 h-1.5 rounded-full ${getMoodBadgeColor(moodEntry.stress, 'stress')}`} title="Stress" />
+          {/* Read-only indicator for past dates */}
+          {isReadOnly && (
+            <div className="absolute top-0.5 left-0.5 text-xs opacity-60">
+              🔒
+            </div>
+          )}
+          
+          {/* Mood indicator */}
+          {calendarEntry?.moodEntry && (
+            <div className="absolute top-0.5 right-0.5 text-xs">
+              😊
             </div>
           )}
           
@@ -219,6 +229,13 @@ export default function CalendarView({
           
           {/* Date number */}
           <span className="relative z-10 font-medium">{date}</span>
+          
+          {/* Habit completion indicator */}
+          {totalHabits > 0 && (
+            <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 text-xs font-medium">
+              {completedHabits}/{totalHabits}
+            </div>
+          )}
         </div>
       );
 
@@ -335,10 +352,9 @@ export default function CalendarView({
       );
     }
 
-    const dailyData = dailyEntries[selectedDate];
-    const moodData = moodEntries[selectedDate];
+    const calendarData = getCalendarEntryForDate(selectedDate);
     
-    if (!dailyData && !moodData) {
+    if (!calendarData) {
       return (
         <div className="p-6">
           <div className="text-center text-gray-400 py-8">
@@ -367,20 +383,17 @@ export default function CalendarView({
 
         <div className="space-y-6">
           {/* Mood Data */}
-          {moodData && 
-           typeof moodData.happiness === 'number' && 
-           typeof moodData.satisfaction === 'number' && 
-           typeof moodData.stress === 'number' && (
+          {calendarData?.moodEntry && (
             <div className="space-y-6">
               {/* Overall Score */}
               <div className="text-center">
                 <div className="text-3xl font-light text-white mb-2">
-                  {Math.round(calculateMoodScore(moodData.happiness, moodData.satisfaction, moodData.stress) * 10) / 10}<span className="text-gray-400">/10</span>
+                  {Math.round(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.satisfaction, calendarData.moodEntry.stress) * 10) / 10}<span className="text-gray-400">/10</span>
                 </div>
                 <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
                   <div 
-                    className={`h-full transition-all duration-500 ${getRatingBarColor(calculateMoodScore(moodData.happiness, moodData.satisfaction, moodData.stress))}`}
-                    style={{ width: `${(calculateMoodScore(moodData.happiness, moodData.satisfaction, moodData.stress) / 10) * 100}%` }}
+                    className={`h-full transition-all duration-500 ${getRatingBarColor(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.satisfaction, calendarData.moodEntry.stress))}`}
+                    style={{ width: `${(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.satisfaction, calendarData.moodEntry.stress) / 10) * 100}%` }}
                   />
                 </div>
               </div>
@@ -392,11 +405,11 @@ export default function CalendarView({
                   <div className="flex items-center gap-3">
                     <div className="w-20 h-1 bg-gray-700 rounded-full overflow-hidden">
                       <div 
-                        className={`h-full transition-all duration-300 ${getMoodBadgeColor(moodData.happiness, 'happiness')}`}
-                        style={{ width: `${(moodData.happiness / 5) * 100}%` }}
+                            className={`h-full transition-all duration-300 ${getMoodBadgeColor(calendarData.moodEntry.happiness, 'happiness')}`}
+                            style={{ width: `${(calendarData.moodEntry.happiness / 5) * 100}%` }}
                       />
                     </div>
-                    <span className="text-white text-sm w-8">{moodData.happiness}/5</span>
+                        <span className="text-white text-sm w-8">{calendarData.moodEntry.happiness}/5</span>
                   </div>
                 </div>
                 
@@ -405,11 +418,11 @@ export default function CalendarView({
                   <div className="flex items-center gap-3">
                     <div className="w-20 h-1 bg-gray-700 rounded-full overflow-hidden">
                       <div 
-                        className={`h-full transition-all duration-300 ${getMoodBadgeColor(moodData.satisfaction, 'satisfaction')}`}
-                        style={{ width: `${(moodData.satisfaction / 5) * 100}%` }}
+                            className={`h-full transition-all duration-300 ${getMoodBadgeColor(calendarData.moodEntry.satisfaction, 'satisfaction')}`}
+                            style={{ width: `${(calendarData.moodEntry.satisfaction / 5) * 100}%` }}
                       />
                     </div>
-                    <span className="text-white text-sm w-8">{moodData.satisfaction}/5</span>
+                        <span className="text-white text-sm w-8">{calendarData.moodEntry.satisfaction}/5</span>
                   </div>
                 </div>
               
@@ -418,11 +431,11 @@ export default function CalendarView({
                   <div className="flex items-center gap-3">
                     <div className="w-20 h-1 bg-gray-700 rounded-full overflow-hidden">
                       <div 
-                        className={`h-full transition-all duration-300 ${getMoodBadgeColor(moodData.stress, 'stress')}`}
-                        style={{ width: `${(moodData.stress / 5) * 100}%` }}
+                            className={`h-full transition-all duration-300 ${getMoodBadgeColor(calendarData.moodEntry.stress, 'stress')}`}
+                            style={{ width: `${(calendarData.moodEntry.stress / 5) * 100}%` }}
                       />
                     </div>
-                    <span className="text-white text-sm w-8">{moodData.stress}/5</span>
+                        <span className="text-white text-sm w-8">{calendarData.moodEntry.stress}/5</span>
                   </div>
                 </div>
               </div>
@@ -430,100 +443,143 @@ export default function CalendarView({
               {/* Date only - no time */}
               <div className="text-center">
                 <span className="text-gray-400 text-xs">
-                  {new Date(moodData.createdAt || moodData.updatedAt || selectedDate || Date.now()).toLocaleDateString()}
+                  {new Date(calendarData.createdAt || calendarData.updatedAt || selectedDate || Date.now()).toLocaleDateString()}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Habits Section */}
-          {habits.length > 0 && (
+          {/* Enhanced Habits Section */}
             <div className="bg-gray-700/50 rounded-lg p-4">
               <div className="font-medium text-white mb-3 flex items-center gap-2">
                 <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Habits for {formattedDate}
+              {isDateReadOnly(selectedDate) && (
+                <span className="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">
+                  🔒 Read Only
+                </span>
+              )}
               </div>
               
+            {(() => {
+              const habitsForDate = getHabitsForDate(selectedDate);
+              const completedCount = habitsForDate.filter(h => h.completed).length;
+              const totalHabits = habitsForDate.length;
+              
+              if (totalHabits === 0) {
+                return (
+                  <div className="text-center text-gray-400 py-6">
+                    <svg className="w-8 h-8 mx-auto mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <p className="text-sm">No habits tracked on this date</p>
+                  </div>
+                );
+              }
+
+              return (
+                <>
               {/* Progress Summary */}
               <div className="flex items-center justify-between mb-3 p-2 bg-gray-600/50 rounded">
                 <span className="text-gray-300 text-sm">Progress:</span>
+                    <div className="flex items-center gap-2">
                 <span className="text-white font-medium">
-                  {(() => {
-                    const completedCount = dailyData?.habitCompletions?.filter(h => h.completed).length || 0;
-                    const totalFromData = dailyData?.habitCompletions?.length || 0;
-                    const totalHabits = habits.length;
-                    
-                    // If we have completion data, use it; otherwise show 0/total
-                    return totalFromData > 0 ? `${completedCount}/${totalFromData} completed` : `0/${totalHabits} completed`;
-                  })()}
+                        {completedCount}/{totalHabits} completed
                 </span>
+                      <div className="w-16 h-2 bg-gray-600 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-green-500 transition-all duration-300"
+                          style={{ width: `${totalHabits > 0 ? (completedCount / totalHabits) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
               </div>
 
               {/* Habit List */}
               <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                {habits.map((habit) => {
-                  const completion = dailyData?.habitCompletions?.find(h => h.habitId === habit.id);
-                  const isCompleted = completion?.completed === true;
+                    {habitsForDate.map(({ habit, completed, wasActive }) => {
+                      const handleToggle = async () => {
+                        if (!isDateReadOnly(selectedDate)) {
+                          await toggleHabitCompletion(selectedDate, habit.id, !completed);
+                        }
+                      };
                   
                   return (
-                    <div key={habit.id} className={`flex items-center justify-between p-3 rounded-lg ${
-                      isCompleted 
+                        <div 
+                          key={habit.id} 
+                          className={`flex items-center justify-between p-3 rounded-lg transition-all ${
+                            completed 
                         ? 'bg-green-500/10 border border-green-500/20'
                         : 'bg-orange-500/10 border border-orange-500/20'
-                    }`}>
+                          } ${!isDateReadOnly(selectedDate) ? 'cursor-pointer hover:opacity-80' : 'opacity-70'}`}
+                          onClick={handleToggle}
+                        >
                       <div className="flex items-center gap-3">
-                        <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                          isCompleted 
+                            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                              completed 
                             ? 'bg-green-500 text-white'
                             : 'bg-gray-600 text-gray-300'
                         }`}>
-                          {isCompleted ? '✓' : '○'}
+                              {completed ? '✓' : '○'}
                         </div>
+                            <div className="flex flex-col">
                         <span className="text-white text-sm">{habit.name}</span>
+                              {!wasActive && (
+                                <span className="text-xs text-gray-400">Was inactive on this date</span>
+                              )}
+                            </div>
                         {habit.isFavorite && (
                           <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                           </svg>
                         )}
                       </div>
-                      <span className={`text-xs ${isCompleted ? 'text-green-400' : 'text-orange-400'}`}>
-                        {isCompleted ? 'Done' : 'Pending'}
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs ${completed ? 'text-green-400' : 'text-orange-400'}`}>
+                              {completed ? 'Done' : 'Pending'}
                       </span>
+                            {!isDateReadOnly(selectedDate) && (
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            )}
+                          </div>
                     </div>
                   );
                 })}
               </div>
+                </>
+              );
+            })()}
             </div>
-          )}
         </div>
       </div>
     );
   };
 
-  // Custom isToday function using time service
-  const isToday = useCallback((date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return dateStr === currentDate;
-  }, [currentDate]);
 
-  // Handle completion toggle
-  const handleCompletionToggle = async (habitId: number, date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const existingCompletion = completions.find(c => c.habitId === habitId && c.date === dateStr);
-    const newCompletedState = !existingCompletion?.completed;
-    
-    try {
-      console.log(`🔄 Toggling habit ${habitId} for ${dateStr}: ${newCompletedState}`);
-      await toggleHabitCompletion(habitId, dateStr, newCompletedState);
-      
-      // Refresh data
-      await Promise.all([loadHabits(), loadCompletions()]);
-    } catch (error) {
-      console.error('❌ Failed to toggle habit completion:', error);
+
+  // Loading state
+  if (loading) {
+    return (
+      <section className="mb-8">
+        <div 
+          className="rounded-lg shadow-md overflow-hidden max-w-7xl mx-auto"
+          style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+        >
+          <h2 className="text-xl text-white px-6 py-4 border-b border-gray-600">Calendar Overview</h2>
+          <div className="flex items-center justify-center min-h-96">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-[#42b9e5] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-300">Loading calendar data...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
     }
-  };
 
   return (
     <section className="mb-8">
@@ -531,7 +587,22 @@ export default function CalendarView({
         className="rounded-lg shadow-md overflow-hidden max-w-7xl mx-auto"
         style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
       >
-        <h2 className="text-xl text-white px-6 py-4 border-b border-gray-600">Calendar Overview</h2>
+        <h2 className="text-xl text-white px-6 py-4 border-b border-gray-600">
+          Enhanced Calendar
+          <span className="ml-2 text-sm text-gray-400">Secure • Read-only Past</span>
+        </h2>
+        
+        {/* Error Banner */}
+        {error && (
+          <div className="mx-6 mt-4 bg-red-900/50 border border-red-600 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <p className="text-red-200">{error}</p>
+            </div>
+          </div>
+        )}
         <div className="flex">
           {/* Calendar Grid Section */}
           <div 
