@@ -20,7 +20,6 @@ export default function CalendarView({
   const calendarRef = useRef<HTMLDivElement>(null);
   const currentDate = useCurrentDate();
   
-  // Use enhanced calendar data hook
   const {
     calendarEntries,
     loading,
@@ -206,19 +205,7 @@ export default function CalendarView({
           onClick={() => setSelectedDate(dateStr)}
           style={getMoodStyling()}
         >
-          {/* Read-only indicator for past dates */}
-          {isReadOnly && (
-            <div className="absolute top-0.5 left-0.5 text-xs opacity-60">
-              🔒
-            </div>
-          )}
-          
-          {/* Mood indicator */}
-          {calendarEntry?.moodEntry && (
-            <div className="absolute top-0.5 right-0.5 text-xs">
-              😊
-            </div>
-          )}
+
           
           {/* Gloss effect */}
           <div className="absolute inset-0 rounded opacity-20 pointer-events-none"
@@ -230,12 +217,7 @@ export default function CalendarView({
           {/* Date number */}
           <span className="relative z-10 font-medium">{date}</span>
           
-          {/* Habit completion indicator */}
-          {totalHabits > 0 && (
-            <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 text-xs font-medium">
-              {completedHabits}/{totalHabits}
-            </div>
-          )}
+
         </div>
       );
 
@@ -305,25 +287,21 @@ export default function CalendarView({
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">Keep Pushing Today!</h3>
               <p className="text-gray-300 text-sm mb-4">Today is your chance to make progress</p>
-              <div className="flex justify-center space-x-2 mb-4">
-                <span className="text-2xl">💪</span>
-                <span className="text-2xl">🔥</span>
-              </div>
             </div>
             
             <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg p-4 border border-blue-500/30">
               <p className="text-white font-medium mb-2">Focus on today's goals:</p>
               <div className="text-left space-y-2 text-sm text-gray-300">
                 <div className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span>
+                  <span className="text-green-400">•</span>
                   <span>Track your mood</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-yellow-400">○</span>
+                  <span className="text-yellow-400">•</span>
                   <span>Complete your habits</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-blue-400">○</span>
+                  <span className="text-blue-400">•</span>
                   <span>Stay consistent</span>
                 </div>
               </div>
@@ -377,10 +355,6 @@ export default function CalendarView({
 
     return (
       <div className="p-6">
-        <div className="mb-8">
-          <h3 className="text-xl font-light text-white">{formattedDate}</h3>
-        </div>
-
         <div className="space-y-6">
           {/* Mood Data */}
           {calendarData?.moodEntry && (
@@ -439,13 +413,6 @@ export default function CalendarView({
                   </div>
                 </div>
               </div>
-              
-              {/* Date only - no time */}
-              <div className="text-center">
-                <span className="text-gray-400 text-xs">
-                  {new Date(calendarData.createdAt || calendarData.updatedAt || selectedDate || Date.now()).toLocaleDateString()}
-                </span>
-              </div>
             </div>
           )}
 
@@ -455,12 +422,7 @@ export default function CalendarView({
                 <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Habits for {formattedDate}
-              {isDateReadOnly(selectedDate) && (
-                <span className="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">
-                  🔒 Read Only
-                </span>
-              )}
+                Habits
               </div>
               
             {(() => {
@@ -482,12 +444,9 @@ export default function CalendarView({
               return (
                 <>
               {/* Progress Summary */}
-              <div className="flex items-center justify-between mb-3 p-2 bg-gray-600/50 rounded">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-gray-300 text-sm">Progress:</span>
                     <div className="flex items-center gap-2">
-                <span className="text-white font-medium">
-                        {completedCount}/{totalHabits} completed
-                </span>
                       <div className="w-16 h-2 bg-gray-600 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-green-500 transition-all duration-300"
@@ -499,7 +458,20 @@ export default function CalendarView({
 
               {/* Habit List */}
               <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                    {habitsForDate.map(({ habit, completed, wasActive }) => {
+                    {habitsForDate
+                      .sort((a, b) => {
+                        // First sort by completion status (completed first)
+                        if (a.completed !== b.completed) {
+                          return b.completed ? 1 : -1;
+                        }
+                        // Then sort by favorite status (favorites first within each group)
+                        if (a.habit.isFavorite !== b.habit.isFavorite) {
+                          return a.habit.isFavorite ? -1 : 1;
+                        }
+                        // Finally sort alphabetically
+                        return a.habit.name.localeCompare(b.habit.name);
+                      })
+                      .map(({ habit, completed, wasActive }) => {
                       const handleToggle = async () => {
                         if (!isDateReadOnly(selectedDate)) {
                           await toggleHabitCompletion(selectedDate, habit.id, !completed);
@@ -512,7 +484,7 @@ export default function CalendarView({
                           className={`flex items-center justify-between p-3 rounded-lg transition-all ${
                             completed 
                         ? 'bg-green-500/10 border border-green-500/20'
-                        : 'bg-orange-500/10 border border-orange-500/20'
+                        : 'bg-red-500/10 border border-red-500/20'
                           } ${!isDateReadOnly(selectedDate) ? 'cursor-pointer hover:opacity-80' : 'opacity-70'}`}
                           onClick={handleToggle}
                         >
@@ -520,9 +492,9 @@ export default function CalendarView({
                             <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
                               completed 
                             ? 'bg-green-500 text-white'
-                            : 'bg-gray-600 text-gray-300'
+                            : 'bg-red-500 text-white'
                         }`}>
-                              {completed ? '✓' : '○'}
+                              {completed ? '•' : '•'}
                         </div>
                             <div className="flex flex-col">
                         <span className="text-white text-sm">{habit.name}</span>
@@ -536,16 +508,6 @@ export default function CalendarView({
                           </svg>
                         )}
                       </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs ${completed ? 'text-green-400' : 'text-orange-400'}`}>
-                              {completed ? 'Done' : 'Pending'}
-                      </span>
-                            {!isDateReadOnly(selectedDate) && (
-                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                              </svg>
-                            )}
-                          </div>
                     </div>
                   );
                 })}
@@ -588,9 +550,7 @@ export default function CalendarView({
         style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
       >
         <h2 className="text-xl text-white px-6 py-4 border-b border-gray-600">
-          Enhanced Calendar
-          <span className="ml-2 text-sm text-gray-400">Secure • Read-only Past</span>
-        </h2>
+          Calendar     </h2>
         
         {/* Error Banner */}
         {error && (

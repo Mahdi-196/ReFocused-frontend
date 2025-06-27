@@ -4,10 +4,18 @@ import { MouseEvent } from "react";
 interface DropdownMenuProps {
   onEdit: (e?: MouseEvent) => void;
   onDelete: (e?: MouseEvent) => void;
+  onClose?: () => void;
   className?: string;
+  showDelete?: boolean;
 }
 
-const DropdownMenu = ({ onEdit, onDelete, className = "" }: DropdownMenuProps) => {
+const DropdownMenu = ({ 
+  onEdit, 
+  onDelete, 
+  onClose,
+  className = "",
+  showDelete = true
+}: DropdownMenuProps) => {
   return (
     <div 
       className={`w-48 bg-white rounded-md shadow-lg border border-gray-200 ${className}`}
@@ -21,13 +29,15 @@ const DropdownMenu = ({ onEdit, onDelete, className = "" }: DropdownMenuProps) =
           <Edit size={14} className="mr-2" />
           Edit
         </button>
-        <button
-          onClick={onDelete}
-          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-        >
-          <Trash2 size={14} className="mr-2" />
-          Delete
-        </button>
+        {showDelete && (
+          <button
+            onClick={onDelete}
+            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+          >
+            <Trash2 size={14} className="mr-2" />
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );

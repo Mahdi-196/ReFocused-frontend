@@ -8,6 +8,7 @@ const client: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 30000, // Increased to 30 seconds for better reliability
+  withCredentials: true, // Include credentials for CORS requests
 });
 
 // Request interceptor for auth tokens
@@ -19,6 +20,43 @@ client.interceptors.request.use(
       if (token && token !== 'dummy-auth-token') {
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    
+    // Add collection access token if available for journal endpoints
+    if (typeof window !== 'undefined' && config.url?.includes('/journal/')) {
+      const collectionTokens = localStorage.getItem('REF_COLLECTION_TOKENS');
+      if (collectionTokens) {
+        try {
+          const tokens = JSON.parse(collectionTokens);
+          let collectionId = null;
+          
+          // Extract collection ID from URL patterns
+          const collectionMatch = config.url.match(/\/collections\/([^\/]+)/);
+          const entryWithCollectionMatch = config.url.match(/\/entries.*[?&]collection=([^&]+)/);
+          
+          if (collectionMatch) {
+            collectionId = collectionMatch[1];
+          } else if (entryWithCollectionMatch) {
+            collectionId = entryWithCollectionMatch[1];
+          } else if (config.data && typeof config.data === 'object') {
+            // For POST requests with collection_id in body
+            const data = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
+            if (data.collection_id) {
+              collectionId = data.collection_id.toString();
+            }
+          }
+          
+          if (collectionId) {
+            const accessToken = tokens[collectionId];
+            if (accessToken) {
+              config.headers = config.headers || {};
+              config.headers['X-Collection-Access-Token'] = accessToken;
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to parse collection tokens:', error);
+        }
       }
     }
     
@@ -78,6 +116,15 @@ client.interceptors.response.use(
         customError.status = error.response.status;
         return Promise.reject(customError);
       }
+      
+      // For 422 validation errors, try to extract more detail
+      if (error.response.status === 422) {
+        console.error('422 Validation Error Details:', error.response.data);
+        const customError = new Error(JSON.stringify(error.response.data));
+        customError.name = 'ValidationError';
+        customError.status = 422;
+        return Promise.reject(customError);
+      }
     }
     
     if (error.response?.status === 401) {
@@ -89,6 +136,9 @@ client.interceptors.response.use(
         localStorage.removeItem('REF_TOKEN');
         localStorage.removeItem('REF_USER');
         delete client.defaults.headers.common['Authorization'];
+        
+        // Clear collection access tokens as well
+        collectionTokens.clear();
         
         // Redirect to home page for re-authentication
         window.location.href = '/';
@@ -116,5 +166,56 @@ export const initializeAuth = () => {
 // ✅ Real backend API integration
 // Backend running on http://localhost:8000 via Next.js rewrites
 // Documentation: http://localhost:8000/docs
+
+// Collection Access Token Management
+export const collectionTokens = {
+  // Store access token for a collection
+  store: (collectionId: string, token: string) => {
+    if (typeof window !== 'undefined') {
+      const tokens = collectionTokens.getAll();
+      tokens[collectionId] = token;
+      localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+    }
+  },
+  
+  // Get access token for a collection
+  get: (collectionId: string): string | null => {
+    if (typeof window !== 'undefined') {
+      const tokens = collectionTokens.getAll();
+      return tokens[collectionId] || null;
+    }
+    return null;
+  },
+  
+  // Get all collection tokens
+  getAll: (): Record<string, string> => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('REF_COLLECTION_TOKENS');
+        return stored ? JSON.parse(stored) : {};
+      } catch (error) {
+        console.warn('Failed to parse collection tokens:', error);
+        return {};
+      }
+    }
+    return {};
+  },
+  
+  // Remove access token for a collection
+  remove: (collectionId: string) => {
+    if (typeof window !== 'undefined') {
+      const tokens = collectionTokens.getAll();
+      delete tokens[collectionId];
+      localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+    }
+  },
+  
+  // Clear all collection tokens
+  clear: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('REF_COLLECTION_TOKENS');
+    }
+  }
+};
 
 export default client;  

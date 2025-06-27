@@ -14,6 +14,7 @@ interface CollectionModalProps {
   editingCollection?: Collection | null;
   passwordError?: string;
   nameExists?: boolean;
+  isLoading?: boolean;
 }
 
 /**
@@ -29,12 +30,22 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
   onFormChange,
   editingCollection,
   passwordError,
-  nameExists
+  nameExists,
+  isLoading
 }) => {
   if (!isOpen) return null;
 
+  // ✅ Defensive programming: ensure formData has required properties
+  const safeFormData: CollectionFormData = {
+    name: formData?.name || "",
+    isPrivate: formData?.isPrivate || false,
+    password: formData?.password || "",
+    currentPassword: formData?.currentPassword || ""
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && formData.name.trim() && !nameExists) {
+    // ✅ Safe trim check
+    if (e.key === 'Enter' && safeFormData.name.trim() && !nameExists) {
       onSubmit();
     }
   };
@@ -65,26 +76,31 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
             <input
               type="text"
               id="collectionName"
-              value={formData.name}
+              value={safeFormData.name}
               onChange={(e) => onFormChange({ name: e.target.value })}
               onKeyDown={handleKeyDown}
               placeholder="Enter collection name..."
-              className={`w-full pl-3 pr-10 py-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                formData.name.trim() && nameExists
+              disabled={editingCollection?.name === "My Notes"}
+              className={`w-full pl-3 pr-10 py-2 border rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                editingCollection?.name === "My Notes"
+                  ? 'bg-gray-600 border-gray-500 cursor-not-allowed opacity-75'
+                  : 'bg-gray-700'
+              } ${
+                safeFormData.name.trim() && nameExists
                   ? 'border-red-400 focus:ring-red-500'
                   : 'border-gray-600'
               }`}
-              autoFocus
+              autoFocus={editingCollection?.name !== "My Notes"}
             />
             <button
               type="button"
-              onClick={() => onFormChange({ isPrivate: !formData.isPrivate })}
+              onClick={() => onFormChange({ isPrivate: !safeFormData.isPrivate })}
               className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-all duration-200 transform hover:scale-110 ${
-                formData.isPrivate 
+                safeFormData.isPrivate 
                   ? 'text-blue-400 hover:text-blue-300 bg-blue-500/20'
                   : 'text-gray-400 hover:text-gray-300 hover:bg-gray-600/50'
               }`}
-              title={formData.isPrivate ? "Private Collection" : "Public Collection"}
+              title={safeFormData.isPrivate ? "Private Collection" : "Public Collection"}
             >
               <Lock size={16} />
             </button>
@@ -99,7 +115,7 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
               <input
                 type="password"
                 id="currentPassword"
-                value={formData.currentPassword}
+                value={safeFormData.currentPassword}
                 onChange={(e) => onFormChange({ currentPassword: e.target.value })}
                 placeholder="Enter current password..."
                 className="w-full pl-3 pr-4 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
@@ -108,7 +124,7 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
           )}
 
           {/* New Password Field for Private Collections */}
-          {formData.isPrivate && (
+          {safeFormData.isPrivate && (
             <div className="mt-4">
               <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
                 {editingCollection ? "New Password (leave blank to keep current)" : "Password"}
@@ -116,7 +132,7 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
               <input
                 type="password"
                 id="password"
-                value={formData.password}
+                value={safeFormData.password}
                 onChange={(e) => onFormChange({ password: e.target.value })}
                 placeholder={editingCollection ? "Enter new password..." : "Enter password..."}
                 className="w-full pl-3 pr-4 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
@@ -131,8 +147,16 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
             </p>
           )}
 
+          {/* Default Collection Info */}
+          {editingCollection?.name === "My Notes" && (
+            <p className="mt-2 text-sm text-blue-400 flex items-center gap-1">
+              <span className="inline-block w-1 h-1 rounded-full bg-blue-400"></span>
+              This is your default collection and cannot be renamed or deleted
+            </p>
+          )}
+
           {/* Name Validation Message */}
-          {formData.name.trim() && nameExists && (
+          {safeFormData.name.trim() && nameExists && (
             <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
               <span className="inline-block w-1 h-1 rounded-full bg-red-400"></span>
               This collection name already exists
@@ -141,7 +165,7 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
 
           {/* Privacy Info */}
           <p className="mt-2 text-xs text-gray-400">
-            {formData.isPrivate 
+            {safeFormData.isPrivate 
               ? "This collection will be private and password protected (letters and numbers only)"
               : "This collection will be visible to everyone"}
           </p>
@@ -156,9 +180,17 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
           </button>
           <button
             onClick={onSubmit}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 active:scale-95"
+            disabled={!safeFormData.name.trim() || nameExists || isLoading}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 active:scale-95 disabled:transform-none"
           >
-            {editingCollection ? "Update" : "Create"}
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                {editingCollection ? "Updating..." : "Creating..."}
+              </div>
+            ) : (
+              editingCollection ? "Update" : "Create"
+            )}
           </button>
         </div>
       </div>

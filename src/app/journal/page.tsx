@@ -4,6 +4,7 @@ import React from "react";
 import PageTransition from '@/components/PageTransition';
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import DropdownMenu from "@/components/DropdownMenu";
+import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
 // Import new components
 import { CollectionModal } from "./components/CollectionModal";
@@ -19,11 +20,11 @@ import { useGratitude } from "./hooks/useGratitude";
 
 /**
  * Main Journal page component
- * Provides a complete journaling experience with collections, entries, and additional features
+ * Provides a complete journaling experience with collections, entries, and backend integration
  */
 const Journal: React.FC = () => {
   const journalState = useJournalState();
-  const { gratitudes, addGratitude, totalGratitudes } = useGratitude();
+  const gratitudeHook = useGratitude();
 
   const {
     // State
@@ -43,11 +44,16 @@ const Journal: React.FC = () => {
     totalEntries,
     nameExists,
 
+    // Loading and Error States
+    collectionsLoading,
+    collectionsError,
+    operationLoading,
+
     // Actions
     setSearchQuery,
     setOpenDropdown,
     setEnteredPassword,
-    setFormData,
+    updateFormData,
     handleAddNewCollection,
     handleEditCollection,
     handleCreateCollection,
@@ -60,8 +66,63 @@ const Journal: React.FC = () => {
     handleDeleteEntry,
     handleDeleteCollection,
     confirmDelete,
-    setDeleteConfirmation
+    setDeleteConfirmation,
+    handleClearError,
   } = journalState;
+
+  const {
+    gratitudes,
+    isLoading: gratitudesLoading,
+    error: gratitudesError,
+    addGratitude,
+    clearError: clearGratitudeError,
+    totalGratitudes,
+  } = gratitudeHook;
+
+  // Show loading state while initial data loads
+  if (collectionsLoading && collections.length === 0) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#1A2537" }}>
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-white mb-2">Loading Journal</h2>
+            <p className="text-gray-300">Setting up your journal workspace...</p>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  // Show error state if collections failed to load and no cached data
+  if (collectionsError && collections.length === 0) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#1A2537" }}>
+          <div className="text-center max-w-md mx-auto px-6">
+            <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
+            <h2 className="text-2xl font-bold text-white mb-4">Unable to Load Journal</h2>
+            <p className="text-gray-300 mb-6 leading-relaxed">{collectionsError}</p>
+            <div className="space-y-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Retry Loading
+              </button>
+              <button
+                onClick={handleClearError}
+                className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+              >
+                Continue Offline
+              </button>
+            </div>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>
@@ -74,6 +135,27 @@ const Journal: React.FC = () => {
           <div className="mb-8 text-center">
             <h1 className="text-4xl font-bold text-white mb-3">Journal</h1>
             <p className="text-lg text-gray-300">Record your thoughts, experiences, and insights</p>
+            
+            {/* Error Banner */}
+            {(collectionsError || gratitudesError) && (
+              <div className="mt-4 p-4 bg-yellow-900/50 border border-yellow-600 rounded-lg max-w-2xl mx-auto">
+                <div className="flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-yellow-400 mr-2" />
+                  <span className="text-yellow-200">
+                    Some features may be limited due to connection issues
+                  </span>
+                  <button
+                    onClick={() => {
+                      handleClearError();
+                      clearGratitudeError();
+                    }}
+                    className="ml-3 text-yellow-400 hover:text-yellow-300"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Main Layout - Three Columns */}
@@ -90,6 +172,7 @@ const Journal: React.FC = () => {
                   onAddCollection={handleAddNewCollection}
                   onOpenDropdown={setOpenDropdown}
                   openDropdown={openDropdown}
+                  isLoading={collectionsLoading}
                 />
 
                 {/* Search and Actions */}
@@ -99,6 +182,7 @@ const Journal: React.FC = () => {
                   selectedCollection={selectedCollection}
                   onAddNewEntry={handleAddNewEntry}
                   selectedCollectionId={selectedCollectionId}
+                  isLoading={operationLoading}
                 />
               </div>
 
@@ -140,6 +224,7 @@ const Journal: React.FC = () => {
                     onOpenDropdown={setOpenDropdown}
                     openDropdown={openDropdown}
                     collections={collections}
+                    isLoading={collectionsLoading}
                   />
                 </div>
               </div>
@@ -151,6 +236,9 @@ const Journal: React.FC = () => {
               onAddGratitude={addGratitude}
               totalEntries={totalEntries}
               totalGratitudes={totalGratitudes}
+              isLoadingGratitudes={gratitudesLoading}
+              gratitudeError={gratitudesError}
+              onClearGratitudeError={clearGratitudeError}
             />
           </div>
 
@@ -161,10 +249,11 @@ const Journal: React.FC = () => {
             onSubmit={handleCreateCollection}
             title={editingCollection ? "Edit Collection" : "Create New Collection"}
             formData={formData}
-            onFormChange={setFormData}
+            onFormChange={updateFormData}
             editingCollection={editingCollection}
             passwordError={passwordError}
             nameExists={nameExists}
+            isLoading={operationLoading}
           />
 
           <PasswordPromptModal
@@ -181,6 +270,7 @@ const Journal: React.FC = () => {
             onConfirm={confirmDelete}
             title={`Delete ${deleteConfirmation?.type === 'entry' ? 'Note' : 'Collection'}`}
             message={`Are you sure you want to delete "${deleteConfirmation?.name}"? This action cannot be undone.`}
+            isLoading={operationLoading}
           />
 
           {/* Dropdown Menu */}
@@ -198,20 +288,24 @@ const Journal: React.FC = () => {
                   if (openDropdown.type === 'collection' && openDropdown.collection) {
                     handleEditCollection(openDropdown.collection);
                   } else if (openDropdown.type === 'entry' && openDropdown.entry) {
-                    handleEditEntry(openDropdown.id);
+                    handleEditEntry(openDropdown.entry.id);
                   }
                   setOpenDropdown(null);
                 }}
                 onDelete={(e) => {
                   e?.stopPropagation();
-                  if (openDropdown.type === 'collection') {
-                    handleDeleteCollection(openDropdown.id);
-                  } else if (openDropdown.type === 'entry') {
-                    handleDeleteEntry(openDropdown.id);
+                  if (openDropdown.type === 'collection' && openDropdown.collection) {
+                    handleDeleteCollection(openDropdown.collection.id);
+                  } else if (openDropdown.type === 'entry' && openDropdown.entry) {
+                    handleDeleteEntry(openDropdown.entry.id);
                   }
                   setOpenDropdown(null);
                 }}
-                className="shadow-xl"
+                onClose={() => setOpenDropdown(null)}
+                showDelete={
+                  openDropdown.type === 'entry' || 
+                  (openDropdown.type === 'collection' && openDropdown.collection?.name !== "My Notes")
+                }
               />
             </div>
           )}

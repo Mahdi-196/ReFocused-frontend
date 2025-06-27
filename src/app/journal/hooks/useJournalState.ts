@@ -17,11 +17,15 @@ export function useJournalState() {
   const router = useRouter();
   const {
     collections,
+    isLoading: collectionsLoading,
+    error: collectionsError,
     addCollection,
+    updateCollection,
     deleteCollection,
     deleteEntry,
     verifyPassword,
-    updateCollection,
+    refreshCollections,
+    clearError,
   } = useCollections();
 
   // UI State
@@ -44,16 +48,17 @@ export function useJournalState() {
     currentPassword: ""
   });
   const [passwordError, setPasswordError] = useState("");
+  const [operationLoading, setOperationLoading] = useState(false);
 
   // Set default collection when collections load
   useEffect(() => {
-    if (collections.length > 0) {
+    if (collections.length > 0 && !collectionsLoading) {
       const defaultCol = collections.find((c) => c.name === "My Notes") || collections[0];
       if (defaultCol && (!selectedCollectionId || !collections.find(c => c.id === selectedCollectionId))) {
         setSelectedCollectionId(defaultCol.id);
       }
     }
-  }, [collections, selectedCollectionId]);
+  }, [collections, selectedCollectionId, collectionsLoading]);
 
   // Helper function to check if collection name exists
   const checkNameExists = useCallback((name: string, excludeId?: string) => {
@@ -62,6 +67,19 @@ export function useJournalState() {
       (!excludeId || c.id !== excludeId)
     );
   }, [collections]);
+
+  // Computed properties
+  const selectedCollection = collections.find(c => c.id === selectedCollectionId) || null;
+  
+  const displayedEntries = selectedCollection ? 
+    selectedCollection.entries.filter(entry => 
+      !searchQuery || 
+      entry.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.content.toLowerCase().includes(searchQuery.toLowerCase())
+    ) : [];
+
+  const totalEntries = collections.reduce((total, col) => total + col.entries.length, 0);
+  const nameExists = formData.name ? checkNameExists(formData.name, editingCollection?.id) : false;
 
   // Collection Operations
   const handleAddNewCollection = () => {
@@ -84,44 +102,57 @@ export function useJournalState() {
   };
 
   const handleCreateCollection = async () => {
-    const trimmedName = formData.name.trim();
-    if (!trimmedName || checkNameExists(trimmedName, editingCollection?.id)) {
-      return;
-    }
+    if (!formData.name.trim()) return;
 
-    if (editingCollection) {
-      // Update existing collection
-      const success = await updateCollection(
-        editingCollection.id,
-        {
-          name: trimmedName,
-          isPrivate: formData.isPrivate,
-          password: formData.isPrivate ? formData.password : undefined
-        },
-        editingCollection.isPrivate ? formData.currentPassword : undefined
-      );
+    setOperationLoading(true);
+    try {
+      console.log('🔐 Creating collection with form data:', {
+        name: formData.name,
+        isPrivate: formData.isPrivate,
+        hasPassword: !!formData.password,
+        passwordLength: formData.password?.length
+      });
 
-      if (!success) {
-        setPasswordError("Invalid current password or invalid new password format");
-        return;
+      let success = false;
+      if (editingCollection) {
+        // Update existing collection
+        success = await updateCollection(
+          editingCollection.id,
+          {
+            name: formData.name,
+            isPrivate: formData.isPrivate,
+            password: formData.password || undefined,
+          },
+          formData.currentPassword || undefined
+        );
+      } else {
+        // Create new collection  
+        const password = formData.isPrivate && formData.password ? formData.password : undefined;
+        console.log('🔐 Calling addCollection with password:', !!password);
+        success = await addCollection(formData.name, password);
       }
-    } else {
-      // Create new collection
-      if (formData.isPrivate && !formData.password.match(/^[a-zA-Z0-9]+$/)) {
-        setPasswordError("Password must contain only letters and numbers");
-        return;
-      }
-      await addCollection(trimmedName, formData.isPrivate ? formData.password : undefined);
-    }
 
-    // Select the newly created/updated collection
-    setSelectedCollectionId(editingCollection?.id || collections[collections.length - 1]?.id || null);
-    
-    // Reset modal state
-    setIsModalOpen(false);
-    setFormData({ name: "", isPrivate: false, password: "", currentPassword: "" });
-    setPasswordError("");
-    setEditingCollection(null);
+      if (success) {
+        console.log('✅ Collection operation successful');
+        handleCloseModal();
+        
+        // Auto-select the new collection if it was created
+        if (!editingCollection) {
+          // Find the newly created collection
+          const newCollection = collections.find(c => c.name === formData.name);
+          if (newCollection) {
+            console.log('🎯 Auto-selecting new collection:', newCollection.id);
+            setSelectedCollectionId(newCollection.id);
+          }
+        }
+      } else {
+        console.error('❌ Collection operation failed');
+      }
+    } catch (error) {
+      console.error('💥 Collection creation/update error:', error);
+    } finally {
+      setOperationLoading(false);
+    }
   };
 
   const handleCloseModal = () => {
@@ -129,6 +160,7 @@ export function useJournalState() {
     setFormData({ name: "", isPrivate: false, password: "", currentPassword: "" });
     setPasswordError("");
     setEditingCollection(null);
+    setOperationLoading(false);
   };
 
   // Entry Operations
@@ -152,9 +184,28 @@ export function useJournalState() {
   // Collection Selection with Password Check
   const handleCollectionSelect = async (collectionId: string) => {
     const collection = collections.find(c => c.id === collectionId);
+    
+    console.log('🔐 DEBUG: Collection selection:', {
+      collectionId,
+      collection: collection ? {
+        id: collection.id,
+        name: collection.name,
+        isPrivate: collection.isPrivate,
+        entriesCount: collection.entries?.length || 0
+      } : null,
+      allCollections: collections.map(c => ({ 
+        id: c.id, 
+        name: c.name, 
+        isPrivate: c.isPrivate,
+        typeof_isPrivate: typeof c.isPrivate
+      }))
+    });
+    
     if (collection?.isPrivate) {
+      console.log('🔐 DEBUG: Collection is private, showing password prompt');
       setPasswordPrompt({ collectionId, name: collection.name });
     } else {
+      console.log('🔐 DEBUG: Collection is public or isPrivate is falsy, selecting directly');
       setSelectedCollectionId(collectionId);
     }
   };
@@ -162,13 +213,24 @@ export function useJournalState() {
   const handlePasswordSubmit = async () => {
     if (!passwordPrompt) return;
     
-    const success = await verifyPassword(passwordPrompt.collectionId, enteredPassword);
-    if (success) {
-      setSelectedCollectionId(passwordPrompt.collectionId);
-      setPasswordPrompt(null);
-      setEnteredPassword("");
-    } else {
-      alert("Incorrect password");
+    setOperationLoading(true);
+    try {
+      const success = await verifyPassword(passwordPrompt.collectionId, enteredPassword);
+      if (success) {
+        // Refresh collections to load entries for the unlocked collection
+        await refreshCollections();
+        
+        setSelectedCollectionId(passwordPrompt.collectionId);
+        setPasswordPrompt(null);
+        setEnteredPassword("");
+      } else {
+        alert("Incorrect password");
+      }
+    } catch (error) {
+      console.error("Password verification failed:", error);
+      alert("Password verification failed. Please try again.");
+    } finally {
+      setOperationLoading(false);
     }
   };
 
@@ -198,32 +260,68 @@ export function useJournalState() {
     });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteConfirmation) return;
-    
-    if (deleteConfirmation.type === 'entry') {
-      deleteEntry(selectedCollectionId!, deleteConfirmation.id);
-    } else {
-      deleteCollection(deleteConfirmation.id);
-      if (selectedCollectionId === deleteConfirmation.id) {
-        setSelectedCollectionId(collections.length > 1 ? collections.find(c => c.id !== deleteConfirmation.id)?.id || null : null);
+
+    setOperationLoading(true);
+    try {
+      let success = false;
+      
+      if (deleteConfirmation.type === 'entry') {
+        success = await deleteEntry(selectedCollectionId!, deleteConfirmation.id);
+      } else {
+        success = await deleteCollection(deleteConfirmation.id);
+        
+        // If deleted collection was selected, switch to default
+        if (success && deleteConfirmation.id === selectedCollectionId) {
+          const defaultCol = collections.find((c) => c.name === "My Notes") || collections[0];
+          setSelectedCollectionId(defaultCol?.id || null);
+        }
       }
+
+      if (success) {
+        setDeleteConfirmation(null);
+      } else {
+        alert(`Failed to delete ${deleteConfirmation.type}. Please try again.`);
+      }
+    } catch (error) {
+      console.error("Delete operation failed:", error);
+      alert(`Failed to delete ${deleteConfirmation.type}. Please try again.`);
+    } finally {
+      setOperationLoading(false);
     }
-    setDeleteConfirmation(null);
   };
 
-  // Computed Values
-  const selectedCollection = collections.find(c => c.id === selectedCollectionId) || null;
-  const displayedEntries = selectedCollection?.entries
-    ?.filter(entry =>
-      entry.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (typeof entry.content === 'string' && entry.content.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-     || [];
+  // Error handling
+  const handleClearError = () => {
+    clearError();
+  };
 
-  const totalEntries = collections.reduce((sum, col) => sum + (col.entries?.length || 0), 0);
-  const nameExists = checkNameExists(formData.name.trim(), editingCollection?.id);
+  // Helper function for merging form data
+  const updateFormData = useCallback((updates: Partial<CollectionFormData>) => {
+    setFormData(prev => {
+      const updated = { ...prev, ...updates };
+      console.log('📝 Form data updated:', {
+        name: updated.name,
+        isPrivate: updated.isPrivate,
+        hasPassword: !!updated.password,
+        passwordLength: updated.password?.length,
+        hasCurrentPassword: !!updated.currentPassword
+      });
+      
+      // Clear password error when switching to public
+      if (updates.isPrivate === false) {
+        setPasswordError("");
+      }
+      
+      // Clear password error when password is entered
+      if (updates.password && passwordError) {
+        setPasswordError("");
+      }
+      
+      return updated;
+    });
+  }, [passwordError]);
 
   return {
     // State
@@ -242,13 +340,17 @@ export function useJournalState() {
     passwordError,
     totalEntries,
     nameExists,
+    
+    // Loading and Error States
+    collectionsLoading,
+    collectionsError,
+    operationLoading,
 
     // Actions
     setSearchQuery,
     setOpenDropdown,
     setEnteredPassword,
-    setFormData: (updates: Partial<CollectionFormData>) => 
-      setFormData(prev => ({ ...prev, ...updates })),
+    updateFormData,
     handleAddNewCollection,
     handleEditCollection,
     handleCreateCollection,
@@ -261,6 +363,7 @@ export function useJournalState() {
     handleDeleteEntry,
     handleDeleteCollection,
     confirmDelete,
-    setDeleteConfirmation
+    setDeleteConfirmation,
+    handleClearError,
   };
 } 

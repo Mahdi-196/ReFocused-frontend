@@ -49,8 +49,14 @@ export const DASHBOARD = {
 // Journal endpoints
 export const JOURNAL = {
   BASE: '/journal',
+  COLLECTIONS: '/journal/collections',
+  COLLECTION_DETAIL: (id: string) => `/journal/collections/${id}`,
+  COLLECTION_ENTRIES: (id: string) => `/journal/collections/${id}/entries`,
+  COLLECTION_VERIFY_PASSWORD: (id: string) => `/journal/collections/${id}/verify-password`,
   ENTRIES: '/journal/entries',
-  ENTRY_DETAIL: (id: number | string) => `/journal/entries/${id}`,
+  ENTRY_DETAIL: (id: string) => `/journal/entries/${id}`,
+  GRATITUDE: '/journal/gratitude',
+  GRATITUDE_DETAIL: (id: string) => `/journal/gratitude/${id}`,
 }; 
 
 // Mood endpoints

@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
-import type { Entry, Collection } from "../types";
+import journalService from "@/api/services/journalService";
+import { collectionTokens } from "@/api/client";
+import type { Entry, Collection, JournalApiError } from "../types";
 
 const LOCAL_STORAGE_KEY = "jurnol_collections";
 const PASSWORD_STORAGE_KEY = "collection_passwords";
@@ -24,332 +26,316 @@ export function getDefaultCollection(): Collection {
   return { 
     id: "default-my-notes",
     name: "My Notes",
-    entries: [] // Fresh start for new users
+    entries: [], // Fresh start for new users
+    isPrivate: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    entryCount: 0,
   };
 }
 
+/**
+ * Ensures the default "My Notes" collection is always present and first
+ * @param collections - Array of collections from backend
+ * @returns Collections array with default collection guaranteed first
+ */
+function ensureDefaultCollection(collections: Collection[]): Collection[] {
+  // Check if backend has a "My Notes" collection (it might have a different ID)
+  const backendDefaultCollection = collections.find(col => col.name === "My Notes");
+  
+  if (backendDefaultCollection) {
+    // Backend already has "My Notes" - ensure it's first
+    const otherCollections = collections.filter(col => col.name !== "My Notes");
+    return [backendDefaultCollection, ...otherCollections];
+  } else {
+    // No "My Notes" found - use our frontend default
+    const defaultCollection = getDefaultCollection();
+    return [defaultCollection, ...collections];
+  }
+}
+
+/**
+ * Custom hook for managing journal collections with backend integration
+ * Replaces localStorage-based storage with API calls
+ */
 export function useCollections() {
-  // Initialize state as empty initially to prevent hydration mismatch
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [passwordHashes, setPasswordHashes] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Effect to load data from localStorage on client mount
+  // Load collections from backend
+  const loadCollections = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await journalService.getCollections();
+      
+      // Load entries for each collection
+      const collectionsWithEntries = await Promise.all(
+        data.map(async (collection) => {
+          try {
+            const entries = await journalService.getEntries(collection.id);
+            return { ...collection, entries };
+          } catch (err) {
+            // If we can't load entries (e.g., private collection), return with empty entries
+            console.warn(`Failed to load entries for collection ${collection.id}:`, err);
+            return { ...collection, entries: [] };
+          }
+        })
+      );
+      
+      // Ensure default collection is always present and first
+      const collectionsWithDefault = ensureDefaultCollection(collectionsWithEntries);
+      
+      setCollections(collectionsWithDefault);
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Failed to load collections:", error);
+      setError(error.message);
+      
+      // Fallback to just the default collection if backend is unavailable
+      setCollections([getDefaultCollection()]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Initial load
   useEffect(() => {
-    console.log("Attempting to load collections from localStorage...");
-    let loadedCollections: Collection[] = [];
-    let loadedHashes: Record<string, string> = {};
+    loadCollections();
+  }, [loadCollections]);
 
-    // Load Collections
+  // Verify password for private collection
+  const verifyPassword = async (collectionId: string, password: string): Promise<boolean> => {
     try {
-      const savedCollections = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedCollections) {
-        const parsed = JSON.parse(savedCollections);
-        if (Array.isArray(parsed) && parsed.every(c => c && typeof c.id === 'string' && typeof c.name === 'string' && Array.isArray(c.entries))) {
-            // Ensure "My Notes" exists and is first (logic moved from getInitialCollections)
-            const myNotesIndex = parsed.findIndex(c => c.id === "default-my-notes");
-            if (myNotesIndex === -1) {
-              parsed.unshift(getDefaultCollection());
-            } else if (myNotesIndex > 0) {
-              const myNotes = parsed.splice(myNotesIndex, 1)[0];
-              myNotes.id = "default-my-notes";
-              myNotes.name = "My Notes";
-              // Keep user's existing entries without adding seeded content
-              parsed.unshift(myNotes);
-            } else {
-               parsed[0].id = "default-my-notes";
-               parsed[0].name = "My Notes";
-               // Keep user's existing entries without adding seeded content
-            }
-            // Assign stable ID to default private collection if necessary (logic moved)
-            const privateColIndex = parsed.findIndex(c => c.name === "Private" && c.isPrivate);
-            const defaultPrivateId = defaultCollectionsData[1].id;
-            if(privateColIndex > -1 && parsed[privateColIndex].id === defaultPrivateId) {
-                 if(!parsed.some(c => c.id === defaultPrivateId && c.name !== "Private")) {
-                    parsed[privateColIndex].id = uuidv4();
-                 }
-            }
-          loadedCollections = parsed as Collection[];
-          console.log("Collections loaded successfully:", loadedCollections);
-        } else {
-            console.warn("Invalid collections format found in localStorage.");
-            loadedCollections = JSON.parse(JSON.stringify(defaultCollectionsData)); // Fallback
-        }
-      } else {
-        console.log("No collections found in localStorage, using defaults.");
-        loadedCollections = JSON.parse(JSON.stringify(defaultCollectionsData)); // Use defaults if nothing saved
-      }
-    } catch (e) {
-      console.error("Error reading/parsing collections from localStorage:", e);
-      loadedCollections = JSON.parse(JSON.stringify(defaultCollectionsData)); // Fallback
+      return await journalService.verifyCollectionPassword(collectionId, password);
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Password verification failed:", error);
+      return false;
     }
+  };
 
-    // Load Password Hashes
+  // Add new collection
+  const addCollection = async (name: string, password?: string): Promise<boolean> => {
     try {
-        const savedPasswords = localStorage.getItem(PASSWORD_STORAGE_KEY);
-        if (savedPasswords) {
-            const parsed = JSON.parse(savedPasswords);
-            if (typeof parsed === 'object' && parsed !== null) {
-                // Basic validation (logic moved)
-                let validHashes = true;
-                for (const key in parsed) {
-                    if (typeof key !== 'string' || typeof parsed[key] !== 'string') {
-                        validHashes = false;
-                        break;
-                    }
-                }
-                if (validHashes) {
-                    loadedHashes = parsed as Record<string, string>;
-                    console.log("Password hashes loaded successfully.");
-                } else {
-                     console.warn("Invalid password hash format found in localStorage.");
-                }
-            }
-        }
-    } catch(e) {
-        console.error("Error reading/parsing password hashes from localStorage:", e);
+      console.log('🔐 Creating collection:', { name, hasPassword: !!password });
+      
+      const newCollection = await journalService.createCollection({
+        name,
+        is_private: !!password,  // ✅ Fixed: snake_case for backend
+        password,
+      });
+
+      console.log('🔐 Backend returned collection:', newCollection);
+
+      // Add to local state with entries array
+      const collectionWithEntries = { ...newCollection, entries: [] };
+      
+      setCollections(prev => {
+        // Ensure default collection stays first
+        const otherCollections = prev.filter(c => c.id !== "default-my-notes");
+        const defaultCollection = prev.find(c => c.id === "default-my-notes");
+        
+        const updated = defaultCollection 
+          ? [defaultCollection, ...otherCollections, collectionWithEntries]
+          : [collectionWithEntries, ...otherCollections];
+          
+        console.log('🔐 Updated collections:', updated.map(c => ({ id: c.id, name: c.name, isPrivate: c.isPrivate })));
+        return updated;
+      });
+      return true;
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Failed to create collection:", error);
+      setError(error.message);
+      return false;
     }
-
-    // Set state after loading
-    setCollections(loadedCollections);
-    setPasswordHashes(loadedHashes);
-
-    // Handle initial hashing for default private collection AFTER loading state
-    const privateCollection = loadedCollections.find(c => c.name === "Private" && c.isPrivate);
-    if (privateCollection && !loadedHashes[privateCollection.id]) {
-        console.log("Setting initial password hash for default private collection...");
-        bcrypt.hash("pass1", 10).then(hash => {
-            // Use functional update based on the *latest* state
-            setPasswordHashes(prev => {
-                const newHashes = {...prev, [privateCollection.id]: hash };
-                // Save updated hashes (will trigger the save effect below)
-                return newHashes;
-            });
-        }).catch(err => {
-           console.error("Failed to hash initial password:", err);
-        });
-    }
-
-    setIsLoading(false); // Set loading to false
-    console.log("Initial loading complete.");
-
-  }, []); // Empty dependency array ensures this runs only once on mount
-
-  // Effect to save collections to localStorage when they change (run only after initial load)
-  useEffect(() => {
-    if (isLoading) return; // Don't save during initial load
-    try {
-        console.log("Saving collections to localStorage...");
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(collections));
-    } catch (e) {
-        console.error("Error saving collections to localStorage:", e);
-    }
-  }, [collections, isLoading]);
-
-  // Effect to save password hashes to localStorage when they change (run only after initial load)
-  useEffect(() => {
-    if (isLoading) return; // Don't save during initial load
-    try {
-      console.log("Saving password hashes to localStorage...");
-      localStorage.setItem(PASSWORD_STORAGE_KEY, JSON.stringify(passwordHashes));
-    } catch (e) {
-      console.error("Error saving password hashes to localStorage:", e);
-    }
-  }, [passwordHashes, isLoading]);
-
-  const verifyPassword = async (
-    collectionId: string,
-    password: string
-  ): Promise<boolean> => {
-    const hash = passwordHashes[collectionId];
-    return hash ? bcrypt.compare(password, hash) : false;
   };
 
-  const validatePassword = (password: string): boolean => {
-    return password.length > 0;
-  };
-
-  const saveEntry = (collectionId: string, entry: Entry) => {
-    const now = new Date().toISOString();
-    setCollections((prev) =>
-      prev.map((col) =>
-        col.id === collectionId
-          ? {
-              ...col,
-              entries: col.entries.some((e) => e.id === entry.id)
-                ? col.entries.map((e) =>
-                    e.id === entry.id ? { ...e, ...entry, lastSavedAt: now } : e
-                  )
-                : [
-                    { ...entry, createdAt: now, lastSavedAt: now },
-                    ...col.entries,
-                  ],
-            }
-          : col
-      )
-    );
-  };
-
-  const deleteEntry = (collectionId: string, entryId: string) => {
-    setCollections((prev) =>
-      prev.map((col) =>
-        col.id === collectionId
-          ? { ...col, entries: col.entries.filter((e) => e.id !== entryId) }
-          : col
-      )
-    );
-  };
-
-  const addCollection = async (name: string, password?: string) => {
-    const newCollection: Collection = {
-      id: uuidv4(),
-      name,
-      isPrivate: Boolean(password),
-      entries: [],
-    };
-
-    if (password) {
-        if (!validatePassword(password)) {
-            console.error("Invalid password format");
-            return false; // Return false on validation failure
-        }
-      try {
-          const hash = await bcrypt.hash(password, 10);
-          setPasswordHashes((prev) => ({ ...prev, [newCollection.id]: hash }));
-      } catch (error) {
-           console.error("Failed to hash password for new collection:", error);
-           return false; // Indicate failure
-      }
-    }
-
-    setCollections((prev) => [...prev, newCollection]);
-    return true; // Indicate success
-  };
-
- const updateCollection = async (
+  // Update existing collection
+  const updateCollection = async (
     collectionId: string,
     updates: { name?: string; isPrivate?: boolean; password?: string },
     currentPassword?: string
-  ) => {
-    // Find collection using functional state update to ensure freshness
-    let collectionToUpdate: Collection | undefined;
-    setCollections(prev => {
-        const collectionIndex = prev.findIndex(c => c.id === collectionId);
-        if (collectionIndex === -1) return prev; // Not found
-        collectionToUpdate = prev[collectionIndex];
-        return prev; // No change yet
-    });
+  ): Promise<boolean> => {
+    try {
+      const updatedCollection = await journalService.updateCollection(collectionId, {
+        name: updates.name,
+        is_private: updates.isPrivate,  // ✅ Convert camelCase to snake_case for backend
+        password: updates.password,
+        current_password: currentPassword,  // ✅ Convert camelCase to snake_case for backend
+      });
 
-    if (!collectionToUpdate) {
-        console.error("Collection not found for update:", collectionId);
-        return false;
+      // Update local state
+      setCollections(prev =>
+        prev.map(col =>
+          col.id === collectionId
+            ? { ...col, ...updatedCollection }
+            : col
+        )
+      );
+      return true;
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Failed to update collection:", error);
+      setError(error.message);
+      return false;
     }
+  };
 
-    // Prevent editing "My Notes" properties
-    if (collectionToUpdate.id === "default-my-notes" && (updates.name || updates.isPrivate !== undefined || updates.password)) {
-        console.warn("Cannot modify core properties of 'My Notes' collection.");
-        return false;
-    }
-
-    // Verify current password if needed
-    const needsAuth = updates.isPrivate === true || updates.password !== undefined || (collectionToUpdate.isPrivate && updates.name !== undefined);
-    if (collectionToUpdate.isPrivate && needsAuth) {
-        if (!currentPassword) {
-             console.error("Current password required for this update.");
-             return false;
-        }
-      const isValid = await verifyPassword(collectionId, currentPassword);
-      if (!isValid) {
-          console.error("Invalid current password.");
-          return false;
-      }
-    }
-
-    // Validate new password
-    if (updates.password && !validatePassword(updates.password)) {
-      console.error("Invalid new password format.");
+  // Delete collection
+  const deleteCollection = async (collectionId: string): Promise<boolean> => {
+    // Find the collection to check if it's the default "My Notes"
+    const collectionToDelete = collections.find(col => col.id === collectionId);
+    
+    // Prevent deletion of the default "My Notes" collection
+    if (collectionToDelete?.name === "My Notes") {
+      console.warn("Cannot delete the default 'My Notes' collection");
+      setError("Cannot delete the default 'My Notes' collection");
       return false;
     }
 
-    // --- Prepare State Updates --- 
-    let newPasswordHash: string | null | undefined = undefined; // undefined: no change, null: remove, string: new hash
+    try {
+      await journalService.deleteCollection(collectionId);
+      
+      // Remove access token for this collection
+      collectionTokens.remove(collectionId);
+      
+      // Remove from local state
+      setCollections(prev => prev.filter(col => col.id !== collectionId));
+      return true;
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Failed to delete collection:", error);
+      setError(error.message);
+      return false;
+    }
+  };
 
-    if (updates.password) {
-        try {
-            newPasswordHash = await bcrypt.hash(updates.password, 10);
-        } catch (error) {
-            console.error("Failed to hash password for update:", error);
-            return false;
+  // Save entry to collection
+  const saveEntry = async (collectionId: string, entry: Entry): Promise<boolean> => {
+    try {
+      let savedEntry: Entry;
+      
+      // Check if entry exists (update) or is new (create)
+      const collection = collections.find(col => col.id === collectionId);
+      const existingEntry = collection?.entries.find(e => e.id === entry.id);
+      
+      if (existingEntry) {
+        // Update existing entry
+        const updateData: any = {
+          title: entry.title,
+          content: entry.content,
+        };
+        
+        // Only include is_encrypted if it's explicitly set (not undefined)
+        if (entry.isEncrypted !== undefined) {
+          updateData.is_encrypted = entry.isEncrypted;
         }
-    } else if (updates.isPrivate === false && passwordHashes[collectionId]) {
-        newPasswordHash = null; // Signal removal
-    } else if (updates.isPrivate === true && !passwordHashes[collectionId] && !updates.password) {
-        console.warn("Collection made private without providing a new password.");
-        // Potentially return false here if password is required for private
-        // return false;
-    }
+        
+        savedEntry = await journalService.updateEntry(entry.id, updateData);
+      } else {
+        // Create new entry  
+        const collectionIdInt = parseInt(collectionId);
+        if (isNaN(collectionIdInt)) {
+          throw new Error(`Invalid collection ID: ${collectionId}`);
+        }
+        
+        const createData: any = {
+          title: entry.title,
+          content: entry.content,
+          collection_id: collectionIdInt, // ✅ Convert to integer for backend
+        };
+        
+        // Only include is_encrypted if it's explicitly set (not undefined)
+        if (entry.isEncrypted !== undefined) {
+          createData.is_encrypted = entry.isEncrypted;
+        }
+        
+        console.log('🚀 ABOUT TO CALL createEntry with data:', createData);
+        savedEntry = await journalService.createEntry(createData);
+      }
 
-    // --- Apply State Updates --- 
-    // Update password hashes first (if changing)
-    if (newPasswordHash !== undefined) {
-        setPasswordHashes((prevHashes) => {
-            const updatedHashes = { ...prevHashes };
-            if (newPasswordHash === null) {
-                delete updatedHashes[collectionId];
-            } else {
-                updatedHashes[collectionId] = newPasswordHash;
-            }
-            return updatedHashes;
-        });
-    }
-
-    // Update collection details
-    setCollections((prev) =>
-        prev.map((col) => {
-            if (col.id === collectionId) {
-                const collectionUpdates: Partial<Collection> = {};
-                if (updates.name !== undefined) collectionUpdates.name = updates.name;
-                if (updates.isPrivate !== undefined) collectionUpdates.isPrivate = updates.isPrivate;
-                return { ...col, ...collectionUpdates };
-            }
-            return col;
-        })
-    );
-
-    return true; // Indicate success
-  };
-
-  const deleteCollection = (collectionId: string) => {
-    // Find collection using functional state update
-     let collectionToDelete: Collection | undefined;
-     setCollections(prev => {
-         collectionToDelete = prev.find(c => c.id === collectionId);
-         if (!collectionToDelete || collectionToDelete.id === "default-my-notes") {
-             console.warn("Attempted to delete 'My Notes' or non-existent collection.");
-             return prev; // No change
-         }
-         return prev.filter((c) => c.id !== collectionId);
-     });
-
-    if (collectionToDelete && collectionToDelete.id !== "default-my-notes") {
-        setPasswordHashes((prev) => {
-          const rest = { ...prev };
-          delete rest[collectionId];
-          return rest;
-        });
+      // Update local state
+      setCollections(prev =>
+        prev.map(col =>
+          col.id === collectionId
+            ? {
+                ...col,
+                entries: existingEntry
+                  ? col.entries.map(e => e.id === entry.id ? savedEntry : e)
+                  : [savedEntry, ...col.entries],
+              }
+            : col
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Failed to save entry:", error);
+      setError(error.message);
+      return false;
     }
   };
+
+  // Delete entry from collection
+  const deleteEntry = async (collectionId: string, entryId: string): Promise<boolean> => {
+    try {
+      await journalService.deleteEntry(entryId);
+      
+      // Remove from local state
+      setCollections(prev =>
+        prev.map(col =>
+          col.id === collectionId
+            ? { ...col, entries: col.entries.filter(e => e.id !== entryId) }
+            : col
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Failed to delete entry:", error);
+      setError(error.message);
+      return false;
+    }
+  };
+
+  // Get specific entry by ID
+  const getEntry = async (entryId: string): Promise<Entry | null> => {
+    try {
+      return await journalService.getEntry(entryId);
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Failed to get entry:", error);
+      return null;
+    }
+  };
+
+  // Refresh collections from backend
+  const refreshCollections = useCallback(() => {
+    loadCollections();
+  }, [loadCollections]);
+
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   return {
     collections,
-    passwordHashes, // May be needed for UI checks? Consider removing if not.
-    isLoading, // Expose loading state for UI
+    isLoading,
+    error,
+    verifyPassword,
+    addCollection,
+    updateCollection,
+    deleteCollection,
     saveEntry,
     deleteEntry,
-    addCollection,
-    deleteCollection,
-    verifyPassword,
-    updateCollection,
-    validatePassword,
+    getEntry,
+    refreshCollections,
+    clearError,
   };
 } 
