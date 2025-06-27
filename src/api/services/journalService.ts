@@ -18,6 +18,35 @@ import type {
  * Handles all journal-related API operations including collections, entries, and gratitude
  */
 class JournalService {
+  // Fallback token storage methods
+  private storeCollectionToken(collectionId: string, token: string) {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('REF_COLLECTION_TOKENS');
+        const tokens = stored ? JSON.parse(stored) : {};
+        tokens[collectionId] = token;
+        localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+        console.log('🔐 Fallback: Stored access token for collection:', collectionId);
+      } catch (error) {
+        console.error('🔐 Fallback: Failed to store collection token:', error);
+      }
+    }
+  }
+
+  private getCollectionToken(collectionId: string): string | null {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('REF_COLLECTION_TOKENS');
+        const tokens = stored ? JSON.parse(stored) : {};
+        return tokens[collectionId] || null;
+      } catch (error) {
+        console.warn('🔐 Fallback: Failed to get collection token:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+
   // Collection Operations
   async getCollections(): Promise<Collection[]> {
     
@@ -129,6 +158,9 @@ class JournalService {
     try {
       console.log('🔐 Verifying password for collection:', id);
       console.log('🔐 Password length:', password?.length);
+      console.log('🔐 collectionTokens object:', collectionTokens);
+      console.log('🔐 collectionTokens type:', typeof collectionTokens);
+      console.log('🔐 collectionTokens.store type:', typeof collectionTokens?.store);
       console.log('🔐 Calling endpoint:', JOURNAL.COLLECTION_VERIFY_PASSWORD(id));
       
       const response = await client.post<{ valid: boolean; access_token?: string }>(
@@ -137,11 +169,32 @@ class JournalService {
       );
       
       console.log('🔐 Password verification response:', response.data);
+      console.log('🔐 Response status:', response.status);
       
       // If verification successful and we get an access token, store it
       if (response.data.valid && response.data.access_token) {
-        console.log('🔐 Password valid, storing access token');
-        collectionTokens.store(id, response.data.access_token);
+        console.log('🔐 Password valid, about to store access token');
+        
+        try {
+          // Try imported collectionTokens first, then fallback
+          if (collectionTokens && typeof collectionTokens.store === 'function') {
+            console.log('🔐 Using imported collectionTokens.store');
+            collectionTokens.store(id, response.data.access_token);
+          } else {
+            console.log('🔐 Using fallback token storage');
+            this.storeCollectionToken(id, response.data.access_token);
+          }
+          console.log('🔐 Access token stored successfully');
+        } catch (storeError) {
+          console.error('🔐 Error storing access token:', storeError);
+          console.log('🔐 Trying fallback storage method...');
+          try {
+            this.storeCollectionToken(id, response.data.access_token);
+            console.log('🔐 Fallback storage successful');
+          } catch (fallbackError) {
+            console.error('🔐 Fallback storage also failed:', fallbackError);
+          }
+        }
       } else {
         console.log('🔐 Password verification result:', response.data.valid);
       }
@@ -174,7 +227,7 @@ class JournalService {
       // Add access token header for private collections
       const headers: Record<string, string> = {};
       if (collectionId) {
-        const accessToken = collectionTokens.get(collectionId);
+        const accessToken = this.getCollectionToken(collectionId);
         if (accessToken) {
           headers['X-Collection-Access-Token'] = accessToken;
           console.log('🔐 Adding access token for collection:', collectionId);
@@ -215,12 +268,20 @@ class JournalService {
       
       return this.mapEntriesResponse(entriesData);
     } catch (error) {
-      // If it's a 401/403 for private collection, the token might be expired
-      const apiError = error as any;
-      if (collectionId && (apiError.status === 401 || apiError.status === 403)) {
-        console.warn('🔐 Access denied for collection, removing token:', collectionId);
-        collectionTokens.remove(collectionId);
-      }
+              // If it's a 401/403 for private collection, the token might be expired
+        const apiError = error as any;
+        if (collectionId && (apiError.status === 401 || apiError.status === 403)) {
+          console.warn('🔐 Access denied for collection, removing token:', collectionId);
+          try {
+            if (collectionTokens && typeof collectionTokens.remove === 'function') {
+              collectionTokens.remove(collectionId);
+            } else {
+              this.removeCollectionToken(collectionId);
+            }
+          } catch (removeError) {
+            console.error('🔐 Error removing token:', removeError);
+          }
+        }
       throw this.handleError(error, 'Failed to fetch entries');
     }
   }
@@ -241,7 +302,7 @@ class JournalService {
       // Add access token header if entry is for a private collection
       const headers: Record<string, string> = {};
       const collectionId = String(data.collection_id);
-      const accessToken = collectionTokens.get(collectionId);
+      const accessToken = this.getCollectionToken(collectionId);
       if (accessToken) {
         headers['X-Collection-Access-Token'] = accessToken;
         console.log('🔐 Using access token for private collection:', collectionId);
@@ -460,6 +521,20 @@ class JournalService {
     }
 
     return journalError;
+  }
+
+  private removeCollectionToken(collectionId: string) {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('REF_COLLECTION_TOKENS');
+        const tokens = stored ? JSON.parse(stored) : {};
+        delete tokens[collectionId];
+        localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+        console.log('🔐 Fallback: Removed access token for collection:', collectionId);
+      } catch (error) {
+        console.error('🔐 Fallback: Failed to remove collection token:', error);
+      }
+    }
   }
 }
 
