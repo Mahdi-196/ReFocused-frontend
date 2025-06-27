@@ -127,24 +127,40 @@ class JournalService {
 
   async verifyCollectionPassword(id: string, password: string): Promise<boolean> {
     try {
+      console.log('🔐 Verifying password for collection:', id);
+      console.log('🔐 Password length:', password?.length);
+      console.log('🔐 Calling endpoint:', JOURNAL.COLLECTION_VERIFY_PASSWORD(id));
+      
       const response = await client.post<{ valid: boolean; access_token?: string }>(
         JOURNAL.COLLECTION_VERIFY_PASSWORD(id),
         { password }
       );
       
+      console.log('🔐 Password verification response:', response.data);
+      
       // If verification successful and we get an access token, store it
       if (response.data.valid && response.data.access_token) {
+        console.log('🔐 Password valid, storing access token');
         collectionTokens.store(id, response.data.access_token);
+      } else {
+        console.log('🔐 Password verification result:', response.data.valid);
       }
       
       return response.data.valid;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('🔐 Password verification error:', error);
+      console.error('🔐 Error status:', error?.response?.status);
+      console.error('🔐 Error data:', error?.response?.data);
+      
       // Return false for authentication errors instead of throwing
-      const apiError = error as any;
-      if (apiError.status === 401 || apiError.status === 403) {
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.log('🔐 Authentication failed - incorrect password');
         return false;
       }
-      throw this.handleError(error, 'Failed to verify password');
+      
+      // For other errors, still return false but log them
+      console.error('🔐 Unexpected error during password verification:', error);
+      return false;
     }
   }
 

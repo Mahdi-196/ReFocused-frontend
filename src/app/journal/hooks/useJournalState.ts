@@ -213,10 +213,16 @@ export function useJournalState() {
   const handlePasswordSubmit = async () => {
     if (!passwordPrompt) return;
     
+    console.log('🔐 Starting password verification for collection:', passwordPrompt.collectionId);
+    console.log('🔐 Password length:', enteredPassword?.length);
+    
     setOperationLoading(true);
     try {
       const success = await verifyPassword(passwordPrompt.collectionId, enteredPassword);
+      console.log('🔐 Password verification result:', success);
+      
       if (success) {
+        console.log('✅ Password correct, refreshing collections and selecting');
         // Refresh collections to load entries for the unlocked collection
         await refreshCollections();
         
@@ -224,11 +230,22 @@ export function useJournalState() {
         setPasswordPrompt(null);
         setEnteredPassword("");
       } else {
-        alert("Incorrect password");
+        console.log('❌ Password incorrect');
+        alert("Incorrect password. Please try again.");
       }
-    } catch (error) {
-      console.error("Password verification failed:", error);
-      alert("Password verification failed. Please try again.");
+    } catch (error: any) {
+      console.error("💥 Password verification error:", error);
+      
+      // Show more specific error messages
+      if (error?.message?.includes('Network Error') || error?.isNetworkError) {
+        alert("Cannot connect to server. Please check your connection and try again.");
+      } else if (error?.message?.includes('timeout')) {
+        alert("Request timed out. Please try again.");
+      } else if (error?.status === 404) {
+        alert("Collection not found. Please refresh the page and try again.");
+      } else {
+        alert(`Password verification failed: ${error?.message || 'Unknown error'}. Please try again.`);
+      }
     } finally {
       setOperationLoading(false);
     }

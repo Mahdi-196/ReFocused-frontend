@@ -172,17 +172,29 @@ export const collectionTokens = {
   // Store access token for a collection
   store: (collectionId: string, token: string) => {
     if (typeof window !== 'undefined') {
-      const tokens = collectionTokens.getAll();
-      tokens[collectionId] = token;
-      localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+      try {
+        const stored = localStorage.getItem('REF_COLLECTION_TOKENS');
+        const tokens = stored ? JSON.parse(stored) : {};
+        tokens[collectionId] = token;
+        localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+        console.log('🔐 Stored access token for collection:', collectionId);
+      } catch (error) {
+        console.error('Failed to store collection token:', error);
+      }
     }
   },
   
   // Get access token for a collection
   get: (collectionId: string): string | null => {
     if (typeof window !== 'undefined') {
-      const tokens = collectionTokens.getAll();
-      return tokens[collectionId] || null;
+      try {
+        const stored = localStorage.getItem('REF_COLLECTION_TOKENS');
+        const tokens = stored ? JSON.parse(stored) : {};
+        return tokens[collectionId] || null;
+      } catch (error) {
+        console.warn('Failed to get collection token:', error);
+        return null;
+      }
     }
     return null;
   },
@@ -204,9 +216,15 @@ export const collectionTokens = {
   // Remove access token for a collection
   remove: (collectionId: string) => {
     if (typeof window !== 'undefined') {
-      const tokens = collectionTokens.getAll();
-      delete tokens[collectionId];
-      localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+      try {
+        const stored = localStorage.getItem('REF_COLLECTION_TOKENS');
+        const tokens = stored ? JSON.parse(stored) : {};
+        delete tokens[collectionId];
+        localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+        console.log('🔐 Removed access token for collection:', collectionId);
+      } catch (error) {
+        console.error('Failed to remove collection token:', error);
+      }
     }
   },
   
@@ -214,6 +232,7 @@ export const collectionTokens = {
   clear: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('REF_COLLECTION_TOKENS');
+      console.log('🔐 Cleared all collection tokens');
     }
   }
 };
