@@ -236,7 +236,14 @@ export function useJournalState() {
     } catch (error: any) {
       console.error("💥 Password verification error:", error);
       
-      // Show more specific error messages
+      // Check if it's an authorization error that will trigger redirect
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.log('🔐 Authorization error detected - redirect will happen automatically');
+        // Don't show alert, let the redirect happen
+        return;
+      }
+      
+      // Show more specific error messages for other types of errors
       if (error?.message?.includes('Network Error') || error?.isNetworkError) {
         alert("Cannot connect to server. Please check your connection and try again.");
       } else if (error?.message?.includes('timeout')) {

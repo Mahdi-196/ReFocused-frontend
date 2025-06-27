@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Save, AlertCircle, Loader2 } from "lucide-react";
 import { useTime } from '@/contexts/TimeContext';
+import PageTransition from '@/components/PageTransition';
 
 // Import types and hooks
 import type { Entry } from "../types";
@@ -32,6 +33,18 @@ function EntryContent() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { getCurrentDateTime } = useTime();
+
+  // Authentication check
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('REF_TOKEN');
+      if (!token || token === 'dummy-auth-token') {
+        console.log('🔐 No valid authentication token found, redirecting to landing page');
+        window.location.href = '/';
+        return;
+      }
+    }
+  }, []);
 
   // Track changes for unsaved indicator
   useEffect(() => {

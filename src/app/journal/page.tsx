@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import PageTransition from '@/components/PageTransition';
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import DropdownMenu from "@/components/DropdownMenu";
@@ -23,6 +23,18 @@ import { useGratitude } from "./hooks/useGratitude";
  * Provides a complete journaling experience with collections, entries, and backend integration
  */
 const Journal: React.FC = () => {
+  // Authentication check
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('REF_TOKEN');
+      if (!token || token === 'dummy-auth-token') {
+        console.log('🔐 No valid authentication token found, redirecting to landing page');
+        window.location.href = '/';
+        return;
+      }
+    }
+  }, []);
+
   const journalState = useJournalState();
   const gratitudeHook = useGratitude();
 

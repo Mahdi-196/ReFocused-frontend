@@ -205,10 +205,10 @@ class JournalService {
       console.error('🔐 Error status:', error?.response?.status);
       console.error('🔐 Error data:', error?.response?.data);
       
-      // Return false for authentication errors instead of throwing
+      // Let 401/403 errors bubble up to trigger redirect to landing page
       if (error?.response?.status === 401 || error?.response?.status === 403) {
-        console.log('🔐 Authentication failed - incorrect password');
-        return false;
+        console.log('🔐 Authentication/authorization failed - will redirect to landing page');
+        throw error; // This will trigger the client interceptor redirect
       }
       
       // For other errors, still return false but log them

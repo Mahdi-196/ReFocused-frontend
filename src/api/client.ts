@@ -127,20 +127,28 @@ client.interceptors.response.use(
       }
     }
     
-    if (error.response?.status === 401) {
-      // Handle unauthorized access - token expired or invalid
-      logger.warn('Authentication failed - token may be expired', { url: error.config?.url }, 'API');
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Handle unauthorized/forbidden access - token expired, invalid, or insufficient permissions
+      const errorType = error.response.status === 401 ? 'unauthorized' : 'forbidden';
+      logger.warn(`Authentication failed - ${errorType} access`, { 
+        url: error.config?.url,
+        status: error.response.status 
+      }, 'API');
       
       if (typeof window !== 'undefined') {
-        // Clear expired/invalid token
+        // Clear all authentication data
         localStorage.removeItem('REF_TOKEN');
         localStorage.removeItem('REF_USER');
+        localStorage.removeItem('REF_COLLECTION_TOKENS');
         delete client.defaults.headers.common['Authorization'];
         
-        // Clear collection access tokens as well
+        // Clear collection access tokens
         collectionTokens.clear();
         
-        // Redirect to home page for re-authentication
+        // Show a brief message before redirect (optional)
+        console.log('🔐 Session expired or access denied. Redirecting to landing page...');
+        
+        // Redirect to landing page for re-authentication
         window.location.href = '/';
       }
     }
