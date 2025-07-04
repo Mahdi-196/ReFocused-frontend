@@ -1,120 +1,93 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 
 interface GoogleSignInButtonProps {
   onSuccess?: (token: string) => void;
   onError?: (error: string) => void;
-  theme?: 'outline' | 'filled_blue' | 'filled_black';
-  size?: 'large' | 'medium' | 'small';
-  text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
-  shape?: 'rectangular' | 'pill' | 'circle' | 'square';
   className?: string;
 }
 
 const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   onSuccess,
   onError,
-  theme = 'outline',
-  size = 'large',
-  text = 'signin_with',
-  shape = 'rectangular',
   className = '',
 }) => {
-  const buttonRef = useRef<HTMLDivElement>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isRendering, setIsRendering] = useState(false);
-  const hasRendered = useRef(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Generate stable ID that doesn't change on re-renders
-  const buttonId = useMemo(() => `google-signin-${Math.random().toString(36).substr(2, 9)}`, []);
-
-  const { renderGoogleButton } = useGoogleAuth({
+  const { signInWithGoogle } = useGoogleAuth({
     onSuccess,
     onError,
   });
 
-  useEffect(() => {
-    const renderButton = () => {
-      if (buttonRef.current && !hasRendered.current && window.google?.accounts?.id) {
-        try {
-          setIsRendering(true);
-          
-          // Create the button element with stable ID
-          const buttonElement = document.createElement('div');
-          buttonElement.id = buttonId;
-          buttonRef.current.appendChild(buttonElement);
-          
-          // Render the Google button with options
-          renderGoogleButton(buttonId, {
-            theme,
-            size,
-            text,
-            shape,
-            width: 400, // Max allowed by Google
-          });
-          
-          hasRendered.current = true;
-          setIsLoaded(true);
-        } catch (error) {
-          console.error('Error rendering Google button:', error);
-          if (onError) {
-            onError('Failed to render Google Sign-In button');
-          }
-        } finally {
-          setIsRendering(false);
+  const handleGoogleSignIn = () => {
+    setIsLoading(true);
+    try {
+      signInWithGoogle();
+      // Loading state will be reset by success/error callbacks
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      setIsLoading(false);
+      
+      // Provide specific error message based on the error type
+      let errorMessage = 'Failed to sign in with Google';
+      if (error instanceof Error) {
+        if (error.message.includes('not available')) {
+          errorMessage = 'Google authentication is not available. Please refresh the page.';
+        } else if (error.message.includes('cancelled')) {
+          errorMessage = 'Sign-in was cancelled. Please try again.';
+        } else if (error.message.includes('not configured')) {
+          errorMessage = 'Google Sign-In is not configured. Please contact support.';
+        } else {
+          errorMessage = error.message;
         }
       }
-    };
-
-    // Check if Google SDK is already loaded
-    if (window.google?.accounts?.id) {
-      renderButton();
-    } else {
-      // Wait for Google SDK to load with proper polling
-      const checkGoogleLoaded = setInterval(() => {
-        if (window.google?.accounts?.id) {
-          clearInterval(checkGoogleLoaded);
-          renderButton();
-        }
-      }, 50); // Check more frequently
-
-      // Cleanup interval after 10 seconds
-      const timeout = setTimeout(() => {
-        clearInterval(checkGoogleLoaded);
-        if (onError) {
-          onError('Google SDK failed to load within 10 seconds');
-        }
-      }, 10000);
-
-      return () => {
-        clearInterval(checkGoogleLoaded);
-        clearTimeout(timeout);
-      };
+      
+      if (onError) {
+        onError(errorMessage);
+      }
     }
-  }, [renderGoogleButton, buttonId, theme, size, text, shape, onError]);
+  };
 
   return (
-    <div className="w-full flex justify-center items-center py-2">
-      <div className="w-full max-w-[420px] px-2 sm:px-0 flex justify-center">
-        <div
-          ref={buttonRef}
-          className={`google-signin-wrapper bg-white/90 dark:bg-neutral-900/80 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-700 flex items-center justify-center transition-all duration-300 min-h-[48px] ${className} ${!isLoaded ? 'opacity-0' : 'opacity-100'}`}
-          style={{
-            width: '100%',
-            minHeight: size === 'large' ? '48px' : size === 'medium' ? '40px' : '32px',
-            maxWidth: 400,
-          }}
-        >
-          {!isLoaded && (
-            <div className="flex items-center justify-center w-full h-full">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <button
+      onClick={handleGoogleSignIn}
+      disabled={isLoading}
+      className={`w-full h-12 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg flex items-center justify-center gap-3 text-white font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg ${className}`}
+    >
+      {isLoading ? (
+        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+      ) : (
+        <>
+          {/* Google Icon */}
+          <svg
+            className="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              fill="#4285F4"
+            />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
+            />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
+          </svg>
+          <span>Continue with Google</span>
+        </>
+      )}
+    </button>
   );
 };
 

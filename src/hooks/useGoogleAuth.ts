@@ -53,15 +53,6 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
   const initializeGoogleAuth = useCallback(() => {
     if (typeof window === 'undefined' || !window.google) return;
 
-    // ⚠️ GOOGLE OAUTH CONFIGURATION REQUIRED ⚠️
-    // If you're seeing "[GSI_LOGGER]: The given origin is not allowed for the given client ID" error:
-    // 1. This error occurs because your current domain/origin is not authorized for this Google OAuth Client ID
-    // 2. ACTION REQUIRED: Log in to Google Cloud Console (https://console.cloud.google.com)
-    // 3. Navigate to: APIs & Services > Credentials
-    // 4. Find your OAuth 2.0 Client ID and click "Edit"
-    // 5. Add "http://localhost:3000" to the "Authorized JavaScript origins" list
-    // 6. Save the changes and wait a few minutes for propagation
-    // 7. Refresh your application to test the fix
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     
     if (!clientId) {
@@ -72,60 +63,93 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
       return;
     }
 
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: handleGoogleResponse,
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
+    try {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: false,
+        itp_support: true,
+      });
+      
+      console.log('✅ Google OAuth initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Google OAuth:', error);
+      if (onError) {
+        onError('Google authentication setup failed. Please try refreshing the page.');
+      }
+    }
   }, [handleGoogleResponse, onError]);
 
   const signInWithGoogle = useCallback(() => {
-    if (typeof window === 'undefined' || !window.google) {
-      console.error('Google Identity Services not loaded');
-      return;
-    }
-
-    window.google.accounts.id.prompt();
-  }, []);
-
-  const renderGoogleButton = useCallback((elementId: string, options?: {
-    theme?: 'outline' | 'filled_blue' | 'filled_black';
-    size?: 'large' | 'medium' | 'small';
-    text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
-    shape?: 'rectangular' | 'pill' | 'circle' | 'square';
-  }) => {
     if (typeof window === 'undefined' || !window.google?.accounts?.id) {
-      console.warn('Google Identity Services not available for button rendering');
+      console.error('Google Identity Services not loaded');
+      if (onError) {
+        onError('Google authentication is not available. Please refresh the page.');
+      }
       return;
     }
-
-    const element = document.getElementById(elementId);
-    if (!element) {
-      console.error(`Element with ID ${elementId} not found for Google button rendering`);
-      return;
-    }
-
-    const defaultOptions = {
-      theme: 'outline' as const,
-      size: 'large' as const,
-      text: 'signin_with' as const,
-      shape: 'rectangular' as const,
-      width: '100%', // Ensure full width
-    };
 
     try {
-      window.google.accounts.id.renderButton(
-        element,
-        { ...defaultOptions, ...options }
-      );
+      // Create a temporary container for the Google button
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.position = 'fixed';
+      buttonContainer.style.top = '-1000px'; // Hide it off-screen
+      buttonContainer.style.left = '-1000px';
+      document.body.appendChild(buttonContainer);
+
+      // Render the Google button which handles popup blocking better
+      window.google.accounts.id.renderButton(buttonContainer, {
+        theme: 'outline',
+        size: 'large',
+        type: 'standard',
+        width: 250,
+        text: 'signin_with',
+        logo_alignment: 'left',
+      });
+
+      // Trigger a click on the button programmatically
+      setTimeout(() => {
+        const googleButton = buttonContainer.querySelector('div[role="button"]') as HTMLElement;
+        if (googleButton) {
+          googleButton.click();
+          console.log('🔘 Google Sign-In button clicked programmatically');
+        } else {
+          console.warn('Google button not found, falling back to prompt');
+          // Fallback to prompt method
+          window.google.accounts.id.prompt((notification: any) => {
+            if (notification.isNotDisplayed()) {
+              console.warn('Google Sign-In prompt was not displayed');
+              if (onError) {
+                onError('Google Sign-In is blocked. Please:\n1. Enable popups for this site\n2. Allow third-party sign-in\n3. Try refreshing the page');
+              }
+            } else if (notification.isSkippedMoment()) {
+              console.warn('Google Sign-In was skipped');
+              if (onError) {
+                onError('Google Sign-In was cancelled. Please enable third-party sign-in for this site in your browser settings.');
+              }
+            }
+          });
+        }
+        
+        // Clean up the temporary container
+        setTimeout(() => {
+          if (document.body.contains(buttonContainer)) {
+            document.body.removeChild(buttonContainer);
+          }
+        }, 1000);
+      }, 100);
+
     } catch (error) {
-      console.error('Error rendering Google button:', error);
+      console.error('Error triggering Google Sign-In:', error);
+      if (onError) {
+        onError('Google Sign-In failed to initialize. Please enable third-party sign-in in your browser settings.');
+      }
     }
-  }, []);
+  }, [onError]);
 
   useEffect(() => {
-    // Load Google Identity Services script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -135,7 +159,6 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
     document.head.appendChild(script);
 
     return () => {
-      // Cleanup script when component unmounts
       const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
       if (existingScript) {
         document.head.removeChild(existingScript);
@@ -145,7 +168,5 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
 
   return {
     signInWithGoogle,
-    renderGoogleButton,
-    initializeGoogleAuth,
   };
-}; 
+};

@@ -4,23 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from '@/components/icons';
 import { FaBrain, FaRobot } from 'react-icons/fa';
-import Footer from '@/components/footer';
 import AuthModal from '@/components/AuthModal';
 import { getStudySets } from '@/services/studyService';
 import { authService } from '@/api/services/authService';
 import { useRouter } from 'next/navigation';
-import AuthGuard from '@/components/AuthGuard';
-import Header from '@/components/Header';
-import DailyMomentum from './homeComponents/DailyMomentum';
-import GoalTracker from './homeComponents/GoalTracker';
-import QuickAccess from './homeComponents/QuickAccess';
-import TaskList from './homeComponents/TaskList';
-import ProductivityScore from './homeComponents/ProductivityScore';
-import CircularProgress from './homeComponents/CircularProgress';
-import WordOfTheDay from './homeComponents/WordOfTheDay';
-import HabitStreaks from './homeComponents/HabitStreaks';
-import MoodStats from './homeComponents/MoodStats';
-import MindFuel from './homeComponents/MindFuel';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentDate, useTime } from '@/contexts/TimeContext';
 
@@ -449,13 +436,7 @@ Is authenticated: ${authService.isAuthenticated()}`);
             </div>
           </div>
 
-          {/* Built for Your Success */}
-          <div className="bg-gradient-to-br from-green-500/10 to-teal-500/10 rounded-2xl p-6 border border-green-500/20 text-center">
-            <h3 className="text-xl font-bold text-white mb-3">Built for Your Success</h3>
-            <p className="text-slate-300 leading-relaxed max-w-2xl mx-auto text-sm">
-              Our AI doesn't just answer questions—it understands your journey, celebrates your progress, and provides the encouragement and practical guidance you need to overcome obstacles and achieve your goals. Every interaction is designed to move you forward on your path to personal growth.
-            </p>
-          </div>
+
         </div>
       </section>
 
@@ -469,15 +450,16 @@ Is authenticated: ${authService.isAuthenticated()}`);
             Join thousands of users who have already improved their focus, productivity, and wellbeing with ReFocused.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex justify-center">
             <button 
-              onClick={() => setIsAuthModalOpen(true)}
-              className="px-6 py-3 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 min-h-[48px] flex items-center justify-center text-sm"
-            >
-              Sign In to ReFocused
-            </button>
-            <button 
-              onClick={() => setIsAuthModalOpen(true)}
+              onClick={() => {
+                // Scroll to top smoothly
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // Wait for scroll to complete, then trigger the modal
+                setTimeout(() => {
+                  setIsAuthModalOpen(true);
+                }, 800);
+              }}
               className="px-6 py-3 border-2 border-[#42b9e5] text-[#42b9e5] font-semibold rounded-xl hover:bg-[#42b9e5] hover:text-white transition-all duration-300 min-h-[48px] flex items-center justify-center text-sm"
             >
               Join ReFocused✨
@@ -485,8 +467,6 @@ Is authenticated: ${authService.isAuthenticated()}`);
           </div>
         </div>
       </section>
-
-              <Footer />
       
       {/* Auth Modal */}
       <AuthModal
