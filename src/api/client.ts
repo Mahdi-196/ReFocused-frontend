@@ -111,7 +111,7 @@ client.interceptors.response.use(
       
       // If we found a backend message, use it
       if (backendMessage) {
-        const customError = new Error(backendMessage);
+        const customError = new Error(backendMessage) as Error & { status?: number };
         customError.name = 'BackendError';
         customError.status = error.response.status;
         return Promise.reject(customError);
@@ -120,7 +120,7 @@ client.interceptors.response.use(
       // For 422 validation errors, try to extract more detail
       if (error.response.status === 422) {
         console.error('422 Validation Error Details:', error.response.data);
-        const customError = new Error(JSON.stringify(error.response.data));
+        const customError = new Error(JSON.stringify(error.response.data)) as Error & { status?: number };
         customError.name = 'ValidationError';
         customError.status = 422;
         return Promise.reject(customError);
@@ -144,6 +144,9 @@ client.interceptors.response.use(
         
         // Clear collection access tokens
         collectionTokens.clear();
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('userLoggedOut'));
         
         // Show a brief message before redirect (optional)
         console.log('🔐 Session expired or access denied. Redirecting to landing page...');

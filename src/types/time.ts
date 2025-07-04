@@ -64,4 +64,5 @@ export interface TimeServiceState {
   isOnline: boolean;
   syncInProgress: boolean;
   syncErrors: number;
+  isReady: boolean;
 } 

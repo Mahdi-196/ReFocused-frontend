@@ -11,18 +11,17 @@ import { authService } from '@/api/services/authService';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/AuthGuard';
 import Header from '@/components/Header';
-import { DailyMomentum } from './homeComponents/DailyMomentum';
-import { GoalTracker } from './homeComponents/GoalTracker';
-import { QuickAccess } from './homeComponents/QuickAccess';
-import { TaskList } from './homeComponents/TaskList';
-import { ProductivityScore } from './homeComponents/ProductivityScore';
-import { CircularProgress } from './homeComponents/CircularProgress';
-import { WordOfTheDay } from './homeComponents/WordOfTheDay';
-import { HabitStreaks } from './homeComponents/HabitStreaks';
-import { MoodStats } from './homeComponents/MoodStats';
-import { MindFuel } from './homeComponents/MindFuel';
+import DailyMomentum from './homeComponents/DailyMomentum';
+import GoalTracker from './homeComponents/GoalTracker';
+import QuickAccess from './homeComponents/QuickAccess';
+import TaskList from './homeComponents/TaskList';
+import ProductivityScore from './homeComponents/ProductivityScore';
+import CircularProgress from './homeComponents/CircularProgress';
+import WordOfTheDay from './homeComponents/WordOfTheDay';
+import HabitStreaks from './homeComponents/HabitStreaks';
+import MoodStats from './homeComponents/MoodStats';
+import MindFuel from './homeComponents/MindFuel';
 import { useAuth } from '@/contexts/AuthContext';
-import { Task } from '@/components/textEditor';
 import { useCurrentDate, useTime } from '@/contexts/TimeContext';
 
 // Type for orb configuration
@@ -33,6 +32,15 @@ type Orb = {
   height: string;
   duration: number;
   delay: number;
+};
+
+// Type for task management
+type Task = {
+  id: string;
+  text: string;
+  completed: boolean;
+  priority: 'high' | 'medium' | 'low';
+  createdAt: string;
 };
 
 export default function HomePage() {

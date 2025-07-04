@@ -87,10 +87,9 @@ const QuoteOfTheDay = () => {
 
   return (
     <section 
-      className="lg:col-span-1" 
       aria-labelledby="daily-quote"
     >
-      <article className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-8 h-80 flex flex-col justify-between">
+      <article className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 h-[17rem] sm:h-[19rem] lg:h-[19rem] xl:h-[19rem] 2xl:h-[19rem] flex flex-col justify-between">
         <div>
           <header className="flex items-center justify-between mb-4">
             <h2 id="daily-quote" className="text-lg font-semibold text-white">

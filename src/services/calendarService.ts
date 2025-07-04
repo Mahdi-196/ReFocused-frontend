@@ -53,7 +53,7 @@ function transformCalendarEntryFromBackend(rawEntry: any): DailyCalendarEntry {
     })) || [],
     moodEntry: rawEntry.mood_entry ? {
       happiness: rawEntry.mood_entry.happiness,
-      satisfaction: rawEntry.mood_entry.satisfaction,
+      focus: rawEntry.mood_entry.focus,
       stress: rawEntry.mood_entry.stress
     } : undefined,
     notes: rawEntry.notes,
@@ -78,7 +78,7 @@ function transformCalendarEntryToBackend(entry: DailyCalendarEntry): any {
     })),
     mood_entry: entry.moodEntry ? {
       happiness: entry.moodEntry.happiness,
-      satisfaction: entry.moodEntry.satisfaction,
+      focus: entry.moodEntry.focus,
       stress: entry.moodEntry.stress
     } : null,
     notes: entry.notes || null
@@ -215,11 +215,11 @@ export async function updateCalendarEntry(date: string, updates: Partial<DailyCa
       : {};
 
     if (updates.moodEntry) {
-      payload.mood_entry = updates.moodEntry;
+      (payload as any).mood_entry = updates.moodEntry;
     }
 
     if (updates.notes !== undefined) {
-      payload.notes = updates.notes;
+      (payload as any).notes = updates.notes;
     }
 
     const response = await client.put(`/calendar/entries/${date}`, payload, {
@@ -245,7 +245,7 @@ export async function updateCalendarEntry(date: string, updates: Partial<DailyCa
 /**
  * Create a calendar entry for today with current habits
  */
-export async function createTodayEntry(habits: any[], moodData?: { happiness: number; satisfaction: number; stress: number }): Promise<DailyCalendarEntry> {
+export async function createTodayEntry(habits: any[], moodData?: { happiness: number; focus: number; stress: number }): Promise<DailyCalendarEntry> {
   const today = new Date().toISOString().split('T')[0];
   
   const entry: DailyCalendarEntry = {

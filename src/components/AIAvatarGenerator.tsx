@@ -39,8 +39,8 @@ const AIAvatarGenerator = ({ isOpen, onClose, onSelect, userName = 'User' }: AIA
       avatars.push(avatarUrl);
     }
 
-    // Simulate AI generation delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Minimal delay for smooth UI transition
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     setGeneratedAvatars(avatars);
     setIsGenerating(false);

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import client from '../api/client';
 import { timeService } from '../services/timeService';
 import { useAuth } from '@/contexts/AuthContext';
+import TimeTravel from './devTools/TimeTravel';
 
 const DevTools: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -75,7 +76,7 @@ const DevTools: React.FC = () => {
 
           const result = `✅ ${endpoint.name}: Success!`;
           results.push(result);
-          console.log(`✅ ${endpoint.name}:`, response.data);
+          console.log(`✅ ${endpoint.name}:`, response?.data);
           passed++;
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -106,7 +107,7 @@ ${results.join('\n\n')}
 
   // Clear test results
   const handleClearTestResults = () => {
-    setTestResults([]);
+    // setTestResults([]); // Function not implemented
   };
 
   // Quick endpoint testing
@@ -309,107 +310,117 @@ ${results.join('\n\n')}
       </button>
       
       {isVisible && (
-        <div className="mt-2 bg-gray-900 text-green-400 p-4 rounded-lg shadow-xl text-xs max-w-sm max-h-96 overflow-auto font-mono">
-          <h3 className="text-white font-bold mb-2">🔧 Authentication Debug</h3>
+        <div className="mt-2 bg-white dark:bg-gray-900 p-6 rounded-lg shadow-xl max-w-2xl max-h-[80vh] overflow-auto">
+          {/* Time Travel Section - Available to all users for testing */}
+          <div className="mb-6">
+            <TimeTravel />
+          </div>
           
-          <div className="space-y-2">
-            <div>
-              <span className="text-yellow-400">Loading:</span> {isLoading ? '⏳ Yes' : '✅ No'}
-            </div>
+          {/* Authentication Debug Section */}
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <h3 className="text-gray-900 dark:text-white font-bold mb-3 text-sm">🔧 Authentication Debug</h3>
             
-            <div>
-              <span className="text-yellow-400">Authenticated:</span> {isAuthenticated ? '✅ Yes' : '❌ No'}
-            </div>
-            
-            <div>
-              <span className="text-yellow-400">Token Present:</span> {token ? '✅ Yes' : '❌ No'}
-            </div>
-            
-            {token && (
-              <div>
-                <span className="text-yellow-400">Token Preview:</span> {token.substring(0, 20)}...
+            <div className="space-y-2 text-xs font-mono">
+              <div className="text-gray-700 dark:text-gray-300">
+                <span className="text-yellow-600 dark:text-yellow-400">Loading:</span> {isLoading ? '⏳ Yes' : '✅ No'}
               </div>
-            )}
-            
-            {tokenInfo && !tokenInfo.error && (
-              <>
-                <div>
-                  <span className="text-yellow-400">Token User ID:</span> {tokenInfo.userId}
-                </div>
-                
-                <div>
-                  <span className="text-yellow-400">Token Status:</span> 
-                  <span className={tokenInfo.isExpired ? 'text-red-400' : 'text-green-400'}>
-                    {tokenInfo.isExpired ? '❌ EXPIRED' : '✅ Valid'}
-                  </span>
-                </div>
-                
-                <div>
-                  <span className="text-yellow-400">Expires:</span> {tokenInfo.expDate}
-                </div>
-                
-                <div>
-                  <span className="text-yellow-400">Time Left:</span> 
-                  <span className={tokenInfo.isExpired ? 'text-red-400' : 'text-green-400'}>
-                    {tokenInfo.timeUntilExpiry}
-                  </span>
-                </div>
-              </>
-            )}
-            
-            {tokenInfo?.error && (
-              <div>
-                <span className="text-red-400">Token Error:</span> {tokenInfo.error}
+              
+              <div className="text-gray-700 dark:text-gray-300">
+                <span className="text-yellow-600 dark:text-yellow-400">Authenticated:</span> {isAuthenticated ? '✅ Yes' : '❌ No'}
               </div>
-            )}
-            
-            <div>
-              <span className="text-yellow-400">User ID:</span> {user?.id || '❌ None'}
+              
+              <div className="text-gray-700 dark:text-gray-300">
+                <span className="text-yellow-600 dark:text-yellow-400">Token Present:</span> {token ? '✅ Yes' : '❌ No'}
+              </div>
+              
+              {token && (
+                <div className="text-gray-700 dark:text-gray-300">
+                  <span className="text-yellow-600 dark:text-yellow-400">Token Preview:</span> {token.substring(0, 20)}...
+                </div>
+              )}
+              
+              {tokenInfo && !tokenInfo.error && (
+                <>
+                  <div className="text-gray-700 dark:text-gray-300">
+                    <span className="text-yellow-600 dark:text-yellow-400">Token User ID:</span> {tokenInfo.userId}
+                  </div>
+                  
+                  <div className="text-gray-700 dark:text-gray-300">
+                    <span className="text-yellow-600 dark:text-yellow-400">Token Status:</span> 
+                    <span className={tokenInfo.isExpired ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'}>
+                      {tokenInfo.isExpired ? '❌ EXPIRED' : '✅ Valid'}
+                    </span>
+                  </div>
+                  
+                  <div className="text-gray-700 dark:text-gray-300">
+                    <span className="text-yellow-600 dark:text-yellow-400">Expires:</span> {tokenInfo.expDate}
+                  </div>
+                  
+                  <div className="text-gray-700 dark:text-gray-300">
+                    <span className="text-yellow-600 dark:text-yellow-400">Time Left:</span> 
+                    <span className={tokenInfo.isExpired ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'}>
+                      {tokenInfo.timeUntilExpiry}
+                    </span>
+                  </div>
+                </>
+              )}
+              
+              {tokenInfo?.error && (
+                <div className="text-gray-700 dark:text-gray-300">
+                  <span className="text-red-500 dark:text-red-400">Token Error:</span> {tokenInfo.error}
+                </div>
+              )}
+              
+              <div className="text-gray-700 dark:text-gray-300">
+                <span className="text-yellow-600 dark:text-yellow-400">User ID:</span> {user?.id || '❌ None'}
+              </div>
+              
+              <div className="text-gray-700 dark:text-gray-300">
+                <span className="text-yellow-600 dark:text-yellow-400">User Email:</span> {user?.email || '❌ None'}
+              </div>
+              
+              {!isAuthenticated && (
+                <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-600">
+                  <div className="text-red-700 dark:text-red-300 font-bold">❌ Authentication Required</div>
+                  <div className="text-red-600 dark:text-red-200 text-xs mt-1">
+                    User must log in to access API endpoints.
+                    Current API requests will fail with 401/500 errors.
+                  </div>
+                </div>
+              )}
+              
+              {tokenInfo?.isExpired && (
+                <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-600">
+                  <div className="text-red-700 dark:text-red-300 font-bold">🕐 Token Expired</div>
+                  <div className="text-red-600 dark:text-red-200 text-xs mt-1">
+                    JWT token expired on {tokenInfo.expDate}.
+                    Please log in again to get a fresh token.
+                  </div>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('REF_TOKEN');
+                      localStorage.removeItem('REF_USER');
+                      // Dispatch custom event to notify other components
+                      window.dispatchEvent(new CustomEvent('userLoggedOut'));
+                      window.location.href = '/';
+                    }}
+                    className="mt-2 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded"
+                  >
+                    Clear & Redirect to Login
+                  </button>
+                </div>
+              )}
+              
+              {isAuthenticated && tokenInfo && !tokenInfo.isExpired && (
+                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/30 rounded border border-green-200 dark:border-green-600">
+                  <div className="text-green-700 dark:text-green-300 font-bold">✅ Authentication Active</div>
+                  <div className="text-green-600 dark:text-green-200 text-xs mt-1">
+                    API requests should include Bearer token.
+                    Token valid for {tokenInfo.timeUntilExpiry}.
+                  </div>
+                </div>
+              )}
             </div>
-            
-            <div>
-              <span className="text-yellow-400">User Email:</span> {user?.email || '❌ None'}
-            </div>
-            
-            {!isAuthenticated && (
-              <div className="mt-3 p-2 bg-red-900 rounded border border-red-600">
-                <div className="text-red-300 font-bold">❌ Authentication Required</div>
-                <div className="text-red-200 text-xs mt-1">
-                  User must log in to access API endpoints.
-                  Current API requests will fail with 401/500 errors.
-                </div>
-              </div>
-            )}
-            
-            {tokenInfo?.isExpired && (
-              <div className="mt-3 p-2 bg-red-900 rounded border border-red-600">
-                <div className="text-red-300 font-bold">🕐 Token Expired</div>
-                <div className="text-red-200 text-xs mt-1">
-                  JWT token expired on {tokenInfo.expDate}.
-                  Please log in again to get a fresh token.
-                </div>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem('REF_TOKEN');
-                    localStorage.removeItem('REF_USER');
-                    window.location.href = '/';
-                  }}
-                  className="mt-2 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded"
-                >
-                  Clear & Redirect to Login
-                </button>
-              </div>
-            )}
-            
-            {isAuthenticated && tokenInfo && !tokenInfo.isExpired && (
-              <div className="mt-3 p-2 bg-green-900 rounded border border-green-600">
-                <div className="text-green-300 font-bold">✅ Authentication Active</div>
-                <div className="text-green-200 text-xs mt-1">
-                  API requests should include Bearer token.
-                  Token valid for {tokenInfo.timeUntilExpiry}.
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

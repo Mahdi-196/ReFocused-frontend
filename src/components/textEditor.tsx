@@ -8,12 +8,14 @@ type Props = {
   value: string;
   onChange: (html: string) => void;
   onCountUpdate?: (counts: { words: number; chars: number }) => void;
+  disabled?: boolean;
 };
 
 const TextEditor: React.FC<Props> = ({
   value = "",
   onChange,
   onCountUpdate,
+  disabled = false,
 }) => {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
@@ -28,8 +30,9 @@ const TextEditor: React.FC<Props> = ({
 
     quillRef.current = new Quill(editorRef.current, {
       theme: "snow",
+      readOnly: disabled,
       modules: {
-        toolbar: [
+        toolbar: disabled ? false : [
           [{ header: [1, 2, 3, false] }],
           ["bold", "italic", "underline", "strike"],
           [{ list: "ordered" }, { list: "bullet" }],
@@ -55,7 +58,14 @@ const TextEditor: React.FC<Props> = ({
     });
 
     quillRef.current.root.innerHTML = value;
-  }, [isMounted, onChange, onCountUpdate, value]);
+  }, [isMounted, onChange, onCountUpdate, value, disabled]);
+
+  // Update read-only state when disabled prop changes
+  useEffect(() => {
+    if (quillRef.current) {
+      quillRef.current.enable(!disabled);
+    }
+  }, [disabled]);
 
   useEffect(() => {
     if (

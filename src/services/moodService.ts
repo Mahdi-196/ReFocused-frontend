@@ -3,12 +3,12 @@ import { MOOD } from '@/api/endpoints';
 import { cacheService } from './cacheService';
 import { timeService } from './timeService';
 
-// Mood entry interface
+// Mood entry interface - Updated to match new backend requirements
 export interface MoodEntry {
   id?: number;
   date: string;
   happiness?: number;
-  satisfaction?: number;
+  focus?: number; // Changed from satisfaction to focus
   stress?: number;
   dayRating?: number;
   notes?: string;
@@ -103,23 +103,30 @@ export async function getMoodEntry(date: string): Promise<MoodEntry | null> {
     }
     
     return entry || null;
-  } catch (error) {
+  } catch (error: any) {
+    // Handle 404 errors gracefully - this is expected when no mood entry exists for the date
+    if (error.response?.status === 404 || error.status === 404) {
+      console.log(`No mood entry found for ${date} - this is expected for new dates`);
+      return null;
+    }
+    
+    // Log other errors as warnings since they indicate real issues
     console.warn('Failed to fetch mood entry:', error);
     return null;
   }
 }
 
 /**
- * Create or update a mood entry
+ * Create or update a mood entry using the new /api/v1/mood/today endpoint
  */
 export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
   try {
-    // Validate required fields
+    // Validate required fields - Updated for new backend requirements
     if (!moodEntry.date || 
         moodEntry.happiness === undefined || 
-        moodEntry.satisfaction === undefined || 
+        moodEntry.focus === undefined || // Changed from satisfaction to focus
         moodEntry.stress === undefined) {
-      throw new Error('Missing required fields: date, happiness, satisfaction, and stress are required');
+      throw new Error('Missing required fields: date, happiness, focus, and stress are required');
     }
 
     // Validate field ranges (1-5)
@@ -130,25 +137,19 @@ export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
     };
     
     validateRange(moodEntry.happiness, 'happiness');
-    validateRange(moodEntry.satisfaction, 'satisfaction');
+    validateRange(moodEntry.focus, 'focus'); // Changed from satisfaction to focus
     validateRange(moodEntry.stress, 'stress');
 
-    // Get user timezone for header
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    // Prepare payload with required fields only
+    // Prepare payload with required fields only - Updated for new backend
     const payload = {
       happiness: moodEntry.happiness,
-      satisfaction: moodEntry.satisfaction,
+      focus: moodEntry.focus, // Changed from satisfaction to focus
       stress: moodEntry.stress,
       date: moodEntry.date
     };
     
-    const response = await client.post('/mood/', payload, {
-      headers: {
-        'X-User-Timezone': userTimezone
-      }
-    });
+    // Use the new endpoint /api/v1/mood/today
+    const response = await client.post('/mood/today', payload);
     
     const savedEntry = response.data;
     
@@ -175,9 +176,9 @@ export async function updateMoodEntry(date: string, updates: Partial<MoodEntry>)
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
     // Prepare payload with only the fields that can be updated
-    const payload: any = {};
+    const payload: Partial<MoodEntry> = {};
     if (updates.happiness !== undefined) payload.happiness = updates.happiness;
-    if (updates.satisfaction !== undefined) payload.satisfaction = updates.satisfaction;
+    if (updates.focus !== undefined) payload.focus = updates.focus; // Changed from satisfaction to focus
     if (updates.stress !== undefined) payload.stress = updates.stress;
     
     const response = await client.put(`/mood/${date}`, payload, {
@@ -230,7 +231,7 @@ export async function deleteMoodEntry(date: string): Promise<void> {
  */
 export async function getMoodStats(startDate: string, endDate: string): Promise<{
   averageHappiness: number;
-  averageSatisfaction: number;
+  averageFocus: number; // Changed from averageSatisfaction to averageFocus
   averageStress: number;
   averageDayRating: number;
   totalEntries: number;
@@ -251,7 +252,7 @@ export async function getMoodStats(startDate: string, endDate: string): Promise<
     
     const stats = response.data || {
       averageHappiness: 0,
-      averageSatisfaction: 0,
+      averageFocus: 0, // Changed from averageSatisfaction to averageFocus
       averageStress: 0,
       averageDayRating: 0,
       totalEntries: 0
@@ -267,7 +268,7 @@ export async function getMoodStats(startDate: string, endDate: string): Promise<
     // Return default stats as fallback
     return {
       averageHappiness: 0,
-      averageSatisfaction: 0,
+      averageFocus: 0, // Changed from averageSatisfaction to averageFocus
       averageStress: 0,
       averageDayRating: 0,
       totalEntries: 0
@@ -291,11 +292,11 @@ export async function getTodaysMood(): Promise<MoodEntry | null> {
 }
 
 /**
- * Save today's mood rating
+ * Save today's mood rating - Updated for new backend requirements
  */
 export async function saveMoodRating(ratings: {
   happiness: number;
-  satisfaction: number;
+  focus: number; // Changed from satisfaction to focus
   stress: number;
 }): Promise<MoodEntry> {
   const today = timeService.getCurrentDate();
@@ -303,7 +304,7 @@ export async function saveMoodRating(ratings: {
   const moodEntry: MoodEntry = {
     date: today,
     happiness: ratings.happiness,
-    satisfaction: ratings.satisfaction,
+    focus: ratings.focus, // Changed from satisfaction to focus
     stress: ratings.stress,
     notes: ''
   };

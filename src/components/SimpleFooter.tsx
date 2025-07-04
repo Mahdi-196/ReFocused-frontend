@@ -15,7 +15,7 @@ import {
 
 const SimpleFooter = () => {
   const quickLinks = [
-    { name: "Home", href: "/" },
+    { name: "Home", href: "/home" },
     { name: "Track", href: "/track" },
     { name: "Study", href: "/study" },
     { name: "Journal", href: "/journal" },

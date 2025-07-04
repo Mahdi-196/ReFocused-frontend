@@ -6,14 +6,14 @@ import { useCurrentDate } from '@/contexts/TimeContext';
 
 interface MoodRating {
   happiness: number | null;
-  satisfaction: number | null;
+  focus: number | null;
   stress: number | null;
 }
 
 export default function NumberMood() {
   const [moodRatings, setMoodRatings] = useState<MoodRating>({
     happiness: null,
-    satisfaction: null,
+    focus: null,
     stress: null
   });
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ export default function NumberMood() {
         if (todaysMood) {
           setMoodRatings({
             happiness: todaysMood.happiness ?? null,
-            satisfaction: todaysMood.satisfaction ?? null,
+            focus: todaysMood.focus ?? null,
             stress: todaysMood.stress ?? null
           });
           setLastSaved(new Date(todaysMood.updatedAt || todaysMood.createdAt || Date.now()));
@@ -46,9 +46,15 @@ export default function NumberMood() {
     loadTodaysMood();
   }, []);
 
-  // Auto-save mood rating with retry logic
+  // Auto-save mood rating with retry logic - Only save when all fields are complete
   const handleRatingChange = async (type: keyof MoodRating, value: string) => {
     const numValue = parseInt(value);
+    
+    // Validate the rating value is within range
+    if (isNaN(numValue) || numValue < 1 || numValue > 5) {
+      console.warn('Invalid rating value:', value);
+      return;
+    }
     
     // Update local state immediately for UI responsiveness
     const newRatings = {
@@ -58,46 +64,57 @@ export default function NumberMood() {
     setMoodRatings(newRatings);
     setError(null); // Clear any previous errors
 
-    // Only save if we have all three values and not in initial loading state
+    // Only save if we have all three VALID values and not in initial loading state
     if (!loading && 
         typeof newRatings.happiness === 'number' && 
-        typeof newRatings.satisfaction === 'number' && 
-        typeof newRatings.stress === 'number') {
+        typeof newRatings.focus === 'number' &&
+        typeof newRatings.stress === 'number' &&
+        newRatings.happiness >= 1 && newRatings.happiness <= 5 &&
+        newRatings.focus >= 1 && newRatings.focus <= 5 &&
+        newRatings.stress >= 1 && newRatings.stress <= 5) {
+      
+      console.log('Saving complete mood rating:', newRatings);
       await saveWithRetry({
         happiness: newRatings.happiness,
-        satisfaction: newRatings.satisfaction,
+        focus: newRatings.focus,
         stress: newRatings.stress
+      });
+    } else {
+      console.log('Mood rating incomplete, waiting for all values:', {
+        happiness: newRatings.happiness,
+        focus: newRatings.focus,
+        stress: newRatings.stress,
+        loading
       });
     }
   };
 
-  // Save with exponential backoff retry logic
-  const saveWithRetry = async (ratings: { happiness: number; satisfaction: number; stress: number }, attempt = 0) => {
-    const maxRetries = 3;
+  // Save with retry logic for better UX
+  const saveWithRetry = async (ratings: { happiness: number; focus: number; stress: number }, attempt = 1) => {
     setSaving(true);
+    setRetryCount(attempt - 1);
     
     try {
       await saveMoodRating(ratings);
       setLastSaved(new Date());
       setError(null);
       setRetryCount(0);
-    } catch (error: unknown) {
-      console.error(`Failed to save mood rating (attempt ${attempt + 1}):`, error);
+    } catch (error) {
+      console.error(`Mood save attempt ${attempt} failed:`, error);
       
-      if (attempt < maxRetries) {
-        // Exponential backoff: wait 1s, 2s, 4s between retries
-        const delay = Math.pow(2, attempt) * 1000;
+      if (attempt < 3) {
+        // Retry with exponential backoff
+        const delay = Math.pow(2, attempt) * 1000; // 2s, 4s delays
         setTimeout(() => {
           saveWithRetry(ratings, attempt + 1);
         }, delay);
-        setRetryCount(attempt + 1);
-        setError(`Saving... (retry ${attempt + 1}/${maxRetries})`);
       } else {
-        setError('Failed to save mood data. Please check your connection.');
+        // All retries failed
+        setError('Failed to save mood rating. Please try again.');
         setRetryCount(0);
       }
     } finally {
-      if (attempt === maxRetries - 1 || error === null) {
+      if (attempt >= 3) {
         setSaving(false);
       }
     }
@@ -255,16 +272,16 @@ export default function NumberMood() {
           className="p-6 rounded-lg shadow-sm"
           style={{ background: "linear-gradient(135deg, #374151 0%, #2D3748 100%)" }}
         >
-          <h3 className="text-lg font-medium mb-2 text-white">Satisfaction</h3>
-          <p className="text-gray-300 mb-4">How satisfied are you with your day?</p>
+          <h3 className="text-lg font-medium mb-2 text-white">Focus</h3>
+          <p className="text-gray-300 mb-4">How focused are you feeling today?</p>
           <input 
             type="range" 
             className="w-full my-4" 
             min="1" 
             max="5" 
-            value={moodRatings.satisfaction || ''}
+            value={moodRatings.focus || ''}
             onChange={(e) => {
-              handleRatingChange('satisfaction', e.target.value);
+              handleRatingChange('focus', e.target.value);
             }}
             disabled={loading}
           />
@@ -275,7 +292,7 @@ export default function NumberMood() {
           </div>
           <div 
             className="text-center py-2 rounded mt-4 text-white font-medium transition-colors duration-300 relative overflow-hidden"
-            style={getRatingStyle(moodRatings.satisfaction)}
+            style={getRatingStyle(moodRatings.focus)}
           >
             <div 
               className="absolute inset-0 rounded opacity-20 pointer-events-none"
@@ -283,7 +300,7 @@ export default function NumberMood() {
                 background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)'
               }}
             />
-            <span className="relative z-10">{moodRatings.satisfaction ? `${moodRatings.satisfaction}/5` : 'Rate'}</span>
+            <span className="relative z-10">{moodRatings.focus ? `${moodRatings.focus}/5` : 'Rate'}</span>
           </div>
         </div>
 

@@ -23,23 +23,26 @@ interface ITimeService {
   getCurrentDateTime(): string;
   getUserTimezone(): string;
   isMockDate(): boolean;
+  isReady(): boolean;
   getStartOfWeek(): string;
   getStartOfMonth(): string;
   getDateRange(filter: 'D' | 'W' | 'M'): { start: string; end: string };
   formatUserDate(dateString: string, options?: Intl.DateTimeFormatOptions): string;
   formatRelativeDate(dateString: string): string;
   getState(): TimeServiceState;
-  initialize(): Promise<void>;
+  initialize(isAuthenticated?: boolean): Promise<void>;
   syncWithBackend(): Promise<BackendTimeResponse | null>;
   detectAndSetTimezone(): Promise<boolean>;
   updateUserTimezone(timezone: string): Promise<boolean>;
   getAvailableTimezones(): Promise<TimezoneInfo[]>;
   getWeekInfo(): Promise<WeekInfo | null>;
   checkSyncStatus(): Promise<TimeSyncCheck | null>;
+  setMockDateTime(isoDateTime: string | null): Promise<void>;
   addEventListener(listener: () => void): void;
   removeEventListener(listener: () => void): void;
   destroy(): void;
   setFilter(filter: TimeFilter): void;
+  setAuthenticationStatus(isAuthenticated: boolean): void;
 }
 
 export class TimeService implements ITimeService {
@@ -48,7 +51,8 @@ export class TimeService implements ITimeService {
     lastSync: null,
     isOnline: typeof window !== 'undefined' ? navigator.onLine : true,
     syncInProgress: false,
-    syncErrors: 0
+    syncErrors: 0,
+    isReady: false
   };
 
   private syncInterval: NodeJS.Timeout | null = null;
@@ -57,34 +61,132 @@ export class TimeService implements ITimeService {
   private readonly SYNC_TIMEOUT_MS = 10000; // 10 seconds
   private eventListeners: Set<() => void> = new Set();
   private pendingSync: Promise<BackendTimeResponse | null> | null = null;
+  private isAuthenticated: boolean = false;
+  private initialized: boolean = false;
 
   constructor() {
-    // Only initialize in browser environment
+    // Only setup network listeners, don't auto-initialize
     if (typeof window !== 'undefined') {
       this.setupNetworkListeners();
-      this.initialize();
+    }
+  }
+
+  /**
+   * Set authentication status - should be called by AuthContext
+   */
+  setAuthenticationStatus(isAuthenticated: boolean): void {
+    const wasAuthenticated = this.isAuthenticated;
+    this.isAuthenticated = isAuthenticated;
+    
+    logger.debug('🔐 Authentication status changed', {
+      wasAuthenticated,
+      isAuthenticated,
+      willSync: isAuthenticated && !wasAuthenticated
+    }, 'TIME_SERVICE');
+
+    // If user just logged in, sync immediately
+    if (isAuthenticated && !wasAuthenticated && this.initialized) {
+      this.syncWithBackend().catch(err => {
+        logger.warn('Failed to sync after authentication', { error: err.message }, 'TIME_SERVICE');
+      });
+    }
+    
+    // If user logged out, stop periodic sync and clear sensitive data
+    if (!isAuthenticated && wasAuthenticated) {
+      this.stopPeriodicSync();
+      // Keep fallback time data but clear backend-specific data
+      if (this.state.currentTime) {
+        this.state.currentTime = this.createFallbackTimeData();
+        this.state.isReady = true; // Keep service ready with local data
+      }
     }
   }
 
   /**
    * Initialize the time service - Call on app startup
    */
-  async initialize(): Promise<void> {
-    logger.info('🕰️ Initializing time service...', undefined, 'TIME_SERVICE');
+  async initialize(isAuthenticated?: boolean): Promise<void> {
+    if (this.initialized) {
+      logger.debug('🕰️ Time service already initialized', undefined, 'TIME_SERVICE');
+      return;
+    }
+
+    this.initialized = true;
     
-    await this.syncWithBackend();
-    this.startPeriodicSync();
+    if (isAuthenticated !== undefined) {
+      this.isAuthenticated = isAuthenticated;
+    }
+
+    logger.info('🕰️ Initializing time service...', {
+      isAuthenticated: this.isAuthenticated
+    }, 'TIME_SERVICE');
+    
+    // Always create fallback time data first
+    this.state.currentTime = this.createFallbackTimeData();
+    this.state.isReady = true; // Mark as ready with fallback data
+    
+    // Only sync with backend if authenticated
+    if (this.isAuthenticated) {
+      try {
+        await this.syncWithBackend();
+        this.startPeriodicSync();
+      } catch (error) {
+        logger.warn('Initial backend sync failed, using local time', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 'TIME_SERVICE');
+        // Continue with local time - don't throw error
+        // isReady remains true from fallback data initialization
+      }
+    }
+    
     logger.info('✅ Time service initialized successfully', {
       currentDate: this.state.currentTime?.user_current_date,
       timezone: this.state.currentTime?.user_timezone,
-      isMockDate: this.state.currentTime?.is_mock_date
+      isMockDate: this.state.currentTime?.is_mock_date,
+      isReady: this.state.isReady,
+      source: this.isAuthenticated ? 'backend' : 'local'
     }, 'TIME_SERVICE');
   }
 
   /**
+   * Create fallback time data using local system time
+   */
+  private createFallbackTimeData(): BackendTimeResponse {
+    const now = new Date();
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const userDate = now.toLocaleDateString('sv-SE'); // YYYY-MM-DD format
+    const userDateTime = now.toISOString();
+    
+    return {
+      user_current_date: userDate,
+      user_current_datetime: userDateTime,
+      user_timezone: timezone,
+      utc_datetime: now.toISOString(),
+      is_mock_date: false,
+      day_of_week: now.toLocaleDateString('en-US', { weekday: 'long' }),
+      week_number: this.getWeekNumber(now),
+      is_weekend: now.getDay() === 0 || now.getDay() === 6,
+      day_boundaries: {
+        start_utc: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
+        end_utc: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString()
+      }
+    };
+  }
+
+  /**
    * Sync current time with backend (primary endpoint)
+   * Only syncs if authenticated, otherwise uses local time silently
    */
   async syncWithBackend(): Promise<BackendTimeResponse | null> {
+    // If not authenticated, return current local time data without error
+    if (!this.isAuthenticated) {
+      logger.debug('🔓 Not authenticated, using local time', undefined, 'TIME_SERVICE');
+      if (!this.state.currentTime) {
+        this.state.currentTime = this.createFallbackTimeData();
+      }
+      return this.state.currentTime;
+    }
+
     // If there's already a pending sync, return it
     if (this.pendingSync) {
       logger.debug('Using existing pending sync request...', undefined, 'TIME_SERVICE');
@@ -142,32 +244,56 @@ export class TimeService implements ITimeService {
         logger.debug('🔄 Transforming raw data:', rawData, 'TIME_SERVICE');
         
         const timeData: BackendTimeResponse = {
-          user_current_date: rawData.user_date || rawData.user_current_date,
-          user_current_datetime: rawData.user_datetime || rawData.user_current_datetime,
-          user_timezone: rawData.timezone_id || rawData.user_timezone,
-          utc_datetime: rawData.server_utc || rawData.utc_datetime,
-          is_mock_date: rawData.is_mock_enabled ?? rawData.is_mock_date ?? false,
+          user_current_date: rawData.user_date || rawData.user_current_date || rawData.date,
+          user_current_datetime: rawData.user_datetime || rawData.user_current_datetime || rawData.datetime,
+          user_timezone: rawData.timezone || rawData.timezone_id || rawData.user_timezone,
+          utc_datetime: rawData.utc_datetime || rawData.server_utc || rawData.utc,
+          is_mock_date: rawData.is_mock_date ?? rawData.is_mock_enabled ?? false,
           day_of_week: rawData.day_of_week || 'Unknown',
           week_number: rawData.week_number || 0,
           is_weekend: rawData.is_weekend ?? false,
           day_boundaries: rawData.day_boundaries || {
-            start_utc: rawData.server_utc || new Date().toISOString(),
-            end_utc: rawData.server_utc || new Date().toISOString()
+            start_utc: rawData.utc_datetime || rawData.server_utc || new Date().toISOString(),
+            end_utc: rawData.utc_datetime || rawData.server_utc || new Date().toISOString()
           }
         };
+        
+        // Improved validation with specific error messages
+        const requiredFields = [
+          { key: 'user_current_date', value: timeData.user_current_date },
+          { key: 'user_current_datetime', value: timeData.user_current_datetime },
+          { key: 'user_timezone', value: timeData.user_timezone },
+          { key: 'utc_datetime', value: timeData.utc_datetime }
+        ];
+        
+        const missingFields = requiredFields
+          .filter(field => !field.value)
+          .map(field => field.key);
+
+        if (missingFields.length > 0) {
+          logger.error('❌ Missing essential time data fields', {
+            missing: missingFields,
+            rawData,
+            transformedData: timeData
+          }, 'TIME_SERVICE');
+          throw new Error(`Invalid response: missing required fields: ${missingFields.join(', ')}`);
+        }
         
         logger.debug('✨ Transformed data:', timeData, 'TIME_SERVICE');
         const oldDate = this.state.currentTime?.user_current_date;
         
+        // Update state atomically to prevent race conditions
         this.state.currentTime = timeData;
         this.state.lastSync = Date.now();
         this.state.syncErrors = 0;
+        this.state.isReady = true; // Mark service as ready after successful sync
 
         logger.info('✅ Time synchronized successfully', {
           date: timeData.user_current_date,
           timezone: timeData.user_timezone,
           isMock: timeData.is_mock_date,
-          transformed: true
+          transformed: true,
+          isReady: true
         }, 'TIME_SERVICE');
 
         // Detect day change
@@ -183,15 +309,25 @@ export class TimeService implements ITimeService {
 
     } catch (error) {
       this.state.syncErrors++;
-      logger.error(`❌ Time sync failed (${this.state.syncErrors}/${this.MAX_SYNC_ERRORS})`, {
+      logger.warn(`⚠️ Time sync failed (${this.state.syncErrors}/${this.MAX_SYNC_ERRORS}), falling back to local time`, {
         error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        url: '/time/current',
-        syncErrors: this.state.syncErrors
+        isAuthenticated: this.isAuthenticated
       }, 'TIME_SERVICE');
 
-      // No fallback - let the app handle the error  
-      throw new Error(`Failed to sync with backend time service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Create fallback time data instead of throwing error
+      if (!this.state.currentTime) {
+        this.state.currentTime = this.createFallbackTimeData();
+        this.state.isReady = true; // Mark as ready even with fallback data
+      }
+      
+      // Only throw error if we're past max retries and this is critical
+      if (this.state.syncErrors >= this.MAX_SYNC_ERRORS) {
+        logger.error('Max sync errors reached, continuing with local time', {
+          syncErrors: this.state.syncErrors
+        }, 'TIME_SERVICE');
+      }
+      
+      return this.state.currentTime;
     }
   }
 
@@ -199,12 +335,14 @@ export class TimeService implements ITimeService {
    * Get current date (YYYY-MM-DD format) - Use this everywhere!
    */
   getCurrentDate(): string {
-    if (this.state.currentTime?.user_current_date) {
+    if (this.isReady() && this.state.currentTime?.user_current_date) {
       return this.state.currentTime.user_current_date;
     }
 
-    // Safe fallback instead of throwing error
-    console.warn('Time service not ready, using local date fallback');
+    // Safe fallback instead of throwing error, but log only if not ready
+    if (!this.state.isReady) {
+      console.warn('Time service not ready, using local date fallback');
+    }
     return new Date().toISOString().split('T')[0];
   }
 
@@ -212,12 +350,14 @@ export class TimeService implements ITimeService {
    * Get current datetime
    */
   getCurrentDateTime(): string {
-    if (this.state.currentTime?.user_current_datetime) {
+    if (this.isReady() && this.state.currentTime?.user_current_datetime) {
       return this.state.currentTime.user_current_datetime;
     }
     
-    // Safe fallback instead of throwing error
-    console.warn('Time service not ready, using local datetime fallback');
+    // Safe fallback instead of throwing error, but log only if not ready
+    if (!this.state.isReady) {
+      console.warn('Time service not ready, using local datetime fallback');
+    }
     return new Date().toISOString();
   }
 
@@ -225,12 +365,14 @@ export class TimeService implements ITimeService {
    * Get user's timezone
    */
   getUserTimezone(): string {
-    if (this.state.currentTime?.user_timezone) {
+    if (this.isReady() && this.state.currentTime?.user_timezone) {
       return this.state.currentTime.user_timezone;
     }
     
-    // Safe fallback instead of throwing error
-    console.warn('Time service not ready, using local timezone fallback');
+    // Safe fallback instead of throwing error, but log only if not ready
+    if (!this.state.isReady) {
+      console.warn('Time service not ready, using local timezone fallback');
+    }
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   }
 
@@ -367,6 +509,41 @@ export class TimeService implements ITimeService {
   }
 
   /**
+   * Set mock date/time for testing purposes
+   * @param isoDateTime - ISO-8601 datetime string (e.g., "2025-08-15T10:30:00") or null to reset
+   */
+  async setMockDateTime(isoDateTime: string | null): Promise<void> {
+    try {
+      if (isoDateTime === null) {
+        // Reset to real time
+        logger.info('🔄 Resetting to real time...', undefined, 'TIME_SERVICE');
+        await client.post('/time/debug/reset-date');
+      } else {
+        // Set mock date
+        logger.info('🕰️ Setting mock date...', { isoDateTime }, 'TIME_SERVICE');
+        await client.post('/time/debug/set-date', {
+          new_datetime: isoDateTime
+        });
+      }
+
+      // Immediately sync with backend to get updated time information
+      // This ensures the change takes effect instantly across the application
+      logger.info('🔄 Syncing with backend after mock date change...', undefined, 'TIME_SERVICE');
+      await this.syncWithBackend();
+
+      logger.info('✅ Mock date operation completed successfully', {
+        action: isoDateTime ? 'set' : 'reset',
+        newDateTime: isoDateTime
+      }, 'TIME_SERVICE');
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('❌ Failed to set mock date', { error: errorMessage, isoDateTime }, 'TIME_SERVICE');
+      throw new Error(`Failed to ${isoDateTime ? 'set mock date' : 'reset to real time'}: ${errorMessage}`);
+    }
+  }
+
+  /**
    * Get date range for filters (D/W/M)
    */
   getDateRange(filter: 'D' | 'W' | 'M'): { start: string; end: string } {
@@ -466,10 +643,18 @@ export class TimeService implements ITimeService {
     }
 
     this.syncInterval = setInterval(async () => {
-      if (this.state.isOnline) {
+      if (this.state.isOnline && this.isAuthenticated) {
         await this.syncWithBackend();
       }
     }, this.SYNC_INTERVAL_MS);
+  }
+
+  private stopPeriodicSync(): void {
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
+      logger.debug('⏹️ Stopped periodic sync', undefined, 'TIME_SERVICE');
+    }
   }
 
   private handleDayChange(oldDate: string, newDate: string): void {
@@ -586,6 +771,13 @@ export class TimeService implements ITimeService {
     // Implementation if needed in future
     console.log('🔧 Time filter functionality reserved for future use');
   }
+
+  /**
+   * Check if the time service is ready to provide data
+   */
+  isReady(): boolean {
+    return this.state.isReady && this.state.currentTime !== null;
+  }
 }
 
 // Create singleton instance only in browser environment
@@ -609,7 +801,8 @@ export const timeService = (() => {
         lastSync: null,
         isOnline: true,
         syncInProgress: false,
-        syncErrors: 0
+        syncErrors: 0,
+        isReady: false
       }),
       // Async methods that throw errors on server
       initialize: async () => { throw new Error('Time service not available on server-side'); },
@@ -619,10 +812,13 @@ export const timeService = (() => {
       getAvailableTimezones: async () => { throw new Error('Time service not available on server-side'); },
       getWeekInfo: async () => { throw new Error('Time service not available on server-side'); },
       checkSyncStatus: async () => { throw new Error('Time service not available on server-side'); },
+      setMockDateTime: async () => { throw new Error('Time service not available on server-side'); },
       addEventListener: () => {},
       removeEventListener: () => {},
       destroy: () => {},
-      setFilter: () => {}
+      setFilter: () => {},
+      setAuthenticationStatus: () => {},
+      isReady: () => false
     } as ITimeService;
   }
   

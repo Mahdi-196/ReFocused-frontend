@@ -130,10 +130,10 @@ const Profile = () => {
   };
 
   const handleLogout = () => {
-    // Use auth service to clear everything
+    // Use auth service to clear everything (this also dispatches the custom event)
     authService.logout();
     
-    // Redirect to home page
+    // Redirect to landing page
     router.push('/');
   };
 

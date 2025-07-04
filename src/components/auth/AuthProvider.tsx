@@ -147,6 +147,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setUser(null);
     setIsAuthenticated(false);
     
+    // Dispatch custom event to notify other components
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    }
+    
     // Redirect to home page
     router.push('/');
   };

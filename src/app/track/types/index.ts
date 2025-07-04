@@ -36,12 +36,15 @@ export interface DailyEntry {
 }
 
 export interface MoodEntry {
+  id?: number;
   date: string;
-  happiness: number;
-  satisfaction: number;
-  stress: number;
-  created_at?: string;
-  updated_at?: string;
+  happiness?: number;
+  focus?: number;
+  stress?: number;
+  dayRating?: number;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export type SimpleFilter = 'all' | 'active' | 'inactive';
@@ -68,7 +71,7 @@ export interface DailyCalendarEntry {
   habitCompletions: DailyHabitCompletion[];
   moodEntry?: {
     happiness: number;
-    satisfaction: number;
+    focus: number; // Changed from satisfaction to focus for consistency
     stress: number;
   };
   notes?: string;
@@ -96,4 +99,21 @@ export interface CacheStats {
     ttl: number; 
     version: string | undefined; 
   }[];
+}
+
+export interface MoodData {
+  happiness: number;
+  focus: number;
+  stress: number;
+}
+
+export interface DailyStats {
+  date: string;
+  totalHabits: number;
+  completedHabits: number;
+  completionRate: number;
+  happiness: number;
+  focus: number;
+  stress: number;
+  moodScore: number;
 } 

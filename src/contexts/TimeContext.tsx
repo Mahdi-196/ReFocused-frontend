@@ -7,6 +7,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { timeService } from '@/services/timeService';
 import type { BackendTimeResponse, WeekInfo, TimeServiceState } from '@/types/time';
+import { useAuth } from './AuthContext';
 
 interface TimeContextValue {
   // Time data
@@ -37,6 +38,9 @@ interface TimeContextValue {
   syncTime: () => Promise<void>;
   checkSyncStatus: () => Promise<import('@/types/time').TimeSyncCheck | null>;
   
+  // Mock date management (available to all users for testing)
+  setMockDateTime: (isoDateTime: string | null) => Promise<void>;
+  
   // Service state
   getServiceState: () => TimeServiceState;
 }
@@ -51,17 +55,26 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
   const [timeData, setTimeData] = useState<BackendTimeResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get authentication status from AuthContext
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   // Initialize time service and set up listeners
   useEffect(() => {
     let mounted = true;
+    
+    // Wait for auth to finish loading before initializing time service
+    if (authLoading) {
+      return;
+    }
     
     const initializeTimeService = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        await timeService.initialize();
+        // Initialize with authentication status
+        await timeService.initialize(isAuthenticated);
         
         // Only update state if component is still mounted
         if (mounted) {
@@ -122,9 +135,16 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
       timeService.removeEventListener(handleTimeUpdate);
       window.removeEventListener('dayChanged', handleDayChange as EventListener);
     };
-  }, []);
+  }, [isAuthenticated, authLoading]); // Re-run when auth status changes
 
-  // Core functions - no fallbacks, let errors propagate
+  // Update time service when authentication status changes
+  useEffect(() => {
+    if (!authLoading) {
+      timeService.setAuthenticationStatus(isAuthenticated);
+    }
+  }, [isAuthenticated, authLoading]);
+
+  // Core functions - with graceful fallbacks for unauthenticated state
   const getCurrentDate = useCallback((): string => {
     try {
       return timeService.getCurrentDate();
@@ -133,10 +153,14 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
       if (timeData?.user_current_date) {
         return timeData.user_current_date;
       }
-      // Re-throw the error if no cached data available
+      // Fallback to local date if not authenticated
+      if (!isAuthenticated) {
+        return new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD format
+      }
+      // Re-throw the error if authenticated but service failed
       throw error;
     }
-  }, [timeData]);
+  }, [timeData, isAuthenticated]);
 
   const getCurrentDateTime = useCallback((): string => {
     try {
@@ -145,9 +169,13 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
       if (timeData?.user_current_datetime) {
         return timeData.user_current_datetime;
       }
+      // Fallback to local datetime if not authenticated
+      if (!isAuthenticated) {
+        return new Date().toISOString();
+      }
       throw error;
     }
-  }, [timeData]);
+  }, [timeData, isAuthenticated]);
 
   const getUserTimezone = useCallback((): string => {
     try {
@@ -156,9 +184,13 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
       if (timeData?.user_timezone) {
         return timeData.user_timezone;
       }
+      // Fallback to local timezone if not authenticated
+      if (!isAuthenticated) {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
       throw error;
     }
-  }, [timeData]);
+  }, [timeData, isAuthenticated]);
 
   const isMockDate = useCallback((): boolean => {
     try {
@@ -167,9 +199,13 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
       if (timeData?.is_mock_date !== undefined) {
         return timeData.is_mock_date;
       }
+      // Fallback - never mock when not authenticated
+      if (!isAuthenticated) {
+        return false;
+      }
       throw error;
     }
-  }, [timeData]);
+  }, [timeData, isAuthenticated]);
 
   // Advanced functions
   const getDateRange = useCallback((filter: 'D' | 'W' | 'M') => {
@@ -184,8 +220,12 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
     return timeService.formatRelativeDate(dateString);
   }, []);
 
-  // Timezone management
+  // Timezone management - only available when authenticated
   const detectAndSetTimezone = useCallback(async (): Promise<boolean> => {
+    if (!isAuthenticated) {
+      throw new Error('Timezone management requires authentication');
+    }
+    
     try {
       setLoading(true);
       const result = await timeService.detectAndSetTimezone();
@@ -198,14 +238,17 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to detect timezone';
       setError(errorMessage);
-      console.error('Error detecting timezone:', err);
-      return false;
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const updateUserTimezone = useCallback(async (timezone: string): Promise<boolean> => {
+    if (!isAuthenticated) {
+      throw new Error('Timezone management requires authentication');
+    }
+    
     try {
       setLoading(true);
       const result = await timeService.updateUserTimezone(timezone);
@@ -218,105 +261,123 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update timezone';
       setError(errorMessage);
-      console.error('Error updating timezone:', err);
-      return false;
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const getAvailableTimezones = useCallback(async () => {
-    return await timeService.getAvailableTimezones();
-  }, []);
+    if (!isAuthenticated) {
+      throw new Error('Timezone management requires authentication');
+    }
+    return timeService.getAvailableTimezones();
+  }, [isAuthenticated]);
 
-  // Week info
+  // Week info - only available when authenticated
   const getWeekInfo = useCallback(async (): Promise<WeekInfo | null> => {
-    return await timeService.getWeekInfo();
-  }, []);
+    if (!isAuthenticated) {
+      return null; // Gracefully return null instead of throwing
+    }
+    return timeService.getWeekInfo();
+  }, [isAuthenticated]);
 
   // Sync management
   const syncTime = useCallback(async (): Promise<void> => {
+    if (!isAuthenticated) {
+      // Silently skip sync if not authenticated
+      return;
+    }
+    
     try {
-      setLoading(true);
-      setError(null);
-      
       await timeService.syncWithBackend();
-      
-      // Update state after sync
       const serviceState = timeService.getState();
       setTimeData(serviceState.currentTime);
-      
+      setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to sync time';
       setError(errorMessage);
-      console.error('Error syncing time:', err);
+      throw err;
+    }
+  }, [isAuthenticated]);
+
+  const checkSyncStatus = useCallback(async () => {
+    if (!isAuthenticated) {
+      return null; // Gracefully return null instead of throwing
+    }
+    return timeService.checkSyncStatus();
+  }, [isAuthenticated]);
+
+  const getServiceState = useCallback((): TimeServiceState => {
+    return timeService.getState();
+  }, []);
+
+  // Mock date management - available to all users for testing
+  const setMockDateTime = useCallback(async (isoDateTime: string | null): Promise<void> => {
+    try {
+      setLoading(true);
+      console.log('🔄 TimeContext: Setting mock date...', isoDateTime);
+      
+      await timeService.setMockDateTime(isoDateTime);
+      
+      // Add a small delay to ensure backend has processed the request
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force multiple syncs to ensure we get the updated data
+      console.log('🔄 TimeContext: Forcing fresh sync (attempt 1)...');
+      await timeService.syncWithBackend();
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      console.log('🔄 TimeContext: Forcing fresh sync (attempt 2)...');
+      await timeService.syncWithBackend();
+      
+      // Update state after mock date change
+      const serviceState = timeService.getState();
+      console.log('🔍 TimeContext: New service state:', serviceState.currentTime);
+      
+      setTimeData(serviceState.currentTime);
+      setError(null);
+      
+      // Force a complete re-render by updating the timeData reference
+      setTimeData(prevData => ({
+        ...serviceState.currentTime!
+      }));
+      
+      console.log('✅ TimeContext: Mock date operation completed');
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to set mock date';
+      console.error('❌ TimeContext: Mock date error:', err);
+      setError(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const checkSyncStatus = useCallback(async () => {
-    try {
-      return await timeService.checkSyncStatus();
-    } catch (err) {
-      console.error('Error checking sync status:', err);
-      return null;
-    }
-  }, []);
-
-  const getServiceState = useCallback((): TimeServiceState => {
-    try {
-      return timeService.getState();
-    } catch (err) {
-      console.error('Error getting service state:', err);
-      return {
-        currentTime: null,
-        lastSync: null,
-        isOnline: navigator.onLine,
-        syncInProgress: false,
-        syncErrors: 0
-      };
-    }
-  }, []);
-
-  const contextValue: TimeContextValue = {
-    // Time data
+  const value: TimeContextValue = {
     timeData,
     loading,
     error,
-    
-    // Core functions
     getCurrentDate,
     getCurrentDateTime,
     getUserTimezone,
     isMockDate,
-    
-    // Advanced functions
     getDateRange,
     formatUserDate,
     formatRelativeDate,
-    
-    // Timezone management
     detectAndSetTimezone,
     updateUserTimezone,
     getAvailableTimezones,
-    
-    // Week info
     getWeekInfo,
-    
-    // Sync management
     syncTime,
     checkSyncStatus,
-    
-    // Service state
-    getServiceState
+    setMockDateTime,
+    getServiceState,
   };
 
-  return (
-    <TimeContext.Provider value={contextValue}>
-      {children}
-    </TimeContext.Provider>
-  );
+  return <TimeContext.Provider value={value}>{children}</TimeContext.Provider>;
 };
 
 /**

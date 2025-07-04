@@ -150,6 +150,12 @@ export const authService = {
     
     // Clear user profile from cache
     cacheService.delete(CacheKeys.USER_PROFILE());
+    
+    // Dispatch custom event to notify other components
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    }
+    
     console.log('👤 User logged out and cache cleared');
   },
 

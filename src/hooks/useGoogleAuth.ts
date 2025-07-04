@@ -14,6 +14,8 @@ interface UseGoogleAuthProps {
 export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
   const handleGoogleResponse = async (response: GoogleAuthResponse) => {
     try {
+      console.log('🔐 Google OAuth response received, processing...');
+      
       // Use the auth service to handle Google authentication
       const authData = await authService.googleAuth({
         id_token: response.credential
@@ -22,13 +24,26 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
       // Save authentication data
       authService.saveAuthData(authData);
       
-      console.log('Google OAuth successful, token stored');
+      console.log('✅ Google OAuth successful, token stored');
       if (onSuccess) {
         onSuccess(authData.access_token);
       }
     } catch (error: unknown) {
-      console.error('Google Auth Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Google authentication failed';
+      console.error('❌ Google Auth Error:', error);
+      let errorMessage = 'Google authentication failed';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid Google token')) {
+          errorMessage = 'Unable to verify Google account. Please ensure your backend has the correct GOOGLE_CLIENT_ID configured.';
+        } else if (error.message.includes('401')) {
+          errorMessage = 'Authentication failed. Please check your backend configuration.';
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = 'Unable to connect to authentication server. Please check if your backend is running.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       if (onError) {
         onError(errorMessage);
       }
@@ -38,6 +53,15 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
   const initializeGoogleAuth = useCallback(() => {
     if (typeof window === 'undefined' || !window.google) return;
 
+    // ⚠️ GOOGLE OAUTH CONFIGURATION REQUIRED ⚠️
+    // If you're seeing "[GSI_LOGGER]: The given origin is not allowed for the given client ID" error:
+    // 1. This error occurs because your current domain/origin is not authorized for this Google OAuth Client ID
+    // 2. ACTION REQUIRED: Log in to Google Cloud Console (https://console.cloud.google.com)
+    // 3. Navigate to: APIs & Services > Credentials
+    // 4. Find your OAuth 2.0 Client ID and click "Edit"
+    // 5. Add "http://localhost:3000" to the "Authorized JavaScript origins" list
+    // 6. Save the changes and wait a few minutes for propagation
+    // 7. Refresh your application to test the fix
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     
     if (!clientId) {
@@ -71,19 +95,33 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
     text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
     shape?: 'rectangular' | 'pill' | 'circle' | 'square';
   }) => {
-    if (typeof window === 'undefined' || !window.google) return;
+    if (typeof window === 'undefined' || !window.google?.accounts?.id) {
+      console.warn('Google Identity Services not available for button rendering');
+      return;
+    }
+
+    const element = document.getElementById(elementId);
+    if (!element) {
+      console.error(`Element with ID ${elementId} not found for Google button rendering`);
+      return;
+    }
 
     const defaultOptions = {
       theme: 'outline' as const,
       size: 'large' as const,
       text: 'signin_with' as const,
       shape: 'rectangular' as const,
+      width: '100%', // Ensure full width
     };
 
-    window.google.accounts.id.renderButton(
-      document.getElementById(elementId),
-      { ...defaultOptions, ...options }
-    );
+    try {
+      window.google.accounts.id.renderButton(
+        element,
+        { ...defaultOptions, ...options }
+      );
+    } catch (error) {
+      console.error('Error rendering Google button:', error);
+    }
   }, []);
 
   useEffect(() => {

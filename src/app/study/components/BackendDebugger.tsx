@@ -255,12 +255,11 @@ export default function BackendDebugger() {
       });
       
       const createdSet = await createStudySet({
-        name: `Debug Test Set ${getCurrentDateTime()}`,
-        description: 'Created by debug tool',
-        flashcards: [
+        title: `Debug Test Set ${getCurrentDateTime()}`,
+        cards: [
           {
-            question: 'Test Question 1',
-            answer: 'Test Answer 1'
+            front_content: 'Test Question 1',
+            back_content: 'Test Answer 1'
           }
         ]
       });
@@ -269,12 +268,11 @@ export default function BackendDebugger() {
         endpoint: '/study-sets',
         method: 'POST',
         request: {
-          name: `Debug Test Set ${getCurrentDateTime()}`,
-          description: 'Created by debug tool',
-          flashcards: [
+          title: `Debug Test Set ${getCurrentDateTime()}`,
+          cards: [
             {
-              question: 'Test Question 1',
-              answer: 'Test Answer 1'
+              front_content: 'Test Question 1',
+              back_content: 'Test Answer 1'
             }
           ]
         },
@@ -288,12 +286,11 @@ export default function BackendDebugger() {
         endpoint: '/study-sets',
         method: 'POST',
         request: {
-          name: `Debug Test Set ${getCurrentDateTime()}`,
-          description: 'Created by debug tool',
-          flashcards: [
+          title: `Debug Test Set ${getCurrentDateTime()}`,
+          cards: [
             {
-              question: 'Test Question 1',
-              answer: 'Test Answer 1'
+              front_content: 'Test Question 1',
+              back_content: 'Test Answer 1'
             }
           ]
         },
@@ -350,7 +347,7 @@ export default function BackendDebugger() {
         status: 200
       });
       
-      await deleteStudySet(setId);
+      await deleteStudySet(setId.toString());
       addResult({
         timestamp: getCurrentDateTime(),
         endpoint: `/study-sets/${setId}`,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserHabit } from '../types';
+import { FireIcon } from '@/components/icons';
 
 interface HabitModalProps {
   isOpen: boolean;
@@ -34,9 +35,9 @@ export default function HabitModal({
             <div className="flex items-center justify-center gap-2">
               {habit.streak > 0 ? (
                 <>
-                  <span className="text-orange-400">🔥</span>
+                  <FireIcon className="w-5 h-5" />
                   <span className="text-white font-medium">{habit.streak} day streak</span>
-                  <span className="text-orange-400">🔥</span>
+                  <FireIcon className="w-5 h-5" />
                 </>
               ) : (
                 <span className="text-gray-400">No current streak</span>

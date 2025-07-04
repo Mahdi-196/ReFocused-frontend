@@ -3,6 +3,7 @@ import { UserHabit, DailyCalendarEntry } from '../types';
 import type { MoodEntry } from '@/services/moodService';
 import { useCalendarData } from '../hooks/useCalendarData';
 import { useCurrentDate } from '@/contexts/TimeContext';
+import { CheckIcon } from '@/components/icons';
 
 interface CalendarViewProps {
   currentMonth: Date;
@@ -52,20 +53,20 @@ export default function CalendarView({
     setTouchStart(null);
   };
 
-  // Calculate overall mood score from happiness, satisfaction, and stress
-  const calculateMoodScore = (happiness: number, satisfaction: number, stress: number) => {
-    // Convert to 0-10 scale: (happiness + satisfaction + (6-stress)) / 3 * 2
+  // Calculate overall mood score from happiness, focus, and stress
+  const calculateMoodScore = (happiness: number, focus: number, stress: number) => {
+    // Convert to 0-10 scale: (happiness + focus + (6-stress)) / 3 * 2
     // Stress is inverted (higher stress = lower score)
     const invertedStress = 6 - stress; // Convert 1-5 stress to 5-1 scale
-    return ((happiness + satisfaction + invertedStress) / 3) * 2;
+    return ((happiness + focus + invertedStress) / 3) * 2;
   };
 
   const getDayClass = (dateStr: string) => {
     // Check for calendar entry with mood data
     const calendarEntry = getCalendarEntryForDate(dateStr);
     if (calendarEntry?.moodEntry) {
-      const { happiness, satisfaction, stress } = calendarEntry.moodEntry;
-      const moodScore = calculateMoodScore(happiness, satisfaction, stress);
+      const { happiness, focus, stress } = calendarEntry.moodEntry;
+      const moodScore = calculateMoodScore(happiness, focus, stress);
       if (moodScore >= 7) return 'mood-good';
       if (moodScore >= 5) return 'mood-neutral';
       return 'mood-poor';
@@ -79,7 +80,7 @@ export default function CalendarView({
     return '';
   };
 
-  const getMoodBadgeColor = (rating: number, type: 'happiness' | 'satisfaction' | 'stress' = 'happiness') => {
+  const getMoodBadgeColor = (rating: number, type: 'happiness' | 'focus' | 'stress' = 'happiness') => {
     if (type === 'stress') {
       // For stress, lower is better, so invert the color logic
       if (rating <= 1) return 'bg-green-500';
@@ -87,7 +88,7 @@ export default function CalendarView({
       if (rating <= 3) return 'bg-orange-500';
       return 'bg-red-500';
     } else {
-      // For happiness and satisfaction, higher is better
+      // For happiness and focus, higher is better
       if (rating >= 5) return 'bg-green-500';
       if (rating >= 4) return 'bg-yellow-400';
       if (rating >= 3) return 'bg-orange-500';
@@ -362,12 +363,12 @@ export default function CalendarView({
               {/* Overall Score */}
               <div className="text-center">
                 <div className="text-3xl font-light text-white mb-2">
-                  {Math.round(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.satisfaction, calendarData.moodEntry.stress) * 10) / 10}<span className="text-gray-400">/10</span>
+                  {Math.round(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.focus, calendarData.moodEntry.stress) * 10) / 10}<span className="text-gray-400">/10</span>
                 </div>
                 <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
                   <div 
-                    className={`h-full transition-all duration-500 ${getRatingBarColor(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.satisfaction, calendarData.moodEntry.stress))}`}
-                    style={{ width: `${(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.satisfaction, calendarData.moodEntry.stress) / 10) * 100}%` }}
+                    className={`h-full transition-all duration-500 ${getRatingBarColor(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.focus, calendarData.moodEntry.stress))}`}
+                    style={{ width: `${(calculateMoodScore(calendarData.moodEntry.happiness, calendarData.moodEntry.focus, calendarData.moodEntry.stress) / 10) * 100}%` }}
                   />
                 </div>
               </div>
@@ -388,15 +389,15 @@ export default function CalendarView({
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Satisfaction</span>
+                  <span className="text-gray-300">Focus</span>
                   <div className="flex items-center gap-3">
                     <div className="w-20 h-1 bg-gray-700 rounded-full overflow-hidden">
                       <div 
-                            className={`h-full transition-all duration-300 ${getMoodBadgeColor(calendarData.moodEntry.satisfaction, 'satisfaction')}`}
-                            style={{ width: `${(calendarData.moodEntry.satisfaction / 5) * 100}%` }}
+                            className={`h-full transition-all duration-300 ${getMoodBadgeColor(calendarData.moodEntry.focus, 'focus')}`}
+                            style={{ width: `${(calendarData.moodEntry.focus / 5) * 100}%` }}
                       />
                     </div>
-                        <span className="text-white text-sm w-8">{calendarData.moodEntry.satisfaction}/5</span>
+                        <span className="text-white text-sm w-8">{calendarData.moodEntry.focus}/5</span>
                   </div>
                 </div>
               
@@ -489,13 +490,19 @@ export default function CalendarView({
                           onClick={handleToggle}
                         >
                       <div className="flex items-center gap-3">
-                            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                            <div className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
                               completed 
-                            ? 'bg-green-500 text-white'
-                            : 'bg-red-500 text-white'
-                        }`}>
-                              {completed ? '•' : '•'}
-                        </div>
+                                ? 'bg-green-500 text-white'
+                                : 'bg-red-500/20 border border-red-500'
+                            }`}>
+                              {completed ? (
+                                <CheckIcon className="w-4 h-4 text-white" />
+                              ) : (
+                                <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              )}
+                            </div>
                             <div className="flex flex-col">
                         <span className="text-white text-sm">{habit.name}</span>
                               {!wasActive && (

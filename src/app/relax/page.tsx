@@ -6,6 +6,7 @@ import PageTransition from '@/components/PageTransition';
 import BreathworkExercises from '@/components/BreathworkExercises';
 import MeditationTimer from '@/components/MeditationTimer';
 import AmbientSounds from '@/components/AmbientSounds';
+import { RelaxPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 
 
 
@@ -93,7 +94,12 @@ export default function RelaxPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen px-2 py-8">
+      <SkeletonDemo
+        skeleton={<RelaxPageSkeleton />}
+        delay={100} // Minimal delay for smooth transition
+        enabled={false} // Disable forced demo mode
+      >
+        <div className="min-h-screen px-2 py-8">
         {/* Theme Header */}
         {/* <div className="w-full max-w-2xl mx-auto">
           <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
@@ -366,6 +372,7 @@ export default function RelaxPage() {
 
 {/* Pinned Mantra feature removed for optimization */}
       </div>
+      </SkeletonDemo>
     </PageTransition>
   );
 }

@@ -71,7 +71,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   const saveCalendarEntryForDate = async (
     date: string, 
     habitCompletions: { habitId: number; completed: boolean }[],
-    moodData?: { happiness: number; satisfaction: number; stress: number }
+    moodData?: { happiness: number; focus: number; stress: number }
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       // Check if it's a past date
@@ -213,7 +213,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
    * Save mood data and integrate with calendar
    */
   const saveMoodData = async (
-    ratings: { happiness: number; satisfaction: number; stress: number },
+    ratings: { happiness: number; focus: number; stress: number },
     date?: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {

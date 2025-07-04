@@ -5,6 +5,7 @@ import PageTransition from '@/components/PageTransition';
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import DropdownMenu from "@/components/DropdownMenu";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { JournalPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 
 // Import new components
 import { CollectionModal } from "./components/CollectionModal";
@@ -95,13 +96,7 @@ const Journal: React.FC = () => {
   if (collectionsLoading && collections.length === 0) {
     return (
       <PageTransition>
-        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#1A2537" }}>
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-blue-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Loading Journal</h2>
-            <p className="text-gray-300">Setting up your journal workspace...</p>
-          </div>
-        </div>
+        <JournalPageSkeleton />
       </PageTransition>
     );
   }
@@ -138,37 +133,42 @@ const Journal: React.FC = () => {
 
   return (
     <PageTransition>
-      <div 
-        className="min-h-screen py-8"
-        style={{ backgroundColor: "#1A2537" }}
+      <SkeletonDemo
+        skeleton={<JournalPageSkeleton />}
+        delay={100} // Minimal delay for smooth transition
+        enabled={false} // Disable forced demo mode
       >
-        <div className="max-w-full mx-auto px-6">
-          {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold text-white mb-3">Journal</h1>
-            <p className="text-lg text-gray-300">Record your thoughts, experiences, and insights</p>
-            
-            {/* Error Banner */}
-            {(collectionsError || gratitudesError) && (
-              <div className="mt-4 p-4 bg-yellow-900/50 border border-yellow-600 rounded-lg max-w-2xl mx-auto">
-                <div className="flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5 text-yellow-400 mr-2" />
-                  <span className="text-yellow-200">
-                    Some features may be limited due to connection issues
-                  </span>
-                  <button
-                    onClick={() => {
-                      handleClearError();
-                      clearGratitudeError();
-                    }}
-                    className="ml-3 text-yellow-400 hover:text-yellow-300"
-                  >
-                    ×
-                  </button>
+        <div 
+          className="min-h-screen py-8"
+          style={{ backgroundColor: "#1A2537" }}
+        >
+          <div className="max-w-full mx-auto px-6">
+            {/* Header */}
+            <div className="mb-8 text-center">
+              <h1 className="text-4xl font-bold text-white mb-3">Journal</h1>
+              <p className="text-lg text-gray-300">Record your thoughts, experiences, and insights</p>
+              
+              {/* Error Banner */}
+              {(collectionsError || gratitudesError) && (
+                <div className="mt-4 p-4 bg-yellow-900/50 border border-yellow-600 rounded-lg max-w-2xl mx-auto">
+                  <div className="flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-yellow-400 mr-2" />
+                    <span className="text-yellow-200">
+                      Some features may be limited due to connection issues
+                    </span>
+                    <button
+                      onClick={() => {
+                        handleClearError();
+                        clearGratitudeError();
+                      }}
+                      className="ml-3 text-yellow-400 hover:text-yellow-300"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           
           {/* Main Layout - Three Columns */}
           <div className="flex flex-col xl:flex-row gap-8 min-h-screen">
@@ -323,6 +323,7 @@ const Journal: React.FC = () => {
           )}
         </div>
       </div>
+      </SkeletonDemo>
     </PageTransition>
   );
 };

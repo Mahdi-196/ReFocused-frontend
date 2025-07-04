@@ -30,54 +30,57 @@ const TaskList: React.FC<TaskListProps> = ({
   return (
     <div className="mt-6">
       <div className="flex items-center gap-2 mb-3">
-        <span className="font-medium text-gray-300">✅ Today's Tasks</span>
+        <span className="font-medium text-gray-300">Today's Tasks</span>
       </div>
-      <div className="bg-gray-700/30 border border-gray-600/50 rounded-lg p-4">
-        <ul className="space-y-2 mb-3">
-          {tasks.map(task => (
-            <li key={task.id} className="group relative flex items-center justify-between gap-2 pr-8">
-              <div className="flex items-center gap-2 flex-grow">
-                <input
-                  type="checkbox"
-                  checked={task.completed}
-                  onChange={() => {
-                    const wasCompleted = task.completed;
-                    
-                    // Use functional update for setting tasks
-                    setTasks(currentTasks =>
-                      currentTasks.map(t =>
-                        t.id === task.id ? { ...t, completed: !t.completed } : t
-                      )
-                    );
-                    
-                    // Track task completion when checking off (not unchecking)
-                    if (!wasCompleted) {
-                      try {
-                        incrementTasksDone();
-                        console.log('✅ [TASK LIST] Task completion tracked for:', task.text);
-                      } catch (error) {
-                        console.error('Failed to track task completion:', error);
+      <div className="w-full bg-gray-700/30 border border-gray-600/50 rounded-lg p-4">
+        {/* Fixed height container to prevent layout shifts - shows minimum 3 tasks worth of space */}
+        <div className="min-h-[120px] mb-3">
+          <ul className="space-y-2">
+            {tasks.map(task => (
+              <li key={task.id} className="group relative flex items-center justify-between gap-2 pr-8">
+                <div className="flex items-center gap-2 flex-grow">
+                  <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() => {
+                      const wasCompleted = task.completed;
+                      
+                      // Use functional update for setting tasks
+                      setTasks(currentTasks =>
+                        currentTasks.map(t =>
+                          t.id === task.id ? { ...t, completed: !t.completed } : t
+                        )
+                      );
+                      
+                      // Track task completion when checking off (not unchecking)
+                      if (!wasCompleted) {
+                        try {
+                          incrementTasksDone();
+                          console.log('✅ [TASK LIST] Task completion tracked for:', task.text);
+                        } catch (error) {
+                          console.error('Failed to track task completion:', error);
+                        }
                       }
-                    }
-                  }}
-                  className="flex-shrink-0 rounded border-gray-500 text-blue-500 focus:ring-blue-500 bg-gray-600"
-                />
-                <span className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-200'}`}>
-                  {task.text}
-                </span>
-              </div>
-              <button
-                onClick={() => handleDeleteTask(task.id)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-gray-600/50"
-                aria-label="Delete task"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </li>
-          ))}
-        </ul>
+                    }}
+                    className="flex-shrink-0 rounded border-gray-500 text-blue-500 focus:ring-blue-500 bg-gray-600"
+                  />
+                  <span className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-200'}`}>
+                    {task.text}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleDeleteTask(task.id)}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-gray-600/50"
+                  aria-label="Delete task"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
         <form onSubmit={handleAddTask} className="flex items-center gap-2">
           <input
             type="text"

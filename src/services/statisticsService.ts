@@ -169,7 +169,7 @@ class DateUtils {
     localStorage.setItem('lastMonthStart', timeService.getStartOfMonth());
   }
 
-  static debugDates(): Record<string, string | number> {
+  static debugDates(): Record<string, string | number | boolean> {
     const now = timeService.getCurrentDateTime();
     const currentDate = timeService.getCurrentDate();
     const weekStart = timeService.getStartOfWeek();

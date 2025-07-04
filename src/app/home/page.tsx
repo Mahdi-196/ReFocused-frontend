@@ -3,73 +3,105 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
-import { GOALS } from '@/api/endpoints';
+
+import { HomePageSkeleton, SkeletonDemo } from '@/components/skeletons';
 
 // Dynamically import heavy components
 const DailyMomentum = dynamic(() => import('../homeComponents/DailyMomentum'), {
   ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>
 });
 
 const QuoteOfTheDay = dynamic(() => import('../homeComponents/QuickAccess'), {
   ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 h-24 rounded-lg"></div>
 });
 
 const WordOfTheDay = dynamic(() => import('../homeComponents/WordOfTheDay'), {
   ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 h-24 rounded-lg"></div>
 });
 
 const GoalTracker = dynamic(() => import('../homeComponents/GoalTracker'), {
   ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 h-48 rounded-lg"></div>
 });
 
 const MindFuel = dynamic(() => import('../homeComponents/MindFuel'), {
   ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>
 });
 
 const ProductivityScore = dynamic(() => import('../homeComponents/ProductivityScore'), {
   ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>
 });
 import { Task } from '../homeComponents/TaskList';
-import client from '@/api/client';
-import { Goal, UIGoal, GoalView, goalToUIGoal, CreateGoalRequest, UpdateGoalRequest } from '@/types/goal';
+
+// Helper functions for local storage
+const getTodayKey = () => {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  return `refocused_tasks_${today}`;
+};
+
+const loadTodayTasks = (): Task[] => {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const todayKey = getTodayKey();
+    const savedTasks = localStorage.getItem(todayKey);
+    return savedTasks ? JSON.parse(savedTasks) : [];
+  } catch (error) {
+    console.error('Error loading tasks from localStorage:', error);
+    return [];
+  }
+};
+
+const saveTodayTasks = (tasks: Task[]) => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const todayKey = getTodayKey();
+    localStorage.setItem(todayKey, JSON.stringify(tasks));
+  } catch (error) {
+    console.error('Error saving tasks to localStorage:', error);
+  }
+};
+
+const cleanupOldTasks = () => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const keys = Object.keys(localStorage);
+    const taskKeys = keys.filter(key => key.startsWith('refocused_tasks_'));
+    const today = new Date().toISOString().split('T')[0];
+    
+    taskKeys.forEach(key => {
+      const taskDate = key.replace('refocused_tasks_', '');
+      if (taskDate !== today) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (error) {
+    console.error('Error cleaning up old tasks:', error);
+  }
+};
 
 const Home = () => {
-  const [activeGoalView, setActiveGoalView] = useState<GoalView>('sprint');
   const [newTask, setNewTask] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const [sprintGoals, setSprintGoals] = useState<UIGoal[]>([]);
-  const [visionGoals, setVisionGoals] = useState<UIGoal[]>([]);
-  const [newGoalName, setNewGoalName] = useState('');
-
-  // Fetch goals from the API
+  // Load today's tasks from localStorage on component mount
   useEffect(() => {
-    const fetchGoals = async () => {
-      try {
-        const res = await client.get<Goal[]>(GOALS.BASE);
-        const uiGoals = res.data.map(goalToUIGoal);
-        setSprintGoals(uiGoals.filter(g => g.category === "sprint"));
-        setVisionGoals(uiGoals.filter(g => g.category === "long_term"));
-      } catch (error) {
-        console.error("Error fetching goals:", error);
-        // Start with empty goals for fresh user experience
-        setSprintGoals([]);
-        setVisionGoals([]);
-      }
-    };
-
-    fetchGoals();
+    const savedTasks = loadTodayTasks();
+    setTasks(savedTasks);
+    
+    // Clean up old task entries to keep localStorage tidy
+    cleanupOldTasks();
   }, []);
 
-  const [isEditGoalModalOpen, setIsEditGoalModalOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<UIGoal & { type: 'sprint' | 'vision' } | null>(null);
-  const [editedGoalProgress, setEditedGoalProgress] = useState(0);
+  // Save tasks to localStorage whenever tasks change
+  useEffect(() => {
+    if (tasks.length > 0 || tasks.length === 0) { // Save even when empty to clear old data
+      saveTodayTasks(tasks);
+    }
+  }, [tasks]);
+
+
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,88 +111,8 @@ const Home = () => {
     }
   };
 
-  const handleAddGoal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newGoalName.trim()) return;
-    
-    const category = activeGoalView === 'sprint' ? 'sprint' as const : 'long_term' as const;
-    
-    try {
-      const requestData: CreateGoalRequest = {
-        category, 
-        goal_text: newGoalName.trim()
-      };
-      
-      const response = await client.post<Goal>(GOALS.BASE, requestData);
-      const newUIGoal = goalToUIGoal(response.data);
-      
-      if (category === 'sprint') {
-        setSprintGoals([...sprintGoals, newUIGoal]);
-      } else {
-        setVisionGoals([...visionGoals, newUIGoal]);
-      }
-      
-      setNewGoalName('');
-    } catch (error) {
-      console.error('Error adding goal:', error);
-      // Don't add goal if API fails - user should try again
-    }
-  };
-
-  const handleOpenEditGoalModal = (goal: UIGoal, type: 'sprint' | 'vision') => {
-    setEditingGoal({ ...goal, type });
-    setEditedGoalProgress(goal.progress || 0);
-    setIsEditGoalModalOpen(true);
-  };
-
-  const handleUpdateGoal = async () => {
-    if (!editingGoal) return;
-    
-    // Convert UI type to API category
-    const category = editingGoal.type === 'sprint' ? 'sprint' as const : 'long_term' as const;
-    
-    try {
-      const updateData: UpdateGoalRequest = {
-        goal_text: editingGoal.goal_text || editingGoal.name,
-        completed: editedGoalProgress === 100,
-        progress: editedGoalProgress,
-        category
-      };
-      
-      const response = await client.patch<Goal>(GOALS.DETAIL(editingGoal.id), updateData);
-      const updatedUIGoal = goalToUIGoal(response.data);
-      
-      if (editingGoal.type === 'sprint') {
-        setSprintGoals(sprintGoals.map(g => g.id === updatedUIGoal.id ? updatedUIGoal : g));
-      } else {
-        setVisionGoals(visionGoals.map(g => g.id === updatedUIGoal.id ? updatedUIGoal : g));
-      }
-    } catch (error) {
-      console.error('Error updating goal:', error);
-      // Don't update goal if API fails - user should try again
-    } finally {
-      setIsEditGoalModalOpen(false);
-      setEditingGoal(null);
-    }
-  };
-
   const handleDeleteTask = (taskId: number) => {
     setTasks(tasks.filter(task => task.id !== taskId));
-  };
-
-  const handleDeleteGoal = async (id: number, type: 'sprint' | 'vision') => {
-    try {
-      await client.delete(GOALS.DETAIL(id));
-      
-      // On success, filter out the deleted goal from state
-      if (type === 'sprint') {
-        setSprintGoals(sprintGoals.filter(goal => goal.id !== id));
-      } else {
-        setVisionGoals(visionGoals.filter(goal => goal.id !== id));
-      }
-    } catch (error) {
-      console.error(`Error deleting goal with id ${id}:`, error);
-    }
   };
 
   return (
@@ -168,84 +120,36 @@ const Home = () => {
       <main className="container mx-auto p-6 max-w-7xl">
         <h1 className="sr-only">ReFocused Dashboard - Daily Productivity and Mindfulness</h1>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <DailyMomentum
-            tasks={tasks}
-            newTask={newTask}
-            setNewTask={setNewTask}
-            handleAddTask={handleAddTask}
-            handleDeleteTask={handleDeleteTask}
-            setTasks={setTasks}
-          />
+        <SkeletonDemo
+          skeleton={<HomePageSkeleton />}
+          delay={100} // Minimal delay for smooth transition
+          enabled={false} // Disable forced demo mode
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <DailyMomentum
+              tasks={tasks}
+              newTask={newTask}
+              setNewTask={setNewTask}
+              handleAddTask={handleAddTask}
+              handleDeleteTask={handleDeleteTask}
+              setTasks={setTasks}
+            />
 
-          <div className="lg:col-span-1">
-            <div className="flex flex-col gap-6">
-              <QuoteOfTheDay />
-              <WordOfTheDay />
-            </div>
-          </div>
-
-          <GoalTracker
-            sprintGoals={sprintGoals}
-            visionGoals={visionGoals}
-            activeGoalView={activeGoalView}
-            setActiveGoalView={setActiveGoalView}
-            newGoalName={newGoalName}
-            setNewGoalName={setNewGoalName}
-            handleAddGoal={handleAddGoal}
-            handleOpenEditGoalModal={handleOpenEditGoalModal}
-            handleDeleteGoal={handleDeleteGoal}
-          />
-
-          <MindFuel />
-
-          <ProductivityScore />
-        </div>
-
-        {isEditGoalModalOpen && editingGoal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-              <h3 className="text-lg font-semibold mb-4">Update Progress</h3>
-              
-              <div className="mb-4">
-                <p className="block text-sm font-medium text-gray-500 mb-1">Goal</p>
-                <p className="text-lg font-semibold text-gray-800">{editingGoal.name}</p>
-              </div>
-
-              <div className="mb-6">
-                <label htmlFor="goalProgress" className="block text-sm font-medium text-gray-700 mb-1">
-                  Progress: {editedGoalProgress}%
-                </label>
-                <input
-                  id="goalProgress"
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={editedGoalProgress}
-                  onChange={(e) => setEditedGoalProgress(parseInt(e.target.value, 10))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                  autoFocus
-                />
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setIsEditGoalModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpdateGoal}
-                  className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-md hover:bg-gray-700 transition-colors disabled:bg-gray-400"
-                >
-                  Save Progress
-                </button>
+            <div className="lg:col-span-1">
+              <div className="flex flex-col gap-6">
+                <QuoteOfTheDay />
+                <WordOfTheDay />
               </div>
             </div>
+
+            <GoalTracker />
+
+            <MindFuel />
+
+            <ProductivityScore />
           </div>
-        )}
+        </SkeletonDemo>
+
       </main>
     </PageTransition>
   );

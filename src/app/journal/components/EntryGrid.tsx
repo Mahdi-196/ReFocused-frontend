@@ -14,6 +14,7 @@ interface EntryGridProps {
   onOpenDropdown: (dropdownState: DropdownState | null) => void;
   openDropdown: DropdownState | null;
   collections: Collection[];
+  isLoading?: boolean;
 }
 
 /**
@@ -28,7 +29,8 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
   onEditEntry,
   onOpenDropdown,
   openDropdown,
-  collections
+  collections,
+  isLoading = false
 }) => {
   const handleEntryEditClick = (e: React.MouseEvent, entry: Entry) => {
     e.stopPropagation();

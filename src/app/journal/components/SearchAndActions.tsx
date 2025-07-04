@@ -10,6 +10,7 @@ interface SearchAndActionsProps {
   selectedCollection: Collection | null;
   onAddNewEntry: () => void;
   selectedCollectionId: string | null;
+  isLoading?: boolean;
 }
 
 /**
@@ -21,7 +22,8 @@ export const SearchAndActions: React.FC<SearchAndActionsProps> = ({
   onSearchChange,
   selectedCollection,
   onAddNewEntry,
-  selectedCollectionId
+  selectedCollectionId,
+  isLoading = false
 }) => {
   return (
     <div 

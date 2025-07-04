@@ -11,6 +11,7 @@ interface CollectionTabsProps {
   onAddCollection: () => void;
   onOpenDropdown: (dropdownState: DropdownState | null) => void;
   openDropdown: DropdownState | null;
+  isLoading?: boolean;
 }
 
 /**
@@ -23,7 +24,8 @@ export const CollectionTabs: React.FC<CollectionTabsProps> = ({
   onCollectionSelect,
   onAddCollection,
   onOpenDropdown,
-  openDropdown
+  openDropdown,
+  isLoading = false
 }) => {
   const handleEditClick = (e: React.MouseEvent, collection: Collection) => {
     e.stopPropagation();

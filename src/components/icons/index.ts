@@ -108,4 +108,7 @@ export const IconStyles = {
   warning: 'text-yellow-500',
   danger: 'text-red-500',
   muted: 'text-gray-400'
-} as const; 
+} as const;
+
+export { default as FireIcon } from './FireIcon';
+export { default as CheckIcon } from './CheckIcon'; 

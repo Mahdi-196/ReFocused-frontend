@@ -22,8 +22,12 @@ export const USER = {
 
 // Goals endpoints
 export const GOALS = {
-  BASE: '/goals',
+  CREATE: '/goals',
+  LIST: '/goals', // Main endpoint for fetching goals with duration filtering
+  PROGRESS: (id: number | string) => `/goals/${id}/progress`,
   DETAIL: (id: number | string) => `/goals/${id}`,
+  HISTORY: '/goals/history', // New endpoint for completed goals history
+  STATS: '/goals/stats', // Enhanced stats endpoint
 };
 
 // Study endpoints (relative to baseURL)

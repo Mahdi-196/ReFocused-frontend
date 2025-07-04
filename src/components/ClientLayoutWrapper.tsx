@@ -8,6 +8,7 @@ import AnimatedLayout from './AnimatedLayout';
 import StatisticsInitializer from './StatisticsInitializer';
 import DevTools from './devTools';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { TimeProvider } from '@/contexts/TimeContext';
 import { initializeAuth } from '@/api/client';
 
 export default function ClientLayoutWrapper({
@@ -32,6 +33,33 @@ export default function ClientLayoutWrapper({
     };
 
     checkAuth();
+
+    // Listen for storage changes (logout in same or other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'REF_TOKEN') {
+        checkAuth();
+      }
+    };
+
+    // Listen for focus events (user might have logged out in another tab)
+    const handleFocus = () => {
+      checkAuth();
+    };
+
+    // Listen for custom logout events (for same-tab logout)
+    const handleLogout = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('userLoggedOut', handleLogout);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('userLoggedOut', handleLogout);
+    };
   }, []);
 
   // Handle authentication-based redirects
@@ -70,19 +98,21 @@ export default function ClientLayoutWrapper({
 
   return (
     <AuthProvider>
-      <StatisticsInitializer />
-      <div className={isLandingPage ? '' : 'pt-20'}>
-        {!isLandingPage && <Header />}
-        <AnimatedLayout>
-          <main className={`${!isLandingPage ? 'container mx-auto px-4 py-8' : ''}`}>
-            {children}
-          </main>
-        </AnimatedLayout>
-        {shouldShowFooter && <Footer />}
-      </div>
-      
-      {/* DevTools - positioned at bottom-right globally */}
-      {process.env.NODE_ENV === 'development' && <DevTools isVisible={true} />}
+      <TimeProvider>
+        <StatisticsInitializer />
+        <div className={isLandingPage ? '' : 'pt-20'}>
+          {!isLandingPage && <Header />}
+          <AnimatedLayout>
+            <main className={`${!isLandingPage ? 'container mx-auto px-4 py-8' : ''}`}>
+              {children}
+            </main>
+          </AnimatedLayout>
+          {shouldShowFooter && <Footer />}
+        </div>
+        
+        {/* DevTools - positioned at bottom-right globally */}
+        {process.env.NODE_ENV === 'development' && <DevTools />}
+      </TimeProvider>
     </AuthProvider>
   );
 } 

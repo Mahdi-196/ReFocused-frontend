@@ -7,7 +7,7 @@ import { timeService } from './timeService';
 export interface DailyEntry {
   date: string;
   happiness?: number;
-  satisfaction?: number;
+  focus?: number;
   stress?: number;
   dayRating?: number;
   habitCompletions?: {
@@ -285,7 +285,7 @@ export async function getTodayOverview(): Promise<{
   };
 }> {
   const today = timeService.getCurrentDate();
-  const sevenDaysAgo = timeService.getRelativeDate(-7);
+  const sevenDaysAgo = new Date(new Date(today).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
   try {
     const [todayEntry, stats] = await Promise.all([

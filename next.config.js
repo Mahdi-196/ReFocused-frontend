@@ -56,7 +56,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Cross-Origin-Opener-Policy',
-            value: 'unsafe-none',
+            value: 'same-origin-allow-popups',
           },
           {
             key: 'Cross-Origin-Embedder-Policy', 
@@ -66,7 +66,17 @@ const nextConfig = {
             key: 'X-Frame-Options',
             value: 'SAMEORIGIN',
           },
-          // Performance headers
+          // Performance headers for static assets only
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+      {
+        // Separate cache headers for static assets
+        source: '/static/(.*)',
+        headers: [
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
@@ -85,11 +95,6 @@ const nextConfig = {
       test: /\.(png|jpg|gif|svg)$/i,
       type: 'asset/resource'
     })
-
-    // Enable faster source maps in development
-    if (dev) {
-      config.devtool = 'eval-cheap-module-source-map'
-    }
 
     // Optimize for production
     if (!dev && !isServer) {

@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, VolumeX, Menu, X } from "lucide-react";
-import AuthButton from "./AuthButton";
 
 import { useState } from "react";
+import AuthButton from './AuthButton';
 
 const Header = () => {
   const pathname = usePathname();
@@ -14,7 +14,7 @@ const Header = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   const navItems = [
-    { href: "/", label: "Home" },
+    { href: "/home", label: "Home" },
     { href: "/track", label: "Track" },
     { href: "/study", label: "Study" },
     { href: "/journal", label: "Journal" },
@@ -59,7 +59,35 @@ const Header = () => {
               className="hidden md:flex items-center space-x-2"
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" />
-              <span className="text-xl font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)]">ReFocused</span>
+              <motion.span 
+                className="text-xl font-bold cursor-pointer relative group inline-block"
+                whileHover={{ 
+                  scale: 1.05,
+                  filter: "drop-shadow(0 0 15px rgba(66,185,229,0.5))"
+                }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 300, 
+                  damping: 20 
+                }}
+              >
+                <motion.span 
+                  className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  ReFocused
+                </motion.span>
+                <motion.span 
+                  className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
+                  initial={{ opacity: 0, y: 5 }}
+                  whileHover={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  ReFocused-Ai
+                </motion.span>
+              </motion.span>
             </motion.div>
           </div>
 
@@ -70,7 +98,35 @@ const Header = () => {
               className="md:hidden flex items-center space-x-2"
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-8 h-8" />
-              <span className="text-lg font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)]">ReFocused</span>
+              <motion.span 
+                className="text-lg font-bold cursor-pointer relative group inline-block"
+                whileHover={{ 
+                  scale: 1.05,
+                  filter: "drop-shadow(0 0 15px rgba(66,185,229,0.5))"
+                }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 300, 
+                  damping: 20 
+                }}
+              >
+                <motion.span 
+                  className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  ReFocused
+                </motion.span>
+                <motion.span 
+                  className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
+                  initial={{ opacity: 0, y: 5 }}
+                  whileHover={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  ReFocused-Ai
+                </motion.span>
+              </motion.span>
             </motion.div>
 
             {/* Desktop Navigation - Centered */}
@@ -131,8 +187,7 @@ const Header = () => {
                 <VolumeX className="w-5 h-5 text-red-400" />
               )}
             </motion.button>
-            
-            {/* Profile/Auth Button - Import AuthButton component */}
+            {/* Profile/Auth Button restored */}
             <AuthButton />
           </motion.div>
         </div>

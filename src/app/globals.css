@@ -55,6 +55,46 @@
   animation-delay: 2s;
 }
 
+/* Google Sign-In Button Styling */
+.google-signin-wrapper {
+  width: 100% !important;
+  min-height: 40px;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative;
+}
+
+.google-signin-wrapper > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.google-signin-wrapper iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 240px !important;
+  height: 40px !important;
+}
+
+/* Fix for Google button responsiveness and visibility */
+.google-signin-wrapper [role="button"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 240px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+/* Ensure Google button is always visible */
+.google-signin-wrapper * {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
 /* Remove Flip Card Animation - Start */
 /* .flip-card { ... } */
 /* .flip-card-inner { ... } */

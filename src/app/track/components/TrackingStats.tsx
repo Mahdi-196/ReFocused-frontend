@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrackingStats as Stats } from '../types';
+import { FireIcon } from '@/components/icons';
 
 interface TrackingStatsProps {
   stats: Stats;
@@ -32,7 +33,7 @@ export default function TrackingStats({ stats }: TrackingStatsProps) {
             <p className="text-2xl font-bold text-white">{stats.currentStreak}</p>
             <span className="text-gray-300 text-sm">day{stats.currentStreak !== 1 ? 's' : ''}</span>
             {stats.currentStreak > 0 && (
-              <span className="text-orange-400 text-lg">🔥</span>
+              <FireIcon className="w-5 h-5" />
             )}
           </div>
         </div>
