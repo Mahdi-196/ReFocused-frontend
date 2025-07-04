@@ -397,9 +397,9 @@ export const useTime = (): TimeContextValue => {
  * Hook for getting just the current date (most common use case)
  */
 export const useCurrentDate = (): string => {
+  const { timeData, loading, getCurrentDate } = useTime();
+  
   try {
-    const { timeData, loading, getCurrentDate } = useTime();
-    
     // If we have timeData available, use it directly
     if (timeData?.user_current_date) {
       return timeData.user_current_date;

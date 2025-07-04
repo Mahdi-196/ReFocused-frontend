@@ -25,14 +25,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
   const [isLoading, setIsLoading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Reset form when modal opens/closes or tab changes
+  // Reset form when modal opens - but not on tab changes to prevent jerky animation
   useEffect(() => {
     if (isOpen) {
       setFormData({ email: '', password: '', name: '' });
       setError('');
       setShowPassword(false);
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen]); // Removed activeTab dependency to prevent re-renders during animation
+
+  // Reset form data when switching tabs (but not error/password visibility to avoid jerky animation)
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, email: '', password: '', name: '' }));
+  }, [activeTab]);
 
   // Handle click outside modal
   useEffect(() => {
@@ -59,6 +64,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
 
   const handleGoogleSuccess = (token: string) => {
     setError('');
+    setIsLoading(false); // Reset loading state on success
     localStorage.setItem('REF_TOKEN', token);
     onClose();
     // Use Next.js router for client-side navigation
@@ -67,6 +73,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
 
   const handleGoogleError = (errorMessage: string) => {
     setError(errorMessage);
+    setIsLoading(false); // Reset loading state on error
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,12 +110,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     }
   };
 
-  // Swoosh animation variants
+  // Ultra-smooth animation variants that override global transitions
   const modalVariants = {
     hidden: {
       opacity: 0,
-      scale: 0.8,
-      y: -50,
+      scale: 0.96,
+      y: 8,
     },
     visible: {
       opacity: 1,
@@ -116,18 +123,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
       y: 0,
       transition: {
         type: "spring" as const,
-        damping: 25,
-        stiffness: 300,
-        duration: 0.6,
+        damping: 30,
+        stiffness: 400,
+        mass: 0.8,
+        duration: 0.3,
       }
     },
     exit: {
       opacity: 0,
-      scale: 0.8,
-      y: 50,
+      scale: 0.96,
+      y: -8,
       transition: {
-        duration: 0.3,
-        ease: "easeInOut" as const
+        type: "tween" as const,
+        ease: "easeIn" as const,
+        duration: 0.2,
       }
     }
   };
@@ -136,11 +145,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
-      transition: { duration: 0.3 }
+      transition: { 
+        type: "tween" as const,
+        ease: "easeOut" as const,
+        duration: 0.3
+      }
     },
     exit: { 
       opacity: 0,
-      transition: { duration: 0.3 }
+      transition: { 
+        type: "tween" as const,
+        ease: "easeIn" as const,
+        duration: 0.2
+      }
     }
   };
 
@@ -165,6 +182,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
             initial="hidden"
             animate="visible"
             exit="exit"
+            style={{
+              // Override any global CSS transitions
+              transition: 'none !important',
+              willChange: 'transform, opacity',
+            }}
           >
             {/* Close button */}
             <button
@@ -226,25 +248,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {activeTab === 'register' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Full Name
-                    </label>
-                    <div className="relative">
-                      <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
-                        placeholder="Enter your full name"
-                        required
-                      />
+                <motion.div
+                  initial={false}
+                  animate={{ height: activeTab === 'register' ? 'auto' : 0, opacity: activeTab === 'register' ? 1 : 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  {activeTab === 'register' && (
+                    <div className="pb-4">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Full Name
+                      </label>
+                      <div className="relative">
+                        <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                          type="text"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          autoComplete="name"
+                          className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                          placeholder="Enter your full name"
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </motion.div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -257,6 +287,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
+                      autoComplete="email"
                       className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
                       placeholder="Enter your email"
                       required
@@ -275,6 +306,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                       name="password"
                       value={formData.password}
                       onChange={handleInputChange}
+                      autoComplete={activeTab === 'login' ? 'current-password' : 'new-password'}
                       className="w-full pl-10 pr-12 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
                       placeholder="Enter your password"
                       required
@@ -308,15 +340,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                 <div className="flex-1 border-t border-gray-600/30"></div>
               </div>
 
+              {/* Google Sign-In Help */}
+              {error && (error.includes('not available') || error.includes('cancelled')) && (
+                <div className="mb-4 p-3 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg text-xs">
+                  <div className="font-medium mb-1">Google Sign-In Help:</div>
+                  <div>Try refreshing the page or clearing your browser cache. If the issue persists, try using a different browser.</div>
+                </div>
+              )}
+
               {/* Google Sign In */}
               <div className="space-y-3">
                 <GoogleSignInButton
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
                   className="w-full"
-                  theme="filled_blue"
-                  size="large"
-                  text="continue_with"
                 />
               </div>
             </div>

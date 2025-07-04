@@ -32,7 +32,7 @@ client.interceptors.request.use(
           let collectionId = null;
           
           // Extract collection ID from URL patterns
-          const collectionMatch = config.url.match(/\/collections\/([^\/]+)/);
+          const collectionMatch = config.url.match(/\/collections\/([^/]+)/);
           const entryWithCollectionMatch = config.url.match(/\/entries.*[?&]collection=([^&]+)/);
           
           if (collectionMatch) {
