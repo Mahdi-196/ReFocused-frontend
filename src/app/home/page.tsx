@@ -32,10 +32,26 @@ const ProductivityScore = dynamic(() => import('../homeComponents/ProductivitySc
 });
 import { Task } from '../homeComponents/TaskList';
 
-// Helper functions for local storage
-const getTodayKey = () => {
+// Helper functions for user-specific local storage
+const getUserId = (): string => {
+  if (typeof window === 'undefined') return '';
+  
+  try {
+    const userString = localStorage.getItem('REF_USER');
+    if (userString) {
+      const user = JSON.parse(userString);
+      return user.id?.toString() || '';
+    }
+    return '';
+  } catch {
+    return '';
+  }
+};
+
+const getTodayKey = (): string => {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-  return `refocused_tasks_${today}`;
+  const userId = getUserId();
+  return userId ? `refocused_tasks_${userId}_${today}` : `refocused_tasks_${today}`;
 };
 
 const loadTodayTasks = (): Task[] => {
@@ -69,11 +85,24 @@ const cleanupOldTasks = () => {
     const keys = Object.keys(localStorage);
     const taskKeys = keys.filter(key => key.startsWith('refocused_tasks_'));
     const today = new Date().toISOString().split('T')[0];
+    const userId = getUserId();
     
     taskKeys.forEach(key => {
-      const taskDate = key.replace('refocused_tasks_', '');
-      if (taskDate !== today) {
-        localStorage.removeItem(key);
+      // Clean up both user-specific and legacy task keys
+      if (userId) {
+        // For user-specific keys, only clean up old dates for current user
+        if (key.startsWith(`refocused_tasks_${userId}_`)) {
+          const taskDate = key.replace(`refocused_tasks_${userId}_`, '');
+          if (taskDate !== today) {
+            localStorage.removeItem(key);
+          }
+        }
+      } else {
+        // For legacy keys without user ID, clean up old dates
+        const taskDate = key.replace('refocused_tasks_', '');
+        if (taskDate !== today && !taskDate.includes('_')) { // Not a user-specific key
+          localStorage.removeItem(key);
+        }
       }
     });
   } catch (error) {
@@ -84,15 +113,86 @@ const cleanupOldTasks = () => {
 const Home = () => {
   const [newTask, setNewTask] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
 
-  // Load today's tasks from localStorage on component mount
+  // Clear tasks when user changes
+  const clearTasks = () => {
+    setTasks([]);
+    setNewTask('');
+  };
+
+  // Load today's tasks from localStorage on component mount and when user changes
   useEffect(() => {
     const savedTasks = loadTodayTasks();
     setTasks(savedTasks);
     
+    // Track current user
+    const userId = getUserId();
+    setCurrentUser(userId);
+    
     // Clean up old task entries to keep localStorage tidy
     cleanupOldTasks();
   }, []);
+
+  // Handle authentication changes
+  useEffect(() => {
+    // Listen for user logout events
+    const handleUserLogout = () => {
+      console.log('🔄 User logged out - clearing tasks');
+      clearTasks();
+    };
+
+    // Listen for storage changes (user login/logout in other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'REF_TOKEN' || e.key === 'REF_USER') {
+        const newUserId = getUserId();
+        const oldUserId = currentUser;
+        
+        // If user changed (logged in/out or switched users)
+        if (newUserId !== oldUserId) {
+          console.log('🔄 User authentication changed - refreshing tasks');
+          setCurrentUser(newUserId);
+          
+          if (newUserId) {
+            // User logged in or switched - reload tasks for new user
+            const newUserTasks = loadTodayTasks();
+            setTasks(newUserTasks);
+          } else {
+            // User logged out - clear tasks
+            clearTasks();
+          }
+        }
+      }
+    };
+
+    // Listen for focus events (user might have logged in/out in another tab)
+    const handleFocus = () => {
+      const userId = getUserId();
+      if (userId !== currentUser) {
+        console.log('🔄 User changed on focus - refreshing tasks');
+        setCurrentUser(userId);
+        
+        if (userId) {
+          const newUserTasks = loadTodayTasks();
+          setTasks(newUserTasks);
+        } else {
+          clearTasks();
+        }
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('userLoggedOut', handleUserLogout);
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleFocus);
+
+    // Cleanup event listeners
+    return () => {
+      window.removeEventListener('userLoggedOut', handleUserLogout);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [currentUser]);
 
   // Save tasks to localStorage whenever tasks change
   useEffect(() => {
@@ -100,8 +200,6 @@ const Home = () => {
       saveTodayTasks(tasks);
     }
   }, [tasks]);
-
-
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();

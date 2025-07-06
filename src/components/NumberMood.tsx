@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { saveMoodRating, getTodaysMood } from '@/services/moodService';
-import { useCurrentDate } from '@/contexts/TimeContext';
 
 interface MoodRating {
   happiness: number | null;
@@ -16,38 +15,38 @@ export default function NumberMood() {
     focus: null,
     stress: null
   });
-  const [loading, setLoading] = useState(true);
+
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const [success, setSuccess] = useState(false);
 
-  // Load today's mood on component mount
+  // Load existing mood data on mount
   useEffect(() => {
-    const loadTodaysMood = async () => {
-      try {
-        const todaysMood = await getTodaysMood();
-        if (todaysMood) {
-          setMoodRatings({
-            happiness: todaysMood.happiness ?? null,
-            focus: todaysMood.focus ?? null,
-            stress: todaysMood.stress ?? null
-          });
-          setLastSaved(new Date(todaysMood.updatedAt || todaysMood.createdAt || Date.now()));
-        }
-      } catch (error) {
-        console.error('Failed to load today\'s mood:', error);
-        setError('Failed to load your previous mood data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadTodaysMood();
   }, []);
 
-  // Auto-save mood rating with retry logic - Only save when all fields are complete
-  const handleRatingChange = async (type: keyof MoodRating, value: string) => {
+  const loadTodaysMood = async () => {
+    try {
+      setLoading(true);
+      const existingMood = await getTodaysMood();
+      
+      if (existingMood) {
+        setMoodRatings({
+          happiness: existingMood.happiness || null,
+          focus: existingMood.focus || null,
+          stress: existingMood.stress || null
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to load existing mood data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle rating changes without saving
+  const handleRatingChange = (type: keyof MoodRating, value: string) => {
     const numValue = parseInt(value);
     
     // Validate the rating value is within range
@@ -56,69 +55,47 @@ export default function NumberMood() {
       return;
     }
     
-    // Update local state immediately for UI responsiveness
-    const newRatings = {
-      ...moodRatings,
+    // Update local state
+    setMoodRatings(prev => ({
+      ...prev,
       [type]: numValue
-    };
-    setMoodRatings(newRatings);
-    setError(null); // Clear any previous errors
+    }));
 
-    // Only save if we have all three VALID values and not in initial loading state
-    if (!loading && 
-        typeof newRatings.happiness === 'number' && 
-        typeof newRatings.focus === 'number' &&
-        typeof newRatings.stress === 'number' &&
-        newRatings.happiness >= 1 && newRatings.happiness <= 5 &&
-        newRatings.focus >= 1 && newRatings.focus <= 5 &&
-        newRatings.stress >= 1 && newRatings.stress <= 5) {
-      
-      console.log('Saving complete mood rating:', newRatings);
-      await saveWithRetry({
-        happiness: newRatings.happiness,
-        focus: newRatings.focus,
-        stress: newRatings.stress
-      });
-    } else {
-      console.log('Mood rating incomplete, waiting for all values:', {
-        happiness: newRatings.happiness,
-        focus: newRatings.focus,
-        stress: newRatings.stress,
-        loading
-      });
-    }
+    // Clear any previous success/error states
+    setError(null);
+    setSuccess(false);
   };
 
-  // Save with retry logic for better UX
-  const saveWithRetry = async (ratings: { happiness: number; focus: number; stress: number }, attempt = 1) => {
-    setSaving(true);
-    setRetryCount(attempt - 1);
-    
+  // Save mood ratings to server
+  const handleSave = async () => {
+    // Validate that all ratings are selected
+    if (moodRatings.happiness === null || moodRatings.focus === null || moodRatings.stress === null) {
+      setError('Please rate all three categories before saving.');
+      return;
+    }
+
     try {
-      await saveMoodRating(ratings);
-      setLastSaved(new Date());
+      setSaving(true);
       setError(null);
-      setRetryCount(0);
-    } catch (error) {
-      console.error(`Mood save attempt ${attempt} failed:`, error);
-      
-      if (attempt < 3) {
-        // Retry with exponential backoff
-        const delay = Math.pow(2, attempt) * 1000; // 2s, 4s delays
-        setTimeout(() => {
-          saveWithRetry(ratings, attempt + 1);
-        }, delay);
-      } else {
-        // All retries failed
-        setError('Failed to save mood rating. Please try again.');
-        setRetryCount(0);
-      }
+
+      await saveMoodRating({
+        happiness: moodRatings.happiness,
+        focus: moodRatings.focus,
+        stress: moodRatings.stress
+      });
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000); // Clear success message after 3 seconds
+    } catch (err) {
+      console.error('Failed to save mood ratings:', err);
+      setError('Failed to save mood ratings. Please try again.');
     } finally {
-      if (attempt >= 3) {
-        setSaving(false);
-      }
+      setSaving(false);
     }
   };
+
+  // Check if all ratings are selected
+  const canSave = moodRatings.happiness !== null && moodRatings.focus !== null && moodRatings.stress !== null;
 
   const getRatingStyle = (rating: number | null, type: 'normal' | 'stress' = 'normal') => {
     const defaultStyle = {
@@ -191,6 +168,19 @@ export default function NumberMood() {
     }
   };
 
+  if (loading) {
+    return (
+      <div 
+        className="rounded-lg p-6 shadow-md"
+        style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
+      >
+        <div className="flex items-center justify-center h-40">
+          <div className="text-white">Loading mood data...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       className="rounded-lg p-6 shadow-md"
@@ -198,39 +188,19 @@ export default function NumberMood() {
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl text-white">Mood Tracking</h2>
-        <div className="flex items-center gap-2">
-          {saving && (
-            <div className="flex items-center gap-2 text-blue-400 text-sm">
-              <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-              {retryCount > 0 ? `Retrying... (${retryCount}/3)` : 'Saving...'}
-            </div>
-          )}
-          {error && !saving && (
-            <div className="flex items-center gap-2 text-red-400 text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {error}
-            </div>
-          )}
-          {lastSaved && !saving && !error && (
-            <div className="flex items-center gap-2 text-green-400 text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Saved
-            </div>
-          )}
-        </div>
-      </div>
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex items-center gap-3 text-gray-400">
-            <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-            Loading your mood data...
+        {success && (
+          <div className="text-green-400 text-sm font-medium">
+            ✓ Mood saved successfully!
           </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-900/50 border border-red-600 rounded text-red-200 text-sm">
+          {error}
         </div>
-      ) : (
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div 
           className="p-6 rounded-lg shadow-sm"
@@ -247,7 +217,6 @@ export default function NumberMood() {
             onChange={(e) => {
               handleRatingChange('happiness', e.target.value);
             }}
-            disabled={loading}
           />
           <div className="flex justify-between text-gray-300 mt-2">
             <span>1</span>
@@ -283,7 +252,6 @@ export default function NumberMood() {
             onChange={(e) => {
               handleRatingChange('focus', e.target.value);
             }}
-            disabled={loading}
           />
           <div className="flex justify-between text-gray-300 mt-2">
             <span>1</span>
@@ -319,7 +287,6 @@ export default function NumberMood() {
             onChange={(e) => {
               handleRatingChange('stress', e.target.value);
             }}
-            disabled={loading}
           />
           <div className="flex justify-between text-gray-300 mt-2">
             <span>1</span>
@@ -340,7 +307,21 @@ export default function NumberMood() {
           </div>
         </div>
       </div>
-      )}
+
+      {/* Save Button */}
+      <div className="mt-6 flex justify-center">
+        <button
+          onClick={handleSave}
+          disabled={!canSave || saving}
+          className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+            canSave && !saving
+              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
+              : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+          }`}
+        >
+          {saving ? 'Saving...' : 'Save Mood Rating'}
+        </button>
+      </div>
     </div>
   );
 } 

@@ -1,6 +1,6 @@
 import client from '../client';
 import { AUTH } from '../endpoints';
-import { cacheService, CacheKeys, CacheTTL } from '../../services/cacheService';
+import { cacheService, CacheKeys, CacheTTL, CacheInvalidation } from '../../services/cacheService';
 
 interface LoginCredentials {
   email: string;
@@ -151,12 +151,15 @@ export const authService = {
     // Clear user profile from cache
     cacheService.delete(CacheKeys.USER_PROFILE());
     
+    // Clear all user-specific cache data
+    CacheInvalidation.clearUserCache();
+    
     // Dispatch custom event to notify other components
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
     }
     
-    console.log('👤 User logged out and cache cleared');
+    console.log('👤 User logged out and all cache cleared');
   },
 
   /**
