@@ -4,7 +4,7 @@ import type { MoodEntry as ServiceMoodEntry } from '@/services/moodService';
 import { getMoodEntries } from '@/services/moodService';
 import { getHabits, createHabit, updateHabit, deleteHabit, markHabitCompletion, getHabitCompletions } from '@/services/habitsService';
 import { getDailyEntries } from '@/services/dashboardService';
-import { cacheService } from '@/services/cacheService';
+import { cacheService, CacheInvalidation } from '@/services/cacheService';
 import { useCurrentDate } from '@/contexts/TimeContext';
 
 /**
@@ -19,6 +19,7 @@ export function useTrackingData(currentMonth: Date) {
   const [habitCompletions, setHabitCompletions] = useState<{[key: string]: boolean}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
 
   // Get current date from time service (timezone-aware)
   const currentDate = useCurrentDate();
@@ -68,6 +69,10 @@ export function useTrackingData(currentMonth: Date) {
       });
       setHabitCompletions(completionMap);
       
+      // Track current user
+      const userToken = localStorage.getItem('REF_TOKEN');
+      setCurrentUser(userToken);
+      
     } catch (err) {
       console.error('Failed to load user data:', err);
       setError('Failed to load data. Please refresh to try again.');
@@ -76,10 +81,79 @@ export function useTrackingData(currentMonth: Date) {
     }
   }, [todayString, monthString]);
 
+  /**
+   * Clear all user data when user logs out
+   */
+  const clearUserData = useCallback(() => {
+    setHabits([]);
+    setDailyEntries({});
+    setMoodEntries({});
+    setHabitCompletions({});
+    setCurrentUser(null);
+    setError(null);
+  }, []);
+
   // Load data when dependencies change
   useEffect(() => {
     loadUserData();
   }, [loadUserData]);
+
+  // Handle authentication changes
+  useEffect(() => {
+    // Listen for user logout events
+    const handleUserLogout = () => {
+      console.log('🔄 User logged out - clearing tracking data');
+      clearUserData();
+    };
+
+    // Listen for storage changes (user login/logout in other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'REF_TOKEN') {
+        const newToken = e.newValue;
+        const oldToken = currentUser;
+        
+        // If token changed (user logged in/out or switched users)
+        if (newToken !== oldToken) {
+          console.log('🔄 User authentication changed - refreshing tracking data');
+          
+          if (newToken) {
+            // User logged in or switched - reload data
+            loadUserData();
+          } else {
+            // User logged out - clear data and cache
+            clearUserData();
+            CacheInvalidation.clearUserCache();
+          }
+        }
+      }
+    };
+
+    // Listen for focus events (user might have logged in/out in another tab)
+    const handleFocus = () => {
+      const userToken = localStorage.getItem('REF_TOKEN');
+      if (userToken !== currentUser) {
+        console.log('🔄 User changed on focus - refreshing tracking data');
+        if (userToken) {
+          loadUserData();
+        } else {
+          clearUserData();
+          CacheInvalidation.clearUserCache();
+        }
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('userLoggedOut', handleUserLogout);
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleFocus);
+
+    // Cleanup event listeners
+    return () => {
+      window.removeEventListener('userLoggedOut', handleUserLogout);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [currentUser, loadUserData, clearUserData]);
 
   /**
    * Habit management functions

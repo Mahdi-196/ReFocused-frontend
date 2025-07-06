@@ -333,5 +333,31 @@ export const CacheInvalidation = {
   // Invalidate mood data
   invalidateMoodData: (userId?: string) => {
     cacheService.invalidateByPattern(`mood_.*_${userId || 'current'}`);
+  },
+  
+  // Clear all user-specific cache on logout
+  clearUserCache: () => {
+    console.log('🗑️ Clearing user-specific cache data');
+    
+    // Clear common user-specific cache patterns
+    const userPatterns = [
+      'habits',
+      'mood',
+      'stats',
+      'study',
+      'journal',
+      'calendar',
+      'goals',
+      'daily',
+      'user'
+    ];
+    
+    userPatterns.forEach(pattern => {
+      cacheService.invalidateByPattern(pattern);
+    });
+    
+    // Also clear the main cache storage if needed
+    // Note: This is aggressive but ensures clean state
+    cacheService.clear();
   }
 }; 

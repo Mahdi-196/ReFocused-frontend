@@ -579,38 +579,7 @@ const Profile = () => {
                             </p>
                           </div>
                           
-                          <div className="space-y-4">
-                            <div className="bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/30 rounded-lg p-4">
-                              <h5 className="text-blue-400 font-medium mb-2">Account Age</h5>
-                              <p className="text-2xl font-bold text-white">
-                                {userStats?.account_age_days || 0} days
-                              </p>
-                              <p className="text-gray-400 text-sm">
-                                Member since day one! 🎉
-                              </p>
-                            </div>
-                            
-                            {userStats && (
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-                                  <p className="text-lg font-bold text-white">{userStats.habits_total}</p>
-                                  <p className="text-xs text-gray-400">Total Habits</p>
-                                </div>
-                                <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-                                  <p className="text-lg font-bold text-white">{userStats.goals_completed}</p>
-                                  <p className="text-xs text-gray-400">Goals Done</p>
-                                </div>
-                                <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-                                  <p className="text-lg font-bold text-white">{userStats.mood_entries_count}</p>
-                                  <p className="text-xs text-gray-400">Mood Entries</p>
-                                </div>
-                                <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-                                  <p className="text-lg font-bold text-white">{userStats.journal_collections_count}</p>
-                                  <p className="text-xs text-gray-400">Journal Entries</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+
                         </div>
                       )}
                     </div>
