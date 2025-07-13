@@ -35,16 +35,34 @@ export function useGratitude() {
   }, []);
 
   // Add new gratitude
-  const addGratitude = async (text: string): Promise<boolean> => {
+  const addGratitude = async (text: string, date?: string): Promise<boolean> => {
     if (!text.trim()) return false;
 
     try {
-      const newGratitude = await journalService.createGratitude(text.trim());
+      const newGratitude = await journalService.createGratitude(text.trim(), date);
       setGratitudes(prev => [newGratitude, ...prev]);
       return true;
     } catch (err) {
       const error = err as JournalApiError;
       console.error("Failed to add gratitude:", error);
+      setError(error.message);
+      return false;
+    }
+  };
+
+  // Update gratitude
+  const updateGratitude = async (id: number | string, text: string): Promise<boolean> => {
+    if (!text.trim()) return false;
+
+    try {
+      const updatedGratitude = await journalService.updateGratitude(id.toString(), text.trim());
+      setGratitudes(prev =>
+        prev.map(g => g.id === id ? updatedGratitude : g)
+      );
+      return true;
+    } catch (err) {
+      const error = err as JournalApiError;
+      console.error("Failed to update gratitude:", error);
       setError(error.message);
       return false;
     }
@@ -81,6 +99,7 @@ export function useGratitude() {
     isLoading,
     error,
     addGratitude,
+    updateGratitude,
     deleteGratitude,
     refreshGratitudes,
     clearError,

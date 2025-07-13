@@ -239,55 +239,57 @@ Is authenticated: ${authService.isAuthenticated()}`);
             </Link>
           </div>
 
-          {/* Cache Testing Section */}
-          <div className="bg-gradient-to-br from-gray-800/20 to-gray-900/20 backdrop-blur-sm border border-gray-600/30 rounded-xl p-6 max-w-2xl mx-auto">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-              🧪 Cache System Testing
-              <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded ml-2">DEVELOPMENT</span>
-            </h3>
-            
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
-              <button 
-                onClick={setupTestAuth}
-                className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 transition-all duration-200 text-sm"
-              >
-                Setup Test Auth
-              </button>
-              <button 
-                onClick={testAuthCache}
-                disabled={isTestingCache}
-                className="px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-all duration-200 text-sm disabled:opacity-50"
-              >
-                Test Auth Cache
-              </button>
-              <button 
-                onClick={testStudySetsCache}
-                disabled={isTestingCache}
-                className="px-4 py-2 bg-green-600/20 border border-green-500/30 text-green-300 rounded-lg hover:bg-green-600/30 transition-all duration-200 text-sm disabled:opacity-50"
-              >
-                Test Study Sets Cache
-              </button>
+          {/* Cache Testing Section - Development Only */}
+                        {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+            <div className="bg-gradient-to-br from-gray-800/20 to-gray-900/20 backdrop-blur-sm border border-gray-600/30 rounded-xl p-6 max-w-2xl mx-auto">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                🧪 Cache System Testing
+                <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded ml-2">DEVELOPMENT</span>
+              </h3>
+              
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <button 
+                  onClick={setupTestAuth}
+                  className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 transition-all duration-200 text-sm"
+                >
+                  Setup Test Auth
+                </button>
+                <button 
+                  onClick={testAuthCache}
+                  disabled={isTestingCache}
+                  className="px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-all duration-200 text-sm disabled:opacity-50"
+                >
+                  Test Auth Cache
+                </button>
+                <button 
+                  onClick={testStudySetsCache}
+                  disabled={isTestingCache}
+                  className="px-4 py-2 bg-green-600/20 border border-green-500/30 text-green-300 rounded-lg hover:bg-green-600/30 transition-all duration-200 text-sm disabled:opacity-50"
+                >
+                  Test Study Sets Cache
+                </button>
+              </div>
+              
+              {isTestingCache && (
+                <div className="text-blue-300 text-sm mb-4 flex items-center">
+                  <div className="w-4 h-4 border-2 border-blue-300 border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Testing cache...
+                </div>
+              )}
+              
+              {cacheTestResult && (
+                <div className="bg-gray-900/50 border border-gray-600/30 rounded-lg p-4">
+                  <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-x-auto">
+                    {cacheTestResult}
+                  </pre>
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-400 mt-2">
+                Open browser console to see detailed cache logs with emojis (👤 for auth, 📚 for study sets)
+              </p>
             </div>
-            
-            {isTestingCache && (
-              <div className="text-blue-300 text-sm mb-4 flex items-center">
-                <div className="w-4 h-4 border-2 border-blue-300 border-t-transparent rounded-full animate-spin mr-2"></div>
-                Testing cache...
-              </div>
-            )}
-            
-            {cacheTestResult && (
-              <div className="bg-gray-900/50 border border-gray-600/30 rounded-lg p-4">
-                <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-x-auto">
-                  {cacheTestResult}
-                </pre>
-              </div>
-            )}
-            
-            <p className="text-xs text-gray-400 mt-2">
-              Open browser console to see detailed cache logs with emojis (👤 for auth, 📚 for study sets)
-            </p>
-          </div>
+          )}
         </div>
       </section>
 

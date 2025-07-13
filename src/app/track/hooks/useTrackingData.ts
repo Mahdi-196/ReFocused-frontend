@@ -7,6 +7,7 @@ import { getDailyEntries } from '@/services/dashboardService';
 import { cacheService, CacheInvalidation } from '@/services/cacheService';
 import { useCurrentDate } from '@/contexts/TimeContext';
 
+
 /**
  * Production-ready timezone-aware habit tracking hook
  * Implements on-demand reset check strategy
@@ -29,6 +30,75 @@ export function useTrackingData(currentMonth: Date) {
   const monthString = useMemo(() => todayString.slice(0, 7), [todayString]);
 
   /**
+   * Helper function to load habit completions for the last 30 days
+   */
+  const loadHabitCompletions = useCallback(async (bypassCache: boolean = false): Promise<{[key: string]: boolean}> => {
+    const today = new Date(todayString);
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const thirtyDaysAgoString = thirtyDaysAgo.toISOString().split('T')[0];
+    
+    // Clear completion cache if bypassing
+    if (bypassCache) {
+      cacheService.invalidateByPattern('habits_completions_*');
+    }
+    
+    const completions = await getHabitCompletions(thirtyDaysAgoString, todayString);
+    const completionMap: {[key: string]: boolean} = {};
+    completions.forEach(completion => {
+      const key = `${completion.habitId}-${completion.date}`;
+      completionMap[key] = completion.completed;
+    });
+    
+    return completionMap;
+  }, [todayString]);
+
+  /**
+   * Calculate correct streak for a habit based on completion history
+   * Implements proper business logic: streak only resets after missing an entire day
+   */
+  const calculateCorrectStreak = useCallback((habitId: number, completions: {[key: string]: boolean}): number => {
+    const today = new Date(todayString);
+    let currentStreak = 0;
+    let checkDate = new Date(today);
+    
+    // Go backwards day by day until we find a gap
+    while (true) {
+      const dateString = checkDate.toISOString().split('T')[0];
+      const completionKey = `${habitId}-${dateString}`;
+      const wasCompleted = completions[completionKey] || false;
+      
+      if (wasCompleted) {
+        currentStreak++;
+      } else {
+        // If this is today and it's not completed, that's OK - streak continues from yesterday
+        // Only break the streak if we hit a day that's not today and wasn't completed
+        if (dateString !== todayString) {
+          break;
+        }
+      }
+      
+      // Move to previous day
+      checkDate.setDate(checkDate.getDate() - 1);
+      
+      // Prevent infinite loop - only check last 100 days max
+      if (currentStreak > 100) break;
+    }
+    
+    return currentStreak;
+  }, [todayString]);
+
+  /**
+   * Get habits with corrected streak calculations
+   */
+  const getHabitsWithCorrectStreaks = useCallback((rawHabits: UserHabit[], completions: {[key: string]: boolean}): UserHabit[] => {
+    return rawHabits.map(habit => ({
+      ...habit,
+      streak: calculateCorrectStreak(habit.id, completions)
+    }));
+  }, [calculateCorrectStreak]);
+
+  /**
    * Load all user data with timezone-aware operations
    */
   const loadUserData = useCallback(async () => {
@@ -36,9 +106,10 @@ export function useTrackingData(currentMonth: Date) {
       setLoading(true);
       setError(null);
       
-      // Load habits (with automatic timezone-aware reset check on backend)
-      const habitsData = await getHabits();
-      setHabits(habitsData);
+      let habitsData: UserHabit[] = [];
+      
+      // Load habits from backend
+      habitsData = await getHabits();
       
       // Load daily entries for current month
       const entriesMap = await getDailyEntries(monthString);
@@ -60,14 +131,14 @@ export function useTrackingData(currentMonth: Date) {
       });
       setMoodEntries(moodMap);
 
-      // Load habit completions for today
-      const completions = await getHabitCompletions(todayString, todayString);
-      const completionMap: {[key: string]: boolean} = {};
-      completions.forEach(completion => {
-        const key = `${completion.habitId}-${completion.date}`;
-        completionMap[key] = completion.completed;
-      });
+      // Load habit completions for the last 30 days (not just today)
+      // This provides historical context for proper streak calculation and display
+      const completionMap = await loadHabitCompletions();
       setHabitCompletions(completionMap);
+      
+      // Apply correct streak calculations using completion data
+      const correctedHabits = getHabitsWithCorrectStreaks(habitsData, completionMap);
+      setHabits(correctedHabits);
       
       // Track current user
       const userToken = localStorage.getItem('REF_TOKEN');
@@ -79,7 +150,7 @@ export function useTrackingData(currentMonth: Date) {
     } finally {
       setLoading(false);
     }
-  }, [todayString, monthString]);
+  }, [todayString, monthString, loadHabitCompletions, getHabitsWithCorrectStreaks]);
 
   /**
    * Clear all user data when user logs out
@@ -102,7 +173,6 @@ export function useTrackingData(currentMonth: Date) {
   useEffect(() => {
     // Listen for user logout events
     const handleUserLogout = () => {
-      console.log('🔄 User logged out - clearing tracking data');
       clearUserData();
     };
 
@@ -114,8 +184,6 @@ export function useTrackingData(currentMonth: Date) {
         
         // If token changed (user logged in/out or switched users)
         if (newToken !== oldToken) {
-          console.log('🔄 User authentication changed - refreshing tracking data');
-          
           if (newToken) {
             // User logged in or switched - reload data
             loadUserData();
@@ -132,7 +200,6 @@ export function useTrackingData(currentMonth: Date) {
     const handleFocus = () => {
       const userToken = localStorage.getItem('REF_TOKEN');
       if (userToken !== currentUser) {
-        console.log('🔄 User changed on focus - refreshing tracking data');
         if (userToken) {
           loadUserData();
         } else {
@@ -267,6 +334,11 @@ export function useTrackingData(currentMonth: Date) {
     const isCurrentlyCompleted = habitCompletions[completionKey] || false;
     const newCompletionState = !isCurrentlyCompleted;
     
+    const habitBefore = habits.find(h => h.id === habitId);
+    console.log(`🔄 Toggling habit ${habitId} (${habitBefore?.name}) completion for ${targetDate}:`);
+    console.log(`   Current state: ${isCurrentlyCompleted} -> ${newCompletionState}`);
+    console.log(`   Current streak: ${habitBefore?.streak}`);
+    
     try {
       // Optimistic update
       setHabitCompletions(prev => ({
@@ -277,9 +349,26 @@ export function useTrackingData(currentMonth: Date) {
       // Update on backend (timezone-aware)
       await markHabitCompletion(habitId, targetDate, newCompletionState);
       
-      // Refresh habits to get updated streaks from backend
-      const updatedHabits = await getHabits();
-      setHabits(updatedHabits);
+      // Clear habits cache aggressively to ensure fresh data
+      cacheService.invalidateByPattern('habits_*');
+      
+      // Small delay to ensure backend has processed the completion
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Refresh habit completions for last 30 days to ensure frontend state consistency
+      const completionMap = await loadHabitCompletions(true);
+      setHabitCompletions(completionMap);
+      
+      // Get fresh habits data (but ignore backend streak calculations)
+      const updatedHabits = await getHabits(true);
+      
+      // Apply correct frontend streak calculations
+      const correctedHabits = getHabitsWithCorrectStreaks(updatedHabits, completionMap);
+      const habitAfter = correctedHabits.find(h => h.id === habitId);
+      console.log(`✅ After frontend correction:`);
+      console.log(`   Habit ${habitId} streak: ${habitBefore?.streak} -> ${habitAfter?.streak}`);
+      console.log(`   All corrected habit streaks:`, correctedHabits.map(h => ({ id: h.id, name: h.name, streak: h.streak })));
+      setHabits(correctedHabits);
       
       return { success: true };
     } catch (err) {

@@ -93,14 +93,16 @@ function transformCompletionFromBackend(rawCompletion: any): HabitCompletion {
 /**
  * Get all user habits with timezone-aware reset check
  */
-export async function getHabits(): Promise<UserHabit[]> {
+export async function getHabits(bypassCache: boolean = false): Promise<UserHabit[]> {
   const cacheKey = `${HABITS_CACHE_PREFIX}_all`;
   
   try {
-    // Check cache first
-    const cached = cacheService.get<UserHabit[]>(cacheKey);
-    if (cached) {
-      return cached;
+    // Check cache first (unless bypassing)
+    if (!bypassCache) {
+      const cached = cacheService.get<UserHabit[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
 
     // Fetch from API with timezone header
@@ -112,6 +114,7 @@ export async function getHabits(): Promise<UserHabit[]> {
     const rawHabits = response.data || [];
     const habits: UserHabit[] = rawHabits.map(transformHabitFromBackend);
     
+    // Always update cache with fresh data
     cacheService.set(cacheKey, habits, HABITS_CACHE_TTL);
     return habits;
   } catch (error) {

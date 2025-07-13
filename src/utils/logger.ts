@@ -9,7 +9,7 @@ interface LogEntry {
 }
 
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development';
+  private isDevelopment = process.env.NEXT_PUBLIC_APP_ENV === 'development';
   
   private log(level: LogLevel, message: string, data?: unknown, component?: string): void {
     const entry: LogEntry = {

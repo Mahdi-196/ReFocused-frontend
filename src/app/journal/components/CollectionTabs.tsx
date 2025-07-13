@@ -30,9 +30,9 @@ export const CollectionTabs: React.FC<CollectionTabsProps> = ({
   const handleEditClick = (e: React.MouseEvent, collection: Collection) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    const nextState = openDropdown?.id === collection.id ? null : { 
+    const nextState = openDropdown?.id === collection.id.toString() ? null : { 
       type: 'collection' as const, 
-      id: collection.id, 
+      id: collection.id.toString(), 
       rect: rect, 
       collection: collection 
     };
@@ -46,14 +46,14 @@ export const CollectionTabs: React.FC<CollectionTabsProps> = ({
     >
       <div className="flex items-center space-x-2 border border-gray-600 rounded-lg p-2 bg-gray-700/50 overflow-x-auto mb-4 lg:mb-0 lg:mr-4 flex-1">
         {collections.map(collection => (
-          <div
+          <button
             key={collection.id}
-            className={`flex-shrink-0 px-5 py-2.5 rounded-lg flex items-center gap-2 text-base font-medium transition-all duration-200 ease-in-out cursor-pointer relative transform hover:scale-105 ${
-              selectedCollectionId === collection.id
-                ? 'bg-blue-500/20 text-blue-300 ring-1 ring-blue-400/50'
-                : 'text-gray-300 hover:bg-gray-600/50'
-              }`}
-            onClick={() => onCollectionSelect(collection.id)}
+            className={`relative flex items-center justify-between px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm ${
+              selectedCollectionId === collection.id.toString()
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+            onClick={() => onCollectionSelect(collection.id.toString())}
           >
             <div className="flex items-center gap-2 pointer-events-none">
               {collection.isPrivate ? <Lock size={18} /> : <FileText size={18} />}
@@ -71,7 +71,7 @@ export const CollectionTabs: React.FC<CollectionTabsProps> = ({
                 </button>
               </div>
             )}
-          </div>
+          </button>
         ))}
         {collections.length === 0 && (
           <span className="px-5 py-2.5 text-base text-gray-400 italic">No collections yet.</span>

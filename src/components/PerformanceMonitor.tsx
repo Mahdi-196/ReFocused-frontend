@@ -20,7 +20,7 @@ export default function PerformanceMonitor() {
 
   useEffect(() => {
     // Monitor memory usage in development
-    if (process.env.NODE_ENV === 'development' && 'memory' in performance) {
+    if (process.env.NEXT_PUBLIC_APP_ENV === 'development' && 'memory' in performance) {
       const checkMemory = () => {
         const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
         if (memory) {

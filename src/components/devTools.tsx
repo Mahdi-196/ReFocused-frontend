@@ -270,7 +270,7 @@ ${results.join('\n\n')}
     }
   };
 
-  if (process.env.NODE_ENV !== 'development') {
+  if (process.env.NEXT_PUBLIC_APP_ENV !== 'development') {
     return null;
   }
 
@@ -300,6 +300,26 @@ ${results.join('\n\n')}
   
   const tokenInfo = getTokenInfo();
 
+  // Clear local storage function
+  const handleClearLocalStorage = () => {
+    if (confirm('⚠️ Clear all local storage?\n\nThis will:\n• Log you out\n• Clear all cached data\n• Reset user preferences\n• Clear any saved settings\n\nThis action cannot be undone.')) {
+      // Get all keys before clearing
+      const keys = Object.keys(localStorage);
+      
+      // Clear all local storage
+      localStorage.clear();
+      
+      // Dispatch logout event to notify other components
+      window.dispatchEvent(new CustomEvent('userLoggedOut'));
+      
+      // Show confirmation with what was cleared
+      alert(`✅ Local Storage Cleared!\n\nCleared ${keys.length} items:\n${keys.map(key => `• ${key}`).join('\n')}\n\n🔄 Page will reload to reset application state.`);
+      
+      // Reload page to reset application state
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       <button
@@ -314,6 +334,43 @@ ${results.join('\n\n')}
           {/* Time Travel Section - Available to all users for testing */}
           <div className="mb-6">
             <TimeTravel />
+          </div>
+          
+          {/* Storage Management Section */}
+          <div className="mb-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <h3 className="text-gray-900 dark:text-white font-bold mb-3 text-sm">🗄️ Storage Management</h3>
+            
+            <div className="space-y-3">
+              <div className="text-xs text-gray-600 dark:text-gray-400">
+                Current storage items: {typeof window !== 'undefined' ? Object.keys(localStorage).length : 0}
+              </div>
+              
+              {typeof window !== 'undefined' && Object.keys(localStorage).length > 0 && (
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <details className="cursor-pointer">
+                    <summary className="hover:text-gray-900 dark:hover:text-gray-200">View stored items</summary>
+                    <div className="mt-2 ml-2 space-y-1 font-mono">
+                      {Object.keys(localStorage).map(key => (
+                        <div key={key} className="text-gray-500 dark:text-gray-500">
+                          • {key}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              )}
+              
+              <button
+                onClick={handleClearLocalStorage}
+                className="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors font-medium"
+              >
+                🗑️ Clear All Local Storage
+              </button>
+              
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                ⚠️ This will log you out and clear all cached data
+              </div>
+            </div>
           </div>
           
           {/* Authentication Debug Section */}

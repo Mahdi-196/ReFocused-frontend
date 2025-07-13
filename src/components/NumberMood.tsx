@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { saveMoodRating, getTodaysMood } from '@/services/moodService';
 
 interface MoodRating {
@@ -17,9 +17,10 @@ export default function NumberMood() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [hasInitialSave, setHasInitialSave] = useState(false);
+  
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load existing mood data on mount
   useEffect(() => {
@@ -37,6 +38,8 @@ export default function NumberMood() {
           focus: existingMood.focus || null,
           stress: existingMood.stress || null
         });
+        // If mood data exists, mark as having initial save
+        setHasInitialSave(true);
       }
     } catch (err) {
       console.warn('Failed to load existing mood data:', err);
@@ -44,6 +47,59 @@ export default function NumberMood() {
       setLoading(false);
     }
   };
+
+  // Save mood ratings to server
+  const handleSave = useCallback(async () => {
+    // Validate that all ratings are selected
+    if (moodRatings.happiness === null || moodRatings.focus === null || moodRatings.stress === null) {
+      return; // Silently return if not all ratings are set
+    }
+
+    try {
+      setError(null);
+
+      await saveMoodRating({
+        happiness: moodRatings.happiness,
+        focus: moodRatings.focus,
+        stress: moodRatings.stress
+      });
+    } catch (err) {
+      console.error('Failed to save mood ratings:', err);
+      setError('Failed to save mood ratings. Please try again.');
+    }
+  }, [moodRatings.happiness, moodRatings.focus, moodRatings.stress]);
+
+  // Auto-save logic with debouncing
+  useEffect(() => {
+    const allRatingsSet = moodRatings.happiness !== null && 
+                         moodRatings.focus !== null && 
+                         moodRatings.stress !== null;
+
+    if (!allRatingsSet) return;
+
+    // Clear any existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // If this is the first time all ratings are set, save immediately
+    if (!hasInitialSave) {
+      handleSave();
+      setHasInitialSave(true);
+    } else {
+      // For subsequent changes, debounce the save
+      debounceTimeoutRef.current = setTimeout(() => {
+        handleSave();
+      }, 1000);
+    }
+
+    // Cleanup timeout on unmount or dependency change
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [moodRatings, hasInitialSave, handleSave]);
 
   // Handle rating changes without saving
   const handleRatingChange = (type: keyof MoodRating, value: string) => {
@@ -61,41 +117,9 @@ export default function NumberMood() {
       [type]: numValue
     }));
 
-    // Clear any previous success/error states
+    // Clear any previous error states
     setError(null);
-    setSuccess(false);
   };
-
-  // Save mood ratings to server
-  const handleSave = async () => {
-    // Validate that all ratings are selected
-    if (moodRatings.happiness === null || moodRatings.focus === null || moodRatings.stress === null) {
-      setError('Please rate all three categories before saving.');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-
-      await saveMoodRating({
-        happiness: moodRatings.happiness,
-        focus: moodRatings.focus,
-        stress: moodRatings.stress
-      });
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000); // Clear success message after 3 seconds
-    } catch (err) {
-      console.error('Failed to save mood ratings:', err);
-      setError('Failed to save mood ratings. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Check if all ratings are selected
-  const canSave = moodRatings.happiness !== null && moodRatings.focus !== null && moodRatings.stress !== null;
 
   const getRatingStyle = (rating: number | null, type: 'normal' | 'stress' = 'normal') => {
     const defaultStyle = {
@@ -188,11 +212,8 @@ export default function NumberMood() {
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl text-white">Mood Tracking</h2>
-        {success && (
-          <div className="text-green-400 text-sm font-medium">
-            ✓ Mood saved successfully!
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+        </div>
       </div>
 
       {error && (
@@ -306,21 +327,6 @@ export default function NumberMood() {
             <span className="relative z-10">{moodRatings.stress ? `${moodRatings.stress}/5` : 'Rate'}</span>
           </div>
         </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="mt-6 flex justify-center">
-        <button
-          onClick={handleSave}
-          disabled={!canSave || saving}
-          className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-            canSave && !saving
-              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
-              : 'bg-gray-600 text-gray-300 cursor-not-allowed'
-          }`}
-        >
-          {saving ? 'Saving...' : 'Save Mood Rating'}
-        </button>
       </div>
     </div>
   );

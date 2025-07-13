@@ -1,0 +1,155 @@
+import React from "react";
+import { DailyCalendarEntry } from "../types";
+
+interface CalendarCellProps {
+  date: number;
+  dateStr: string;
+  calendarEntry: DailyCalendarEntry | null;
+  isSelected: boolean;
+  isReadOnly: boolean;
+  onDateClick: (dateStr: string) => void;
+}
+
+export default function CalendarCell({
+  date,
+  dateStr,
+  calendarEntry,
+  isSelected,
+  isReadOnly,
+  onDateClick,
+}: CalendarCellProps) {
+  // Calculate overall mood score from happiness, focus, and stress
+  const calculateMoodScore = (
+    happiness: number,
+    focus: number,
+    stress: number
+  ) => {
+    // Convert to 0-10 scale: (happiness + focus + (6-stress)) / 3 * 2
+    // Stress is inverted (higher stress = lower score)
+    const invertedStress = 6 - stress; // Convert 1-5 stress to 5-1 scale
+    return ((happiness + focus + invertedStress) / 3) * 2;
+  };
+
+  // Debug logging for all dates with data (development only)
+      if (calendarEntry && process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+    console.log(`📅 CalendarCell(${dateStr}):`, {
+      date,
+      completedHabits: calendarEntry.habitCompletions?.filter(hc => hc.completed).length || 0,
+      totalHabits: calendarEntry.habitCompletions?.length || 0,
+      hasMood: !!calendarEntry.moodEntry,
+      hasGoals: calendarEntry.goalActivities?.length || 0,
+      moodScore: calendarEntry.moodEntry ? 
+        calculateMoodScore(calendarEntry.moodEntry.happiness, calendarEntry.moodEntry.focus, calendarEntry.moodEntry.stress) : 
+        null
+    });
+  }
+
+  const getDayClass = () => {
+    // Check for calendar entry with mood data
+    if (calendarEntry?.moodEntry) {
+      const { happiness, focus, stress } = calendarEntry.moodEntry;
+      const moodScore = calculateMoodScore(happiness, focus, stress);
+      if (moodScore >= 7) return "mood-good";
+      if (moodScore >= 5) return "mood-neutral";
+      return "mood-poor";
+    }
+
+    // Check if there's goal activity on this day
+    if (calendarEntry?.goalActivities && calendarEntry.goalActivities.length > 0) {
+      return "has-goal-activity";
+    }
+
+    // Check if there's habit activity on this day
+    if (calendarEntry?.habitCompletions.some((hc) => hc.completed)) {
+      return "has-activity";
+    }
+
+    return "";
+  };
+
+  const getMoodStyling = () => {
+    if (isSelected) {
+      return {
+        background:
+          "linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)",
+        boxShadow:
+          "0 4px 12px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25)",
+        border: "1px solid #3b82f6",
+      };
+    }
+
+    const dayClass = getDayClass();
+    switch (dayClass) {
+      case "mood-good":
+        return {
+          background:
+            "linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)",
+          boxShadow:
+            "0 4px 12px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+          border: "1px solid #10b981",
+        };
+      case "mood-neutral":
+        return {
+          background:
+            "linear-gradient(135deg, #eab308 0%, #ca8a04 50%, #a16207 100%)",
+          boxShadow:
+            "0 4px 12px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+          border: "1px solid #eab308",
+        };
+      case "mood-poor":
+        return {
+          background:
+            "linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)",
+          boxShadow:
+            "0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+          border: "1px solid #ef4444",
+        };
+      case "has-goal-activity":
+        return {
+          background:
+            "linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)",
+          boxShadow:
+            "0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+          border: "1px solid #f59e0b",
+        };
+      case "has-activity":
+        return {
+          background:
+            "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)",
+          boxShadow:
+            "0 4px 12px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+          border: "1px solid #8b5cf6",
+        };
+      default:
+        return {
+          background:
+            "linear-gradient(135deg, #4b5563 0%, #374151 50%, #1f2937 100%)",
+          boxShadow:
+            "0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+          border: "1px solid #4b5563",
+        };
+    }
+  };
+
+  return (
+    <div
+      className={`aspect-square flex flex-col items-center justify-center rounded transition-all text-xs text-white relative cursor-pointer ${
+        isReadOnly ? "opacity-80" : ""
+      }`}
+      onClick={() => onDateClick(dateStr)}
+      style={getMoodStyling()}
+    >
+      {/* Gloss effect */}
+      <div
+        className="absolute inset-0 rounded opacity-20 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)",
+        }}
+      />
+
+      {/* Date number - only element kept */}
+      <span className="relative z-10 font-medium">{date}</span>
+    </div>
+  );
+} 

@@ -6,6 +6,7 @@ import ConfirmationDialog from "@/components/ConfirmationDialog";
 import DropdownMenu from "@/components/DropdownMenu";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { JournalPageSkeleton, SkeletonDemo } from '@/components/skeletons';
+import { initializeAuth } from '@/api/client';
 
 // Import new components
 import { CollectionModal } from "./components/CollectionModal";
@@ -24,15 +25,21 @@ import { useGratitude } from "./hooks/useGratitude";
  * Provides a complete journaling experience with collections, entries, and backend integration
  */
 const Journal: React.FC = () => {
-  // Authentication check
+  // Authentication check and initialization
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
+      console.log('🔐 JOURNAL: Checking authentication...', { hasToken: !!token, tokenPreview: token?.substring(0, 20) + '...' });
+      
       if (!token || token === 'dummy-auth-token') {
-        console.log('🔐 No valid authentication token found, redirecting to landing page');
+        console.log('🔐 JOURNAL: No valid authentication token found, redirecting to landing page');
         window.location.href = '/';
         return;
       }
+      
+      // Initialize authentication in axios client
+      console.log('🔐 JOURNAL: Initializing authentication in axios client...');
+      initializeAuth();
     }
   }, []);
 
@@ -307,7 +314,7 @@ const Journal: React.FC = () => {
                 onDelete={(e) => {
                   e?.stopPropagation();
                   if (openDropdown.type === 'collection' && openDropdown.collection) {
-                    handleDeleteCollection(openDropdown.collection.id);
+                    handleDeleteCollection(openDropdown.collection.id.toString());
                   } else if (openDropdown.type === 'entry' && openDropdown.entry) {
                     handleDeleteEntry(openDropdown.entry.id);
                   }

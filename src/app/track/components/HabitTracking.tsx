@@ -1,13 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { UserHabit, SimpleFilter } from '../types';
-import HabitModal from './HabitModal';
 import { CheckIcon } from '@/components/icons';
-
-interface Toast {
-  id: number;
-  message: string;
-  type: 'success' | 'error';
-}
 
 interface HabitTrackingProps {
   habits: UserHabit[];
@@ -31,19 +24,6 @@ export default function HabitTracking({
   const [newHabit, setNewHabit] = useState('');
   const [habitError, setHabitError] = useState('');
   const [simpleFilter, setSimpleFilter] = useState<SimpleFilter>('all');
-  const [habitModalOpen, setHabitModalOpen] = useState(false);
-  const [selectedHabit, setSelectedHabit] = useState<UserHabit | null>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    const id = Date.now();
-    const newToast = { id, message, type };
-    setToasts(prev => [...prev, newToast]);
-    
-    setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
-    }, 3000);
-  };
 
   const handleAddHabit = async () => {
     if (!newHabit.trim()) return;
@@ -53,7 +33,6 @@ export default function HabitTracking({
     if (result.success) {
       setNewHabit('');
       setHabitError('');
-      showToast('🎉 Habit added successfully!', 'success');
     } else {
       setHabitError(result.error || 'Failed to add habit');
     }
@@ -65,57 +44,15 @@ export default function HabitTracking({
     }
   };
 
-  const handleOpenHabitModal = (habit: UserHabit) => {
-    setSelectedHabit(habit);
-    setHabitModalOpen(true);
-  };
-
-  const handleCloseHabitModal = () => {
-    setHabitModalOpen(false);
-    setSelectedHabit(null);
-  };
-
-  const handleDeleteHabitFromModal = async () => {
-    if (!selectedHabit) return;
-    
-    const result = await onDeleteHabit(selectedHabit.id);
-    if (result.success) {
-      showToast(`🗑️ "${selectedHabit.name}" deleted`, 'success');
-    } else {
-      showToast(result.error || 'Failed to delete habit', 'error');
-    }
-    handleCloseHabitModal();
-  };
-
-  const handleToggleFavoriteFromModal = async () => {
-    if (!selectedHabit) return;
-    
-    const result = await onToggleFavorite(selectedHabit.id);
-    if (result.success) {
-      const wasPinned = selectedHabit.isFavorite;
-      const message = wasPinned 
-        ? `📍 "${selectedHabit.name}" unpinned` 
-        : `📌 "${selectedHabit.name}" pinned to top!`;
-      showToast(message, 'success');
-      handleCloseHabitModal();
-    } else {
-      showToast(result.error || 'Failed to update habit', 'error');
-    }
-  };
-
   const handleToggleCompletion = async (habitId: number) => {
     const habit = habits.find(h => h.id === habitId);
     const wasCompleted = isHabitCompleted(habitId);
     
     const result = await onToggleCompletion(habitId);
     
-    if (result.success && habit) {
-      const message = wasCompleted 
-        ? `${habit.name} unmarked` 
-        : `🎉 ${habit.name} completed! Keep going!`;
-      showToast(message, 'success');
-    } else if (result.error) {
-      showToast(result.error, 'error');
+    if (!result.success && result.error) {
+      // Could add error handling here if needed
+      console.error('Failed to toggle habit completion:', result.error);
     }
   };
 
@@ -202,20 +139,6 @@ export default function HabitTracking({
 
   return (
     <>
-      {/* Toast Notifications */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {toasts.map(toast => (
-          <div
-            key={toast.id}
-            className={`px-4 py-2 rounded-lg shadow-lg text-white animate-slide-in-right ${
-              toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-            }`}
-          >
-            {toast.message}
-          </div>
-        ))}
-      </div>
-
       <section className="mb-8">
         <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
           <div className="flex justify-between items-center mb-6">
@@ -229,6 +152,8 @@ export default function HabitTracking({
               <span>{getFilterLabel()}</span>
             </button>
           </div>
+
+
 
           {/* Add New Habit */}
           <div className="mb-6">
@@ -325,16 +250,7 @@ export default function HabitTracking({
                         </span>
                       </div>
 
-                      {/* Edit Button */}
-                      <button
-                        onClick={() => handleOpenHabitModal(habit)}
-                        className="text-gray-400 hover:text-blue-400 transition-colors p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-600"
-                        title="Manage habit"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                      </button>
+
                     </div>
                   </div>
                 );
@@ -344,31 +260,9 @@ export default function HabitTracking({
         </div>
       </section>
 
-      {/* Habit Management Modal */}
-      <HabitModal
-        isOpen={habitModalOpen}
-        habit={selectedHabit}
-        habits={habits}
-        onClose={handleCloseHabitModal}
-        onDelete={handleDeleteHabitFromModal}
-        onToggleFavorite={handleToggleFavoriteFromModal}
-      />
 
-      <style jsx global>{`
-        @keyframes slide-in-right {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.3s ease-out;
-        }
-      `}</style>
+
+
     </>
   );
 } 

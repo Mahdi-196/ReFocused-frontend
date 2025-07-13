@@ -8,8 +8,16 @@ import type {
   UpdateCollectionRequest,
   CreateEntryRequest,
   UpdateEntryRequest,
+  CreateGratitudeRequest,
+  UpdateGratitudeRequest,
   CollectionResponse,
   EntryResponse,
+  GratitudeResponse,
+  PaginatedCollectionsResponse,
+  PaginatedEntriesResponse,
+  PaginatedGratitudeResponse,
+  PasswordVerificationResponse,
+  JournalStatsResponse,
   JournalApiError,
 } from '../../app/journal/types';
 
@@ -49,49 +57,28 @@ class JournalService {
 
   // Collection Operations
   async getCollections(): Promise<Collection[]> {
-    
     try {
       console.log('📡 Making request to:', JOURNAL.COLLECTIONS);
-      const response = await client.get(JOURNAL.COLLECTIONS);
+      const response = await client.get<PaginatedCollectionsResponse>(JOURNAL.COLLECTIONS);
       
       console.log('✅ Received response, status:', response.status);
       console.log('📦 Raw response.data:', response.data);
-      console.log('📦 Response.data type:', typeof response.data);
-      console.log('📦 Response.data is array?', Array.isArray(response.data));
       
-      // Handle different response formats from backend
-      let collectionsData = response.data;
+      // Handle paginated response format
+      const responseData = response.data;
+      let collectionsData: CollectionResponse[] = [];
       
-      // If response is wrapped (e.g., {data: [...]} or {collections: [...]})
-      if (collectionsData && !Array.isArray(collectionsData)) {
-        console.log('🔍 Response is not an array, checking for wrapper formats...');
-        console.log('🔍 Available keys:', Object.keys(collectionsData));
-        
-        if (collectionsData.data && Array.isArray(collectionsData.data)) {
-          console.log('✅ Found data wrapper');
-          collectionsData = collectionsData.data;
-        } else if (collectionsData.collections && Array.isArray(collectionsData.collections)) {
-          console.log('✅ Found collections wrapper');
-          collectionsData = collectionsData.collections;
-        } else if (collectionsData.results && Array.isArray(collectionsData.results)) {
-          console.log('✅ Found results wrapper');
-          collectionsData = collectionsData.results;
-        } else {
-          // If it's still not an array, return empty array
-          console.warn('❌ Unexpected collections response format:', collectionsData);
-          console.warn('❌ Response keys:', Object.keys(collectionsData || {}));
-          return [];
-        }
-      }
-      
-      // Ensure we have an array
-      if (!Array.isArray(collectionsData)) {
-        console.warn('❌ Collections data is not an array after processing:', collectionsData);
+      if (responseData.collections && Array.isArray(responseData.collections)) {
+        collectionsData = responseData.collections;
+        console.log('✅ Found collections in paginated response, count:', collectionsData.length);
+      } else if (Array.isArray(responseData)) {
+        // Fallback for direct array response
+        collectionsData = responseData as CollectionResponse[];
+        console.log('✅ Found direct array response, count:', collectionsData.length);
+      } else {
+        console.warn('❌ Unexpected collections response format:', responseData);
         return [];
       }
-      
-      console.log('✅ Processing collections array with length:', collectionsData.length);
-      console.log('🏃‍♂️ About to call mapCollectionsResponse...');
       
       const result = this.mapCollectionsResponse(collectionsData);
       console.log('✅ mapCollectionsResponse completed, result length:', result.length);
@@ -100,7 +87,6 @@ class JournalService {
     } catch (error: any) {
       console.error('💥 Collections API error (full):', error);
       console.error('💥 Error message:', error?.message);
-      console.error('💥 Error stack:', error?.stack);
       console.error('💥 Error response status:', error?.response?.status);
       console.error('💥 Error response data:', error?.response?.data);
       
@@ -117,11 +103,14 @@ class JournalService {
   async getCollection(id: string): Promise<Collection> {
     try {
       const response = await client.get<CollectionResponse>(JOURNAL.COLLECTION_DETAIL(id));
-      const entriesResponse = await client.get<EntryResponse[]>(JOURNAL.COLLECTION_ENTRIES(id));
+      const entriesResponse = await client.get<PaginatedEntriesResponse>(JOURNAL.COLLECTION_ENTRIES(id));
+      
+      // Handle paginated entries response
+      const entriesData = entriesResponse.data.entries || [];
       
       return {
         ...this.mapCollectionResponse(response.data),
-        entries: this.mapEntriesResponse(entriesResponse.data),
+        entries: this.mapEntriesResponse(entriesData),
       };
     } catch (error) {
       throw this.handleError(error, 'Failed to fetch collection');
@@ -158,12 +147,9 @@ class JournalService {
     try {
       console.log('🔐 Verifying password for collection:', id);
       console.log('🔐 Password length:', password?.length);
-      console.log('🔐 collectionTokens object:', collectionTokens);
-      console.log('🔐 collectionTokens type:', typeof collectionTokens);
-      console.log('🔐 collectionTokens.store type:', typeof collectionTokens?.store);
       console.log('🔐 Calling endpoint:', JOURNAL.COLLECTION_VERIFY_PASSWORD(id));
       
-      const response = await client.post<{ valid: boolean; access_token?: string }>(
+      const response = await client.post<PasswordVerificationResponse>(
         JOURNAL.COLLECTION_VERIFY_PASSWORD(id),
         { password }
       );
@@ -195,8 +181,6 @@ class JournalService {
             console.error('🔐 Fallback storage also failed:', fallbackError);
           }
         }
-      } else {
-        console.log('🔐 Password verification result:', response.data.valid);
       }
       
       return response.data.valid;
@@ -208,10 +192,9 @@ class JournalService {
       // Let 401/403 errors bubble up to trigger redirect to landing page
       if (error?.response?.status === 401 || error?.response?.status === 403) {
         console.log('🔐 Authentication/authorization failed - will redirect to landing page');
-        throw error; // This will trigger the client interceptor redirect
+        throw error;
       }
       
-      // For other errors, still return false but log them
       console.error('🔐 Unexpected error during password verification:', error);
       return false;
     }
@@ -234,54 +217,26 @@ class JournalService {
         }
       }
       
-      const response = await client.get(url, { headers });
+      const response = await client.get<PaginatedEntriesResponse>(url, { headers });
       
-      // Handle different response formats from backend
-      let entriesData = response.data;
+      // Handle paginated entries response
+      const responseData = response.data;
+      let entriesData: EntryResponse[] = [];
       
-      // If response is wrapped (e.g., {data: [...]} or {entries: [...]})
-      if (entriesData && !Array.isArray(entriesData)) {
-        console.log('🔍 ENTRIES: Response is wrapped, keys:', Object.keys(entriesData));
-        
-        if (entriesData.data && Array.isArray(entriesData.data)) {
-          console.log('✅ ENTRIES: Found data wrapper');
-          entriesData = entriesData.data;
-        } else if (entriesData.entries && Array.isArray(entriesData.entries)) {
-          console.log('✅ ENTRIES: Found entries wrapper');
-          entriesData = entriesData.entries;
-        } else if (entriesData.results && Array.isArray(entriesData.results)) {
-          console.log('✅ ENTRIES: Found results wrapper');
-          entriesData = entriesData.results;
-        } else {
-          // If it's still not an array, return empty array
-          console.warn('❌ ENTRIES: Unexpected response format:', entriesData);
-          console.warn('❌ ENTRIES: Available keys:', Object.keys(entriesData || {}));
-          return [];
-        }
-      }
-      
-      // Ensure we have an array
-      if (!Array.isArray(entriesData)) {
-        console.warn('Entries data is not an array:', entriesData);
+      if (responseData.entries && Array.isArray(responseData.entries)) {
+        entriesData = responseData.entries;
+        console.log('✅ ENTRIES: Found entries in paginated response, count:', entriesData.length);
+      } else if (Array.isArray(responseData)) {
+        // Fallback for direct array response
+        entriesData = responseData as EntryResponse[];
+        console.log('✅ ENTRIES: Found direct array response, count:', entriesData.length);
+      } else {
+        console.warn('❌ ENTRIES: Unexpected response format:', responseData);
         return [];
       }
       
       return this.mapEntriesResponse(entriesData);
     } catch (error) {
-              // If it's a 401/403 for private collection, the token might be expired
-        const apiError = error as any;
-        if (collectionId && (apiError.status === 401 || apiError.status === 403)) {
-          console.warn('🔐 Access denied for collection, removing token:', collectionId);
-          try {
-            if (collectionTokens && typeof collectionTokens.remove === 'function') {
-              collectionTokens.remove(collectionId);
-            } else {
-              this.removeCollectionToken(collectionId);
-            }
-          } catch (removeError) {
-            console.error('🔐 Error removing token:', removeError);
-          }
-        }
       throw this.handleError(error, 'Failed to fetch entries');
     }
   }
@@ -297,52 +252,55 @@ class JournalService {
 
   async createEntry(data: CreateEntryRequest): Promise<Entry> {
     try {
-      console.log('📝 CREATE ENTRY: Request payload:', data);
-      
-      // Add access token header if entry is for a private collection
+      // Add access token header for private collections
       const headers: Record<string, string> = {};
-      const collectionId = String(data.collection_id);
-      const accessToken = this.getCollectionToken(collectionId);
+      const accessToken = this.getCollectionToken(data.collection_id.toString());
       if (accessToken) {
         headers['X-Collection-Access-Token'] = accessToken;
-        console.log('🔐 Using access token for private collection:', collectionId);
+        console.log('🔐 Adding access token for collection:', data.collection_id);
       }
-      
+
       const response = await client.post<EntryResponse>(JOURNAL.ENTRIES, data, { headers });
-      
-      console.log('✅ CREATE ENTRY: Success, response:', response.data);
       return this.mapEntryResponse(response.data);
-    } catch (error: any) {
-      console.error('💥 CREATE ENTRY ERROR:', error);
-      console.error('💥 Response status:', error?.response?.status);
-      console.error('💥 Response data:', error?.response?.data);
-      
+    } catch (error) {
       throw this.handleError(error, 'Failed to create entry');
     }
   }
 
   async updateEntry(id: string, data: UpdateEntryRequest): Promise<Entry> {
     try {
-      // Try to get access token for any collection that might contain this entry
+      // Get the entry first to determine its collection for access token
+      const entryResponse = await client.get<EntryResponse>(JOURNAL.ENTRY_DETAIL(id));
       const headers: Record<string, string> = {};
       
-      // We need to check which collection this entry belongs to
-      // For now, we'll try without token first, then handle 401 if needed
-      
+      // Add access token header for private collections
+      const accessToken = this.getCollectionToken(entryResponse.data.collection_id.toString());
+      if (accessToken) {
+        headers['X-Collection-Access-Token'] = accessToken;
+        console.log('🔐 Adding access token for collection:', entryResponse.data.collection_id);
+      }
+
       const response = await client.put<EntryResponse>(JOURNAL.ENTRY_DETAIL(id), data, { headers });
       return this.mapEntryResponse(response.data);
-    } catch (error: any) {
-      // If we get 401/403, the entry might be in a private collection
-      if (error?.response?.status === 401 || error?.response?.status === 403) {
-        console.warn('🔐 Entry update failed - might need collection access token');
-      }
+    } catch (error) {
       throw this.handleError(error, 'Failed to update entry');
     }
   }
 
   async deleteEntry(id: string): Promise<void> {
     try {
-      await client.delete(JOURNAL.ENTRY_DETAIL(id));
+      // Get the entry first to determine its collection for access token
+      const entryResponse = await client.get<EntryResponse>(JOURNAL.ENTRY_DETAIL(id));
+      const headers: Record<string, string> = {};
+      
+      // Add access token header for private collections
+      const accessToken = this.getCollectionToken(entryResponse.data.collection_id.toString());
+      if (accessToken) {
+        headers['X-Collection-Access-Token'] = accessToken;
+        console.log('🔐 Adding access token for collection:', entryResponse.data.collection_id);
+      }
+
+      await client.delete(JOURNAL.ENTRY_DETAIL(id), { headers });
     } catch (error) {
       throw this.handleError(error, 'Failed to delete entry');
     }
@@ -351,67 +309,51 @@ class JournalService {
   // Gratitude Operations
   async getGratitudes(): Promise<GratitudeEntry[]> {
     try {
-      const response = await client.get(JOURNAL.GRATITUDE);
+      const response = await client.get<PaginatedGratitudeResponse>(JOURNAL.GRATITUDE);
       
-      // Handle different response formats from backend
-      let gratitudeData = response.data;
+      // Handle paginated gratitude response
+      const responseData = response.data;
+      let gratitudeData: GratitudeResponse[] = [];
       
-      // If response is wrapped (e.g., {data: [...]} or {gratitudes: [...]})
-      if (gratitudeData && !Array.isArray(gratitudeData)) {
-        console.log('🔍 GRATITUDE: Response is wrapped, keys:', Object.keys(gratitudeData));
-        
-        if (gratitudeData.data && Array.isArray(gratitudeData.data)) {
-          console.log('✅ GRATITUDE: Found data wrapper');
-          gratitudeData = gratitudeData.data;
-        } else if (gratitudeData.gratitudes && Array.isArray(gratitudeData.gratitudes)) {
-          console.log('✅ GRATITUDE: Found gratitudes wrapper');
-          gratitudeData = gratitudeData.gratitudes;
-        } else if (gratitudeData.gratitude && Array.isArray(gratitudeData.gratitude)) {
-          console.log('✅ GRATITUDE: Found gratitude wrapper');
-          gratitudeData = gratitudeData.gratitude;
-        } else if (gratitudeData.results && Array.isArray(gratitudeData.results)) {
-          console.log('✅ GRATITUDE: Found results wrapper');
-          gratitudeData = gratitudeData.results;
-        } else {
-          // If it's still not an array, return empty array
-          console.warn('❌ GRATITUDE: Unexpected response format:', gratitudeData);
-          console.warn('❌ GRATITUDE: Available keys:', Object.keys(gratitudeData || {}));
-          return [];
-        }
-      }
-      
-      // Ensure we have an array
-      if (!Array.isArray(gratitudeData)) {
-        console.warn('Gratitude data is not an array:', gratitudeData);
+      if (responseData.gratitude_entries && Array.isArray(responseData.gratitude_entries)) {
+        gratitudeData = responseData.gratitude_entries;
+        console.log('✅ GRATITUDE: Found gratitude_entries in paginated response, count:', gratitudeData.length);
+      } else if (Array.isArray(responseData)) {
+        // Fallback for direct array response
+        gratitudeData = responseData as GratitudeResponse[];
+        console.log('✅ GRATITUDE: Found direct array response, count:', gratitudeData.length);
+      } else {
+        console.warn('❌ GRATITUDE: Unexpected response format:', responseData);
         return [];
       }
       
-      return gratitudeData;
+      return this.mapGratitudeResponse(gratitudeData);
     } catch (error) {
       throw this.handleError(error, 'Failed to fetch gratitudes');
     }
   }
 
-  async createGratitude(text: string): Promise<GratitudeEntry> {
+  async createGratitude(text: string, date?: string): Promise<GratitudeEntry> {
     try {
-      const response = await client.post<GratitudeEntry>(JOURNAL.GRATITUDE, {
-        text,
-        date: new Date().toISOString().split('T')[0],
-      });
-      return response.data;
+      const data: CreateGratitudeRequest = { text };
+      if (date) {
+        data.date = date;
+      }
+      
+      const response = await client.post<GratitudeResponse>(JOURNAL.GRATITUDE, data);
+      return this.mapGratitudeEntryResponse(response.data);
     } catch (error) {
-      throw this.handleError(error, 'Failed to create gratitude entry');
+      throw this.handleError(error, 'Failed to create gratitude');
     }
   }
 
   async updateGratitude(id: string, text: string): Promise<GratitudeEntry> {
     try {
-      const response = await client.put<GratitudeEntry>(JOURNAL.GRATITUDE_DETAIL(id), {
-        text,
-      });
-      return response.data;
+      const data: UpdateGratitudeRequest = { text };
+      const response = await client.put<GratitudeResponse>(JOURNAL.GRATITUDE_DETAIL(id), data);
+      return this.mapGratitudeEntryResponse(response.data);
     } catch (error) {
-      throw this.handleError(error, 'Failed to update gratitude entry');
+      throw this.handleError(error, 'Failed to update gratitude');
     }
   }
 
@@ -419,124 +361,120 @@ class JournalService {
     try {
       await client.delete(JOURNAL.GRATITUDE_DETAIL(id));
     } catch (error) {
-      throw this.handleError(error, 'Failed to delete gratitude entry');
+      throw this.handleError(error, 'Failed to delete gratitude');
     }
   }
 
-  // Response Mappers
+  // Statistics Operations
+  async getStats(): Promise<JournalStatsResponse> {
+    try {
+      const response = await client.get<JournalStatsResponse>(JOURNAL.STATS);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to fetch journal stats');
+    }
+  }
+
+  // Response Mapping Methods
   private mapCollectionsResponse(data: CollectionResponse[]): Collection[] {
-    console.log('🔄 Mapping collections response. Raw data:', data);
-    
-    if (!Array.isArray(data)) {
-      console.warn('❌ mapCollectionsResponse: Data is not an array:', data);
-      return [];
-    }
-    
-    const mapped = data.map(item => this.mapCollectionResponse(item));
-    console.log('✅ Mapped collections:', mapped);
-    return mapped;
+    return data.map(collection => this.mapCollectionResponse(collection));
   }
 
-  private mapCollectionResponse(data: any): Collection {
-    console.log('🔄 Mapping single collection:', data);
-    
-    const mapped = {
-      id: String(data.id),
-      name: data.name || '',
-      isPrivate: Boolean(data.is_private || data.isPrivate), // ✅ Handle both snake_case and camelCase
+  private mapCollectionResponse(data: CollectionResponse): Collection {
+    return {
+      id: data.id,
+      name: data.name,
+      is_private: data.is_private,
+      user_id: data.user_id,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      entry_count: data.entry_count,
       entries: [], // Will be populated separately
-      createdAt: data.created_at || data.createdAt,
-      updatedAt: data.updated_at || data.updatedAt,
-      entryCount: data.entry_count || data.entryCount || 0,
+      // Frontend-friendly aliases
+      isPrivate: data.is_private,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      entryCount: data.entry_count,
     };
-    
-    console.log('✅ Mapped collection result:', mapped);
-    return mapped;
   }
 
   private mapEntriesResponse(data: EntryResponse[]): Entry[] {
-    // Safety check - ensure data is an array
-    if (!Array.isArray(data)) {
-      console.error('mapEntriesResponse received non-array data:', data);
-      return [];
+    return data.map(entry => this.mapEntryResponse(entry));
+  }
+
+  private mapEntryResponse(data: EntryResponse): Entry {
+    return {
+      id: data.id,
+      title: data.title,
+      content: data.content,
+      collection_id: data.collection_id,
+      is_encrypted: data.is_encrypted,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      // Frontend-friendly aliases
+      isEncrypted: data.is_encrypted,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  private mapGratitudeResponse(data: GratitudeResponse[]): GratitudeEntry[] {
+    return data.map(gratitude => this.mapGratitudeEntryResponse(gratitude));
+  }
+
+  private mapGratitudeEntryResponse(data: GratitudeResponse): GratitudeEntry {
+    return {
+      id: data.id,
+      text: data.text,
+      date: data.date,
+      user_id: data.user_id,
+      created_at: data.created_at,
+      // Frontend-friendly aliases
+      createdAt: data.created_at,
+    };
+  }
+
+  private handleError(error: any, defaultMessage: string): JournalApiError {
+    console.error('Journal API Error:', error);
+    
+    // Handle different error types
+    if (error?.response?.data?.detail) {
+      return {
+        message: error.response.data.detail,
+        code: error.response.status?.toString() || 'unknown',
+        details: error.response.data
+      };
     }
     
-    return data.map(this.mapEntryResponse);
-  }
-
-  private mapEntryResponse(data: any): Entry {
-    return {
-      id: String(data.id),
-      title: data.title || '',
-      content: data.content || '',
-      isEncrypted: Boolean(data.is_encrypted || data.isEncrypted), // ✅ Handle both formats
-      createdAt: data.created_at || data.createdAt,
-      updatedAt: data.updated_at || data.updatedAt,
-    };
-  }
-
-  // Error Handling
-  private handleError(error: any, defaultMessage: string): JournalApiError {
-    const journalError: JournalApiError = {
-      message: error.message || defaultMessage,
-      code: error.status?.toString() || 'UNKNOWN',
-      details: error.response?.data || error,
-    };
-
-    // Handle specific error cases
-    if (error.status === 401) {
-      journalError.message = 'Authentication required';
-      journalError.code = 'UNAUTHORIZED';
-    } else if (error.status === 403) {
-      journalError.message = 'Access denied';
-      journalError.code = 'FORBIDDEN';
-    } else if (error.status === 404) {
-      journalError.message = 'Resource not found';
-      journalError.code = 'NOT_FOUND';
-    } else if (error.status === 409) {
-      journalError.message = 'Resource already exists';
-      journalError.code = 'CONFLICT';
-    } else if (error.status === 422) {
-      journalError.message = 'Validation failed - check your input data';
-      journalError.code = 'VALIDATION_ERROR';
-      
-      // Try to extract more specific validation errors
-      if (error.response?.data?.detail) {
-        if (Array.isArray(error.response.data.detail)) {
-          // FastAPI validation errors format
-          const validationErrors = error.response.data.detail.map((err: any) => 
-            `${err.loc?.join('.')}: ${err.msg}`
-          ).join(', ');
-          journalError.message = `Validation errors: ${validationErrors}`;
-        } else if (typeof error.response.data.detail === 'string') {
-          journalError.message = error.response.data.detail;
-        }
-      }
-    } else if (error.isTimeout) {
-      journalError.message = 'Request timed out';
-      journalError.code = 'TIMEOUT';
-    } else if (error.isNetworkError) {
-      journalError.message = 'Network connection failed';
-      journalError.code = 'NETWORK_ERROR';
+    if (error?.message) {
+      return {
+        message: error.message,
+        code: error.code || 'unknown',
+        details: error
+      };
     }
-
-    return journalError;
+    
+    return {
+      message: defaultMessage,
+      code: 'unknown',
+      details: error
+    };
   }
 
   private removeCollectionToken(collectionId: string) {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('REF_COLLECTION_TOKENS');
-        const tokens = stored ? JSON.parse(stored) : {};
-        delete tokens[collectionId];
-        localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
-        console.log('🔐 Fallback: Removed access token for collection:', collectionId);
+        if (stored) {
+          const tokens = JSON.parse(stored);
+          delete tokens[collectionId];
+          localStorage.setItem('REF_COLLECTION_TOKENS', JSON.stringify(tokens));
+        }
       } catch (error) {
-        console.error('🔐 Fallback: Failed to remove collection token:', error);
+        console.warn('Failed to remove collection token:', error);
       }
     }
   }
 }
 
-export const journalService = new JournalService();
-export default journalService; 
+export default new JournalService(); 

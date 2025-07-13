@@ -3,25 +3,25 @@ import { DailyCalendarEntry, UserHabit } from '../types';
 import { 
   getCalendarEntries, 
   getCalendarEntry, 
-  saveCalendarEntry, 
-  updateCalendarEntry,
   toggleHabitInCalendar,
-  createTodayEntry,
   hasCalendarEntry,
   clearCalendarCache 
 } from '@/services/calendarService';
-import { getMoodEntries, saveMoodRating } from '@/services/moodService';
-import { useCurrentDate } from '@/contexts/TimeContext';
+import { saveMoodRating } from '@/services/moodService';
+import { markHabitCompletion } from '@/services/habitsService';
+import { useCurrentDate, useTime } from '@/contexts/TimeContext';
+
 
 /**
  * Enhanced Calendar Data Hook
- * Manages calendar entries with database persistence and read-only protection
+ * Manages calendar entries with real data from habit, mood, and goal services
  */
 export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   const [calendarEntries, setCalendarEntries] = useState<{ [key: string]: DailyCalendarEntry }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const currentDate = useCurrentDate();
+  const { getCurrentDate } = useTime();
 
   // Get date range for current month
   const getMonthDateRange = useCallback(() => {
@@ -37,7 +37,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   }, [currentMonth]);
 
   /**
-   * Load calendar entries for current month
+   * Load calendar entries for current month using REAL data
    */
   const loadCalendarData = useCallback(async () => {
     try {
@@ -45,9 +45,11 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       setError(null);
       
       const { startDate, endDate } = getMonthDateRange();
+      console.log('🔍 Loading REAL calendar data for range:', { startDate, endDate });
       
-      // Load calendar entries from new calendar service
+      // Load calendar entries from REAL services (not mock API)
       const entries = await getCalendarEntries(startDate, endDate);
+      console.log('📥 Received REAL calendar entries:', entries.length, 'entries');
       
       // Convert to map for easy lookup
       const entriesMap: { [key: string]: DailyCalendarEntry } = {};
@@ -55,90 +57,24 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
         entriesMap[entry.date] = entry;
       });
       
+      console.log('📋 Real calendar entries map has', Object.keys(entriesMap).length, 'entries');
+      if (Object.keys(entriesMap).length > 0) {
+        console.log('📋 Available dates:', Object.keys(entriesMap).slice(0, 5).join(', ') + 
+                   (Object.keys(entriesMap).length > 5 ? '...' : ''));
+      }
+      
       setCalendarEntries(entriesMap);
       
     } catch (err) {
-      console.error('Failed to load calendar data:', err);
+      console.error('Failed to load REAL calendar data:', err);
       setError('Failed to load calendar data. Please refresh to try again.');
     } finally {
       setLoading(false);
     }
-  }, [getMonthDateRange]);
+  }, [getMonthDateRange, currentMonth]);
 
   /**
-   * Create or update calendar entry for a specific date
-   */
-  const saveCalendarEntryForDate = async (
-    date: string, 
-    habitCompletions: { habitId: number; completed: boolean }[],
-    moodData?: { happiness: number; focus: number; stress: number }
-  ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      // Check if it's a past date
-      const today = new Date().toISOString().split('T')[0];
-      if (date < today) {
-        return { success: false, error: 'Cannot modify calendar entries for past dates.' };
-      }
-
-      // Get habits that existed on this date (for now, use current habits)
-      const habitsOnDate = habits.filter(h => h.isActive !== false);
-      
-      // Create habit completion data with historical names
-      const completionData = habitsOnDate.map(habit => {
-        const completion = habitCompletions.find(hc => hc.habitId === habit.id);
-        return {
-          habitId: habit.id,
-          habitName: habit.name,
-          completed: completion?.completed || false,
-          completedAt: completion?.completed ? new Date() : undefined,
-          wasActiveOnDate: true
-        };
-      });
-
-      // Check if entry already exists
-      const existingEntry = await getCalendarEntry(date);
-      
-      if (existingEntry) {
-        // Update existing entry
-        const updatedEntry = await updateCalendarEntry(date, {
-          habitCompletions: completionData,
-          moodEntry: moodData
-        });
-        
-        // Update local state
-        setCalendarEntries(prev => ({
-          ...prev,
-          [date]: updatedEntry
-        }));
-      } else {
-        // Create new entry
-        const newEntry: DailyCalendarEntry = {
-          date,
-          userId: 0, // Will be set by backend
-          habitCompletions: completionData,
-          moodEntry: moodData,
-          notes: ''
-        };
-        
-        const savedEntry = await saveCalendarEntry(newEntry);
-        
-        // Update local state
-        setCalendarEntries(prev => ({
-          ...prev,
-          [date]: savedEntry
-        }));
-      }
-      
-      return { success: true };
-    } catch (err) {
-      console.error('Failed to save calendar entry:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save calendar entry.';
-      return { success: false, error: errorMessage };
-    }
-  };
-
-  /**
-   * Toggle habit completion for a specific date
+   * Toggle habit completion for a specific date using REAL habit service
    */
   const toggleHabitCompletion = async (
     date: string, 
@@ -147,7 +83,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       // Check if it's a past date
-      const today = new Date().toISOString().split('T')[0];
+      const today = getCurrentDate();
       if (date < today) {
         return { success: false, error: 'Cannot modify habit completions for past dates.' };
       }
@@ -172,14 +108,12 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
         };
       });
 
-      // Update on backend
-      const updatedEntry = await toggleHabitInCalendar(date, habitId, completed);
+      // Update via REAL habit service
+      await markHabitCompletion(habitId, date, completed);
       
-      // Update with real data
-      setCalendarEntries(prev => ({
-        ...prev,
-        [date]: updatedEntry
-      }));
+      // Clear cache and reload to get fresh data
+      clearCalendarCache();
+      await loadCalendarData();
       
       return { success: true };
     } catch (err) {
@@ -210,7 +144,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   };
 
   /**
-   * Save mood data and integrate with calendar
+   * Save mood data using REAL mood service
    */
   const saveMoodData = async (
     ratings: { happiness: number; focus: number; stress: number },
@@ -219,18 +153,14 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
     try {
       const targetDate = date || currentDate;
       
-      // Save mood via mood service
+      // Save mood via REAL mood service
       await saveMoodRating(ratings);
       
-      // Get existing calendar entry or create completion data
-      const existingEntry = calendarEntries[targetDate];
-      const habitCompletions = existingEntry?.habitCompletions.map(hc => ({
-        habitId: hc.habitId,
-        completed: hc.completed
-      })) || [];
+      // Clear cache and reload to get fresh data
+      clearCalendarCache();
+      await loadCalendarData();
       
-      // Save or update calendar entry with mood data
-      return await saveCalendarEntryForDate(targetDate, habitCompletions, ratings);
+      return { success: true };
     } catch (err) {
       console.error('Failed to save mood data:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to save mood data.';
@@ -242,14 +172,23 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
    * Get calendar entry for a specific date
    */
   const getCalendarEntryForDate = (date: string): DailyCalendarEntry | null => {
-    return calendarEntries[date] || null;
+    const entry = calendarEntries[date] || null;
+    // Debug logging
+    if (entry && process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+      console.log(`🔍 getCalendarEntryForDate(${date}):`, {
+        hasHabits: entry.habitCompletions?.length || 0,
+        hasMood: !!entry.moodEntry,
+        hasGoals: entry.goalActivities?.length || 0
+      });
+    }
+    return entry;
   };
 
   /**
    * Check if date is read-only (past date)
    */
   const isDateReadOnly = (date: string): boolean => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getCurrentDate();
     return date < today;
   };
 
@@ -297,15 +236,21 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   };
 
   /**
-   * Refresh calendar data
+   * Refresh calendar data - now uses REAL data
    */
   const refreshCalendarData = () => {
+    console.log('🧹 Clearing REAL calendar cache and reloading data...');
     clearCalendarCache();
     loadCalendarData();
   };
 
   // Load data when month changes or habits change
   useEffect(() => {
+    // Force clear cache on initial load to ensure fresh data
+    if (Object.keys(calendarEntries).length === 0) {
+      console.log('🔄 Initial load - clearing REAL calendar cache...');
+      clearCalendarCache();
+    }
     loadCalendarData();
   }, [loadCalendarData]);
 
@@ -316,7 +261,6 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
     error,
     
     // Actions
-    saveCalendarEntryForDate,
     toggleHabitCompletion,
     saveMoodData,
     refreshCalendarData,
