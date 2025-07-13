@@ -111,7 +111,7 @@ export default function ClientLayoutWrapper({
         </div>
         
         {/* DevTools - positioned at bottom-right globally */}
-        {process.env.NODE_ENV === 'development' && <DevTools />}
+        {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}
       </TimeProvider>
     </AuthProvider>
   );

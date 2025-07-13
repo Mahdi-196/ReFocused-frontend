@@ -20,7 +20,6 @@ import { useStudyData } from './hooks/useStudyData';
 import { useStatistics } from './hooks/useStatistics';
 
 export default function StudyPage() {
-  console.log('🚀 [STUDY PAGE] Component rendered/re-rendered');
   
   // Use custom hooks for data management
   const studyData = useStudyData();
@@ -85,14 +84,16 @@ export default function StudyPage() {
                 isAuthenticated={statistics.isAuthenticated}
               />
 
-              {/* Testing Section */}
-              <TestingSection
-                showTesting={showTesting}
-                setShowTesting={setShowTesting}
-                timeFilter={statistics.timeFilter}
-                setStats={statistics.setStats}
-                setStatsLoading={statistics.setStatsLoading}
-              />
+              {/* Testing Section - Development Only */}
+              {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+                <TestingSection
+                  showTesting={showTesting}
+                  setShowTesting={setShowTesting}
+                  timeFilter={statistics.timeFilter}
+                  setStats={statistics.setStats}
+                  setStatsLoading={statistics.setStatsLoading}
+                />
+              )}
 
               {/* Modals */}
               <StudyModals
@@ -113,8 +114,8 @@ export default function StudyPage() {
           </div>
         </SkeletonDemo>
 
-        {/* Backend Debugger */}
-        <BackendDebugger />
+        {/* Backend Debugger - Development Only */}
+        {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <BackendDebugger />}
       </PageTransition>
     </AuthGuard>
   );

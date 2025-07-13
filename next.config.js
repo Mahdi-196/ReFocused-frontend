@@ -41,10 +41,11 @@ const nextConfig = {
 
   async rewrites() {
     return [
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://localhost:8000/api/v1/:path*',
-      },
+      // Removed the rewrite rule that was redirecting calendar API calls to external backend
+      // {
+      //   source: '/api/v1/:path*',
+      //   destination: 'http://localhost:8000/api/v1/:path*',
+      // },
     ];
   },
 

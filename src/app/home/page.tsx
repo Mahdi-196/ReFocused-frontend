@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
 
-import { HomePageSkeleton, SkeletonDemo } from '@/components/skeletons';
+import { HomePageSkeleton } from '@/components/skeletons';
 
-// Dynamically import heavy components
+// Dynamically import heavy components without loading states to avoid double animation
 const DailyMomentum = dynamic(() => import('../homeComponents/DailyMomentum'), {
   ssr: false,
 });
@@ -30,6 +30,11 @@ const MindFuel = dynamic(() => import('../homeComponents/MindFuel'), {
 const ProductivityScore = dynamic(() => import('../homeComponents/ProductivityScore'), {
   ssr: false,
 });
+
+const ApiTestingBox = dynamic(() => import('../homeComponents/ApiTestingBox'), {
+  ssr: false,
+});
+
 import { Task } from '../homeComponents/TaskList';
 
 // Helper functions for user-specific local storage
@@ -114,6 +119,7 @@ const Home = () => {
   const [newTask, setNewTask] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Clear tasks when user changes
   const clearTasks = () => {
@@ -132,6 +138,9 @@ const Home = () => {
     
     // Clean up old task entries to keep localStorage tidy
     cleanupOldTasks();
+    
+    // Remove initial loading state immediately - no delays needed for production
+    setIsInitialLoading(false);
   }, []);
 
   // Handle authentication changes
@@ -213,40 +222,54 @@ const Home = () => {
     setTasks(tasks.filter(task => task.id !== taskId));
   };
 
+  // Show skeleton during initial loading
+  if (isInitialLoading) {
+    return (
+      <PageTransition>
+        <main className="container mx-auto p-6 max-w-7xl">
+          <h1 className="sr-only">ReFocused Dashboard - Daily Productivity and Mindfulness</h1>
+          <HomePageSkeleton />
+        </main>
+      </PageTransition>
+    );
+  }
+
   return (
     <PageTransition>
       <main className="container mx-auto p-6 max-w-7xl">
         <h1 className="sr-only">ReFocused Dashboard - Daily Productivity and Mindfulness</h1>
         
-        <SkeletonDemo
-          skeleton={<HomePageSkeleton />}
-          delay={100} // Minimal delay for smooth transition
-          enabled={false} // Disable forced demo mode
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <DailyMomentum
-              tasks={tasks}
-              newTask={newTask}
-              setNewTask={setNewTask}
-              handleAddTask={handleAddTask}
-              handleDeleteTask={handleDeleteTask}
-              setTasks={setTasks}
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <DailyMomentum
+            tasks={tasks}
+            newTask={newTask}
+            setNewTask={setNewTask}
+            handleAddTask={handleAddTask}
+            handleDeleteTask={handleDeleteTask}
+            setTasks={setTasks}
+          />
 
-            <div className="lg:col-span-1">
-              <div className="flex flex-col gap-6">
-                <QuoteOfTheDay />
-                <WordOfTheDay />
-              </div>
+          <div className="lg:col-span-1">
+            <div className="flex flex-col gap-6">
+              <QuoteOfTheDay />
+              <WordOfTheDay />
             </div>
-
-            <GoalTracker />
-
-            <MindFuel />
-
-            <ProductivityScore />
           </div>
-        </SkeletonDemo>
+
+          <GoalTracker />
+
+          <MindFuel />
+
+          <ProductivityScore />
+        </div>
+
+        {/* API Testing Section - Development Only */}
+                      {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">API Testing</h2>
+            <ApiTestingBox />
+          </div>
+        )}
 
       </main>
     </PageTransition>

@@ -64,11 +64,23 @@ export interface CalendarDay {
   habitCompletions?: number; // Number of habits completed
 }
 
+export interface DailyGoalActivity {
+  goalId: number;
+  goalName: string;
+  activityType: 'created' | 'completed' | 'progress_update';
+  activityTime?: Date;
+  progressValue?: number;
+  goalType?: string; // 'percentage' | 'counter' | 'checklist'
+  targetValue?: number;
+  notes?: string;
+}
+
 export interface DailyCalendarEntry {
   id?: number;
   date: string; // ISO date string (YYYY-MM-DD)
   userId: number;
   habitCompletions: DailyHabitCompletion[];
+  goalActivities?: DailyGoalActivity[]; // Goal changes that happened on this day
   moodEntry?: {
     happiness: number;
     focus: number; // Changed from satisfaction to focus for consistency

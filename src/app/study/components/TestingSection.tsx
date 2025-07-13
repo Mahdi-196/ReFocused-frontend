@@ -20,7 +20,7 @@ export default function TestingSection({
 }: TestingSectionProps) {
   
   // Only render in development environment
-  if (process.env.NODE_ENV !== 'development') {
+  if (process.env.NEXT_PUBLIC_APP_ENV !== 'development') {
     return null;
   }
   

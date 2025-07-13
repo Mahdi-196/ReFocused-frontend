@@ -1,38 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
-import bcrypt from "bcryptjs";
 import journalService from "@/api/services/journalService";
 import { collectionTokens } from "@/api/client";
 import type { Entry, Collection, JournalApiError } from "../types";
-
-const LOCAL_STORAGE_KEY = "jurnol_collections";
-const PASSWORD_STORAGE_KEY = "collection_passwords";
-
-const defaultCollectionsData: Collection[] = [
-  {
-    id: "default-my-notes",
-    name: "My Notes",
-    entries: [], // Start with empty entries for fresh user experience
-  },
-  {
-    id: uuidv4(), // Keep generating potential ID for default private
-    name: "Private",
-    isPrivate: true,
-    entries: [],
-  },
-];
-
-export function getDefaultCollection(): Collection {
-  return { 
-    id: "default-my-notes",
-    name: "My Notes",
-    entries: [], // Fresh start for new users
-    isPrivate: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    entryCount: 0,
-  };
-}
 
 /**
  * Ensures the default "My Notes" collection is always present and first
@@ -40,7 +10,7 @@ export function getDefaultCollection(): Collection {
  * @returns Collections array with default collection guaranteed first
  */
 function ensureDefaultCollection(collections: Collection[]): Collection[] {
-  // Check if backend has a "My Notes" collection (it might have a different ID)
+  // Check if backend has a "My Notes" collection
   const backendDefaultCollection = collections.find(col => col.name === "My Notes");
   
   if (backendDefaultCollection) {
@@ -48,15 +18,28 @@ function ensureDefaultCollection(collections: Collection[]): Collection[] {
     const otherCollections = collections.filter(col => col.name !== "My Notes");
     return [backendDefaultCollection, ...otherCollections];
   } else {
-    // No "My Notes" found - use our frontend default
-    const defaultCollection = getDefaultCollection();
+    // No "My Notes" found - create a default one (this will be created on backend later)
+    const defaultCollection: Collection = {
+      id: 0, // Temporary ID, will be assigned by backend
+      name: "My Notes",
+      is_private: false,
+      entries: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      entry_count: 0,
+      // Frontend-friendly aliases
+      isPrivate: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      entryCount: 0,
+    };
     return [defaultCollection, ...collections];
   }
 }
 
 /**
  * Custom hook for managing journal collections with backend integration
- * Replaces localStorage-based storage with API calls
+ * Handles collections, entries, and all related operations
  */
 export function useCollections() {
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -70,11 +53,29 @@ export function useCollections() {
       setError(null);
       const data = await journalService.getCollections();
       
+      // Check if "My Notes" collection exists, create it if not
+      let collectionsData = data;
+      const hasDefaultCollection = data.some(col => col.name === "My Notes");
+      
+      if (!hasDefaultCollection) {
+        console.log('📝 Creating default "My Notes" collection...');
+        try {
+          const defaultCollection = await journalService.createCollection({
+            name: "My Notes",
+            is_private: false,
+          });
+          collectionsData = [defaultCollection, ...data];
+          console.log('✅ Default collection created:', defaultCollection);
+        } catch (createError) {
+          console.warn('⚠️ Failed to create default collection, using fallback:', createError);
+        }
+      }
+      
       // Load entries for each collection
       const collectionsWithEntries = await Promise.all(
-        data.map(async (collection) => {
+        collectionsData.map(async (collection) => {
           try {
-            const entries = await journalService.getEntries(collection.id);
+            const entries = await journalService.getEntries(collection.id.toString());
             return { ...collection, entries };
           } catch (err) {
             // If we can't load entries (e.g., private collection), return with empty entries
@@ -94,7 +95,20 @@ export function useCollections() {
       setError(error.message);
       
       // Fallback to just the default collection if backend is unavailable
-      setCollections([getDefaultCollection()]);
+      const defaultCollection: Collection = {
+        id: 0,
+        name: "My Notes",
+        is_private: false,
+        entries: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        entry_count: 0,
+        isPrivate: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        entryCount: 0,
+      };
+      setCollections([defaultCollection]);
     } finally {
       setIsLoading(false);
     }
@@ -102,6 +116,11 @@ export function useCollections() {
 
   // Initial load
   useEffect(() => {
+    loadCollections();
+  }, [loadCollections]);
+
+  // Refresh collections (public method)
+  const refreshCollections = useCallback(() => {
     loadCollections();
   }, [loadCollections]);
 
@@ -123,7 +142,7 @@ export function useCollections() {
       
       const newCollection = await journalService.createCollection({
         name,
-        is_private: !!password,  // ✅ Fixed: snake_case for backend
+        is_private: !!password,
         password,
       });
 
@@ -134,8 +153,8 @@ export function useCollections() {
       
       setCollections(prev => {
         // Ensure default collection stays first
-        const otherCollections = prev.filter(c => c.id !== "default-my-notes");
-        const defaultCollection = prev.find(c => c.id === "default-my-notes");
+        const otherCollections = prev.filter(c => c.name !== "My Notes");
+        const defaultCollection = prev.find(c => c.name === "My Notes");
         
         const updated = defaultCollection 
           ? [defaultCollection, ...otherCollections, collectionWithEntries]
@@ -162,15 +181,16 @@ export function useCollections() {
     try {
       const updatedCollection = await journalService.updateCollection(collectionId, {
         name: updates.name,
-        is_private: updates.isPrivate,  // ✅ Convert camelCase to snake_case for backend
+        is_private: updates.isPrivate,
         password: updates.password,
-        current_password: currentPassword,  // ✅ Convert camelCase to snake_case for backend
+        current_password: currentPassword,
+        new_password: updates.password, // Backend expects new_password for password changes
       });
 
       // Update local state
       setCollections(prev =>
         prev.map(col =>
-          col.id === collectionId
+          col.id.toString() === collectionId
             ? { ...col, ...updatedCollection }
             : col
         )
@@ -187,7 +207,7 @@ export function useCollections() {
   // Delete collection
   const deleteCollection = async (collectionId: string): Promise<boolean> => {
     // Find the collection to check if it's the default "My Notes"
-    const collectionToDelete = collections.find(col => col.id === collectionId);
+    const collectionToDelete = collections.find(col => col.id.toString() === collectionId);
     
     // Prevent deletion of the default "My Notes" collection
     if (collectionToDelete?.name === "My Notes") {
@@ -203,7 +223,7 @@ export function useCollections() {
       collectionTokens.remove(collectionId);
       
       // Remove from local state
-      setCollections(prev => prev.filter(col => col.id !== collectionId));
+      setCollections(prev => prev.filter(col => col.id.toString() !== collectionId));
       return true;
     } catch (err) {
       const error = err as JournalApiError;
@@ -219,53 +239,57 @@ export function useCollections() {
       let savedEntry: Entry;
       
       // Check if entry exists (update) or is new (create)
-      const collection = collections.find(col => col.id === collectionId);
-      const existingEntry = collection?.entries.find(e => e.id === entry.id);
+      const collection = collections.find(col => col.id.toString() === collectionId);
+      if (!collection) {
+        console.error('❌ Collection not found:', collectionId);
+        setError(`Collection not found: ${collectionId}`);
+        return false;
+      }
+      
+      const existingEntry = collection.entries.find(e => e.id === entry.id);
       
       if (existingEntry) {
         // Update existing entry
-        const updateData: any = {
+        const updateData = {
           title: entry.title,
           content: entry.content,
+          is_encrypted: entry.is_encrypted,
         };
         
-        // Only include is_encrypted if it's explicitly set (not undefined)
-        if (entry.isEncrypted !== undefined) {
-          updateData.is_encrypted = entry.isEncrypted;
-        }
-        
+        console.log('📝 Updating entry:', entry.id, 'in collection:', collectionId);
         savedEntry = await journalService.updateEntry(entry.id, updateData);
       } else {
-        // Create new entry  
+        // Create new entry
         const collectionIdInt = parseInt(collectionId);
         if (isNaN(collectionIdInt)) {
-          throw new Error(`Invalid collection ID: ${collectionId}`);
+          console.error('❌ Invalid collection ID format:', collectionId);
+          setError(`Invalid collection ID: ${collectionId}`);
+          return false;
         }
         
-        const createData: any = {
+        const createData = {
           title: entry.title,
           content: entry.content,
-          collection_id: collectionIdInt, // ✅ Convert to integer for backend
+          collection_id: collectionIdInt,
+          is_encrypted: entry.is_encrypted,
         };
         
-        // Only include is_encrypted if it's explicitly set (not undefined)
-        if (entry.isEncrypted !== undefined) {
-          createData.is_encrypted = entry.isEncrypted;
-        }
-        
-        console.log('🚀 ABOUT TO CALL createEntry with data:', createData);
+        console.log('📝 Creating new entry in collection:', collectionIdInt, 'with data:', createData);
         savedEntry = await journalService.createEntry(createData);
+        console.log('✅ Entry created successfully:', savedEntry.id);
       }
 
       // Update local state
       setCollections(prev =>
         prev.map(col =>
-          col.id === collectionId
+          col.id.toString() === collectionId
             ? {
                 ...col,
                 entries: existingEntry
                   ? col.entries.map(e => e.id === entry.id ? savedEntry : e)
-                  : [savedEntry, ...col.entries],
+                  : [...col.entries, savedEntry],
+                entry_count: (col.entry_count || 0) + (existingEntry ? 0 : 1),
+                entryCount: (col.entryCount || 0) + (existingEntry ? 0 : 1),
               }
             : col
         )
@@ -274,8 +298,18 @@ export function useCollections() {
       return true;
     } catch (err) {
       const error = err as JournalApiError;
-      console.error("Failed to save entry:", error);
-      setError(error.message);
+      console.error("❌ Failed to save entry:", error);
+      console.error("❌ Collection ID:", collectionId);
+      console.error("❌ Entry data:", entry);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('collection')) {
+        setError(`Collection error: ${error.message}`);
+      } else if (error.message?.includes('validation')) {
+        setError(`Validation error: ${error.message}`);
+      } else {
+        setError(`Failed to save entry: ${error.message}`);
+      }
       return false;
     }
   };
@@ -285,11 +319,16 @@ export function useCollections() {
     try {
       await journalService.deleteEntry(entryId);
       
-      // Remove from local state
+      // Update local state
       setCollections(prev =>
         prev.map(col =>
-          col.id === collectionId
-            ? { ...col, entries: col.entries.filter(e => e.id !== entryId) }
+          col.id.toString() === collectionId
+            ? {
+                ...col,
+                entries: col.entries.filter(e => e.id !== entryId),
+                entry_count: Math.max(0, (col.entry_count || 1) - 1),
+                entryCount: Math.max(0, (col.entryCount || 1) - 1),
+              }
             : col
         )
       );
@@ -303,38 +342,34 @@ export function useCollections() {
     }
   };
 
-  // Get specific entry by ID
+  // Get entry by ID
   const getEntry = async (entryId: string): Promise<Entry | null> => {
     try {
       return await journalService.getEntry(entryId);
     } catch (err) {
       const error = err as JournalApiError;
       console.error("Failed to get entry:", error);
+      // Don't set general error state for individual entry fetches
       return null;
     }
   };
 
-  // Refresh collections from backend
-  const refreshCollections = useCallback(() => {
-    loadCollections();
-  }, [loadCollections]);
-
   // Clear error
-  const clearError = useCallback(() => {
+  const clearError = () => {
     setError(null);
-  }, []);
+  };
 
   return {
     collections,
     isLoading,
     error,
-    verifyPassword,
     addCollection,
     updateCollection,
     deleteCollection,
     saveEntry,
     deleteEntry,
     getEntry,
+    verifyPassword,
     refreshCollections,
     clearError,
   };

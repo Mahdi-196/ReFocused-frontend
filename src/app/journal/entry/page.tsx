@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Save, AlertCircle, Loader2 } from "lucide-react";
 import { useTime } from '@/contexts/TimeContext';
 import PageTransition from '@/components/PageTransition';
+import { initializeAuth } from '@/api/client';
 
 // Import types and hooks
 import type { Entry } from "../types";
@@ -34,15 +35,21 @@ function EntryContent() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { getCurrentDateTime } = useTime();
 
-  // Authentication check
+  // Authentication check and initialization
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
+      console.log('🔐 ENTRY: Checking authentication...', { hasToken: !!token, tokenPreview: token?.substring(0, 20) + '...' });
+      
       if (!token || token === 'dummy-auth-token') {
-        console.log('🔐 No valid authentication token found, redirecting to landing page');
+        console.log('🔐 ENTRY: No valid authentication token found, redirecting to landing page');
         window.location.href = '/';
         return;
       }
+      
+      // Initialize authentication in axios client
+      console.log('🔐 ENTRY: Initializing authentication in axios client...');
+      initializeAuth();
     }
   }, []);
 
@@ -58,7 +65,7 @@ function EntryContent() {
 
     if (collectionsLoading) return; // Wait for collections to load
 
-    if (collectionId && collections.some(c => c.id === collectionId)) {
+    if (collectionId && collections.some(c => c.id.toString() === collectionId)) {
       setSelectedCollectionId(collectionId);
       
       // If editing an existing entry, load its data
@@ -68,7 +75,7 @@ function EntryContent() {
     } else if (collections.length > 0) {
       const defaultCol = collections.find((c) => c.name === "My Notes") || collections[0];
       if (defaultCol) {
-        setSelectedCollectionId(defaultCol.id);
+        setSelectedCollectionId(defaultCol.id.toString());
       }
     }
   }, [collections, searchParams, collectionsLoading]);
@@ -84,7 +91,7 @@ function EntryContent() {
         setHasUnsavedChanges(false);
       } else {
         // Entry not found, try to find it in collections
-        const collection = collections.find(c => c.id === selectedCollectionId);
+        const collection = collections.find(c => c.id.toString() === selectedCollectionId);
         const localEntry = collection?.entries.find(e => e.id === id);
         if (localEntry) {
           setTitle(localEntry.title || "");
@@ -113,6 +120,20 @@ function EntryContent() {
       return;
     }
 
+    // Validate that the selected collection exists
+    const selectedCollection = collections.find(c => c.id.toString() === selectedCollectionId);
+    if (!selectedCollection) {
+      setSaveError(`Selected collection (ID: ${selectedCollectionId}) not found. Please refresh and try again.`);
+      return;
+    }
+
+    console.log('💾 Saving entry to collection:', {
+      collectionId: selectedCollectionId,
+      collectionName: selectedCollection.name,
+      collectionIdInt: parseInt(selectedCollectionId),
+      isUpdate: !!entryId
+    });
+
     try {
       setIsSaving(true);
       setSaveError(null);
@@ -121,21 +142,28 @@ function EntryContent() {
         id: entryId || crypto.randomUUID(),
         title: title.trim() || "Untitled Entry",
         content,
+        collection_id: parseInt(selectedCollectionId),
+        created_at: entryId ? undefined : getCurrentDateTime(),
+        updated_at: getCurrentDateTime(),
+        // Frontend-friendly aliases
         createdAt: entryId ? undefined : getCurrentDateTime(),
         lastSavedAt: getCurrentDateTime(),
       };
 
+      console.log('💾 Entry data to save:', entry);
+
       const success = await saveEntry(selectedCollectionId, entry);
       
       if (success) {
+        console.log('✅ Entry saved successfully, redirecting to journal');
         setHasUnsavedChanges(false);
         router.push("/journal");
       } else {
-        setSaveError("Failed to save entry. Please try again.");
+        setSaveError("Failed to save entry. Please check the console for details and try again.");
       }
     } catch (error) {
-      console.error("Failed to save entry:", error);
-      setSaveError("Failed to save entry. Please try again.");
+      console.error("💥 Failed to save entry:", error);
+      setSaveError(`Failed to save entry: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSaving(false);
     }

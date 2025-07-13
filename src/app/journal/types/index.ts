@@ -2,6 +2,11 @@ export type Entry = {
   id: string;
   title: string;
   content: string;
+  collection_id: number; // Backend uses integer collection_id
+  is_encrypted?: boolean; // Backend uses snake_case
+  created_at?: string; // Backend uses snake_case
+  updated_at?: string; // Backend uses snake_case
+  // Keep frontend-friendly aliases for backward compatibility
   createdAt?: string;
   lastSavedAt?: string;
   updatedAt?: string;
@@ -9,10 +14,16 @@ export type Entry = {
 };
 
 export type Collection = {
-  id: string;
+  id: number; // Backend uses integer IDs
   name: string;
-  isPrivate?: boolean;
+  is_private?: boolean; // Backend uses snake_case
+  user_id?: number; // Backend field
+  created_at?: string; // Backend uses snake_case
+  updated_at?: string; // Backend uses snake_case
+  entry_count?: number; // Backend field
   entries: Entry[];
+  // Keep frontend-friendly aliases for backward compatibility
+  isPrivate?: boolean;
   createdAt?: string;
   updatedAt?: string;
   entryCount?: number;
@@ -22,6 +33,9 @@ export type GratitudeEntry = {
   id: number;
   text: string;
   date: string;
+  user_id?: number; // Backend field
+  created_at?: string; // Backend uses snake_case
+  // Keep frontend-friendly aliases for backward compatibility
   createdAt?: string;
 };
 
@@ -51,7 +65,7 @@ export type CollectionFormData = {
   currentPassword: string;
 };
 
-// API Request/Response Types
+// API Request Types (Backend format)
 export type CreateCollectionRequest = {
   name: string;
   is_private?: boolean;
@@ -63,38 +77,106 @@ export type UpdateCollectionRequest = {
   is_private?: boolean;
   password?: string;
   current_password?: string;
+  new_password?: string;
 };
 
 export type CreateEntryRequest = {
   title: string;
   content: string;
-  collection_id: number; // ✅ Fixed: integer for backend  
-  is_encrypted?: boolean; // ✅ Fixed: snake_case for backend
+  collection_id: number;
+  is_encrypted?: boolean;
 };
 
 export type UpdateEntryRequest = {
   title?: string;
   content?: string;
-  is_encrypted?: boolean; // ✅ Fixed: snake_case for backend
+  is_encrypted?: boolean;
 };
 
+export type CreateGratitudeRequest = {
+  text: string;
+  date?: string;
+};
+
+export type UpdateGratitudeRequest = {
+  text: string;
+};
+
+// API Response Types (Backend format)
 export type CollectionResponse = {
-  id: string;
+  id: number;
   name: string;
-  isPrivate: boolean;
-  entryCount: number;
-  createdAt: string;
-  updatedAt: string;
+  is_private: boolean;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+  entry_count: number;
 };
 
 export type EntryResponse = {
   id: string;
   title: string;
   content: string;
-  collectionId: string;
-  isEncrypted: boolean;
-  createdAt: string;
-  updatedAt: string;
+  collection_id: number;
+  is_encrypted: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GratitudeResponse = {
+  id: number;
+  text: string;
+  date: string;
+  user_id: number;
+  created_at: string;
+};
+
+// Paginated Response Types (Backend format)
+export type PaginatedCollectionsResponse = {
+  collections: CollectionResponse[];
+  total: number;
+  page: number;
+  size: number;
+  has_next: boolean;
+  has_prev: boolean;
+};
+
+export type PaginatedEntriesResponse = {
+  entries: EntryResponse[];
+  total: number;
+  page: number;
+  size: number;
+  has_next: boolean;
+  has_prev: boolean;
+};
+
+export type PaginatedGratitudeResponse = {
+  gratitude_entries: GratitudeResponse[];
+  total: number;
+  page: number;
+  size: number;
+  has_next: boolean;
+  has_prev: boolean;
+};
+
+// Password Verification Response
+export type PasswordVerificationResponse = {
+  valid: boolean;
+  access_token?: string;
+  expires_in?: number;
+  collection_id?: number;
+};
+
+// Statistics Response
+export type JournalStatsResponse = {
+  total_collections: number;
+  total_entries: number;
+  total_gratitude: number;
+  private_collections: number;
+  entries_this_week: number;
+  entries_this_month: number;
+  gratitude_this_week: number;
+  gratitude_streak: number;
 };
 
 export type JournalApiError = {

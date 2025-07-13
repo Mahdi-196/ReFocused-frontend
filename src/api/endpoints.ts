@@ -61,6 +61,8 @@ export const JOURNAL = {
   ENTRY_DETAIL: (id: string) => `/journal/entries/${id}`,
   GRATITUDE: '/journal/gratitude',
   GRATITUDE_DETAIL: (id: string) => `/journal/gratitude/${id}`,
+  STATS: '/journal/stats',
+  HEALTH: '/journal/health',
 }; 
 
 // Mood endpoints
@@ -75,11 +77,4 @@ export const STATISTICS = {
   FOCUS: '/statistics/focus',
   SESSIONS: '/statistics/sessions',
   TASKS: '/statistics/tasks',
-}; 
-
-// Calendar endpoints
-export const CALENDAR = {
-  BASE: '/calendar',
-  ENTRIES: '/calendar/entries',
-  ENTRY_DETAIL: (date: string) => `/calendar/entries/${date}`,
 }; 
