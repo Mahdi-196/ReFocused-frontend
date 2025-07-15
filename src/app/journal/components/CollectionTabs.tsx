@@ -46,14 +46,23 @@ export const CollectionTabs: React.FC<CollectionTabsProps> = ({
     >
       <div className="flex items-center space-x-2 border border-gray-600 rounded-lg p-2 bg-gray-700/50 overflow-x-auto mb-4 lg:mb-0 lg:mr-4 flex-1">
         {collections.map(collection => (
-          <button
+          <div
             key={collection.id}
-            className={`relative flex items-center justify-between px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm ${
+            className={`relative flex items-center justify-between px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm cursor-pointer ${
               selectedCollectionId === collection.id.toString()
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
             onClick={() => onCollectionSelect(collection.id.toString())}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onCollectionSelect(collection.id.toString());
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`Select ${collection.name} collection`}
           >
             <div className="flex items-center gap-2 pointer-events-none">
               {collection.isPrivate ? <Lock size={18} /> : <FileText size={18} />}
@@ -71,7 +80,7 @@ export const CollectionTabs: React.FC<CollectionTabsProps> = ({
                 </button>
               </div>
             )}
-          </button>
+          </div>
         ))}
         {collections.length === 0 && (
           <span className="px-5 py-2.5 text-base text-gray-400 italic">No collections yet.</span>

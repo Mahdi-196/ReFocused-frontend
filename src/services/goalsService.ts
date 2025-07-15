@@ -457,56 +457,39 @@ export class GoalsService {
   }
 
   /**
-   * Create a new goal with the backend duration system
+   * Create a new goal
    */
   async createGoal(request: CreateGoalRequest): Promise<Goal> {
     try {
-      // Sanitize and validate input
-      const sanitizedName = sanitizeGoalName(request.name);
-      const validationError = validateGoalInput(
-        sanitizedName, 
-        request.goal_type, 
-        request.duration, 
-        request.target_value
-      );
+      // Debug logging to help identify the issue
+      console.log('🔍 GOALS_SERVICE.createGoal - request:', request);
+      console.log('🔍 GOALS_SERVICE.createGoal - request.name type:', typeof request.name, 'value:', request.name);
       
+      // Validate input
+      const validationError = validateGoalInput(request.name, request.goal_type, request.duration, request.target_value);
       if (validationError) {
         throw new Error(validationError);
       }
 
-      // Prepare payload for new backend API
-      const payload: CreateGoalRequest = {
+      // Sanitize name
+      const sanitizedName = sanitizeGoalName(request.name);
+
+      const goalData = {
         name: sanitizedName,
         goal_type: request.goal_type,
-        duration: request.duration // Using 'duration' field as per backend API
+        duration: request.duration,
+        target_value: request.target_value
       };
 
-      // Only include target_value for counter goals
-      if (request.goal_type === 'counter' && request.target_value) {
-        payload.target_value = Math.floor(request.target_value); // Ensure integer
-      }
-
-      // Add created_at timestamp for backend compatibility (workaround for backend issue)
-      // Use time service for accurate timestamp
-      const timestamp = getCurrentDateTime();
-      
-      const backendPayload = {
-        ...payload,
-        created_at: timestamp
-      };
-
-      logger.info('Creating new goal', { 
-        goalType: request.goal_type, 
-        duration: request.duration 
-      }, 'GOALS_SERVICE');
+      logger.info('Creating new goal', goalData, 'GOALS_SERVICE');
       
       console.log('🔍 CREATE GOAL REQUEST:', { 
         method: 'POST', 
         url: GOALS.CREATE, 
-        payload: backendPayload 
+        payload: goalData 
       });
       
-      const response = await client.post<Goal>(GOALS.CREATE, backendPayload);
+      const response = await client.post<Goal>(GOALS.CREATE, goalData);
       
       console.log('📡 CREATE GOAL RESPONSE:', { 
         url: GOALS.CREATE, 
@@ -514,34 +497,31 @@ export class GoalsService {
         data: response.data 
       });
       
-      if (!response.data || !response.data.id) {
+      if (!response.data) {
         throw new Error('Invalid response from server');
       }
       
-      // Add legacy fields for backward compatibility
-      const goal = response.data;
-      if (!goal.date_created && goal.created_at) {
-        goal.date_created = goal.created_at;
-      }
-      if (!goal.goal_duration && goal.duration) {
-        goal.goal_duration = goal.duration;
+      const newGoal = response.data;
+      
+      // Dispatch event to notify calendar and other components
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('goalCreated', {
+          detail: {
+            goalId: newGoal.id,
+            goal: newGoal,
+            goalType: newGoal.goal_type,
+            duration: newGoal.duration
+          }
+        });
+        window.dispatchEvent(event);
+        console.log('📢 Dispatched goalCreated event:', event.detail);
       }
       
-      logger.info('Goal created successfully', { 
-        goalId: goal.id,
-        duration: goal.duration,
-        expiresAt: goal.expires_at
-      }, 'GOALS_SERVICE');
-      
-      return goal;
+      logger.info('Successfully created goal', { goalId: newGoal.id }, 'GOALS_SERVICE');
+      return newGoal;
     } catch (error) {
       logger.error('Failed to create goal', error, 'GOALS_SERVICE');
-      
-      if (error instanceof Error && error.message.includes('validation')) {
-        throw error; // Re-throw validation errors as-is
-      }
-      
-      throw new Error('Unable to create goal. Please check your input and try again.');
+      throw new Error('Unable to create goal. Please try again.');
     }
   }
 
@@ -551,6 +531,63 @@ export class GoalsService {
   async updateGoalProgress(payload: GoalProgressUpdatePayload): Promise<Goal> {
     try {
       const { goalId, goalType, action, value } = payload;
+      
+      // Get current goal to save previous progress value
+      let previousProgress = 0;
+      try {
+        const currentGoal = await this.getGoalById(goalId);
+        previousProgress = currentGoal.current_value || 0;
+        console.log('📊 Previous progress value from backend:', previousProgress, 'for goal', goalId);
+        
+        // Store this value as the "previous" value for the next update
+        if (typeof window !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('goal_previous_values');
+            const previousValues = stored ? JSON.parse(stored) : {};
+            previousValues[goalId] = previousProgress;
+            localStorage.setItem('goal_previous_values', JSON.stringify(previousValues));
+            console.log('📊 Stored current value as previous for next update:', previousProgress, 'for goal', goalId);
+          } catch (error) {
+            console.warn('Could not store previous value:', error);
+          }
+        }
+        
+        // If we got 0 from backend, try to get from localStorage as fallback for display
+        if (previousProgress === 0 && typeof window !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('goal_previous_values');
+            if (stored) {
+              const previousValues = JSON.parse(stored);
+              const storedValue = previousValues[goalId];
+              if (storedValue !== undefined && storedValue > 0) {
+                previousProgress = storedValue;
+                console.log('📊 Using stored previous value for display:', previousProgress, 'for goal', goalId);
+              }
+            }
+          } catch (error) {
+            console.warn('Could not get stored previous value:', error);
+          }
+        }
+      } catch (error) {
+        console.warn('Could not get previous progress value from backend:', error);
+        
+        // Fallback to localStorage
+        if (typeof window !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('goal_previous_values');
+            if (stored) {
+              const previousValues = JSON.parse(stored);
+              const storedValue = previousValues[goalId];
+              if (storedValue !== undefined) {
+                previousProgress = storedValue;
+                console.log('📊 Using stored previous value as fallback:', previousProgress, 'for goal', goalId);
+              }
+            }
+          } catch (error) {
+            console.warn('Could not get stored previous value as fallback:', error);
+          }
+        }
+      }
       
       // Prepare request based on action type
       let updateRequest: UpdateGoalProgressRequest;
@@ -590,7 +627,7 @@ export class GoalsService {
           throw new Error('Invalid action type');
       }
 
-      logger.info('Updating goal progress', { goalId, action }, 'GOALS_SERVICE');
+      logger.info('Updating goal progress', { goalId, action, previousProgress }, 'GOALS_SERVICE');
       
       console.log('🔍 UPDATE PROGRESS REQUEST:', { 
         method: 'PATCH', 
@@ -599,7 +636,8 @@ export class GoalsService {
         goalId,
         goalType,
         action,
-        value
+        value,
+        previousProgress
       });
       
       const response = await client.patch<Goal>(GOALS.PROGRESS(goalId), updateRequest);
@@ -626,6 +664,20 @@ export class GoalsService {
       
       const progressType = isCompleted ? 'complete' : action;
       
+      // Calculate progress change for better notes
+      const progressChange = Math.abs(progressValue - previousProgress);
+      const isIncrease = progressValue > previousProgress;
+      const direction = isIncrease ? 'gained' : 'lost';
+      
+      console.log('📊 PROGRESS CALCULATION:', {
+        goalId,
+        previousProgress,
+        progressValue,
+        progressChange,
+        isIncrease,
+        direction
+      });
+      
       saveDailyProgress({
         goalId,
         date: today,
@@ -634,6 +686,14 @@ export class GoalsService {
         timestamp: getCurrentDateTime(),
         notes: isCompleted 
           ? `Goal completed!`
+          : progressChange > 0
+          ? goalType === 'percentage' 
+            ? `You ${direction} ${Math.round(progressChange)}% progress`
+            : goalType === 'counter'
+            ? `You ${direction} ${Math.round(progressChange)}% progress (${progressValue}/${response.data.target_value})`
+            : goalType === 'checklist'
+            ? (progressValue === 1 ? 'Completed' : 'Pending')
+            : `You ${direction} ${Math.round(progressChange)}% progress`
           : goalType === 'percentage' 
           ? `Progress updated to ${Math.round(progressValue)}%`
           : goalType === 'counter'
@@ -646,9 +706,30 @@ export class GoalsService {
       // Clear old progress data
       clearOldProgress();
       
+      // Dispatch event to notify calendar and other components
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('goalProgressUpdated', {
+          detail: {
+            goalId,
+            goal: response.data,
+            action,
+            previousValue: previousProgress,
+            newValue: progressValue,
+            isCompleted,
+            progressType,
+            progressChange,
+            isIncrease
+          }
+        });
+        window.dispatchEvent(event);
+        console.log('📢 Dispatched goalProgressUpdated event:', event.detail);
+      }
+      
       logger.info('Goal progress updated successfully', { 
         goalId, 
+        previousValue: previousProgress,
         newValue: progressValue,
+        change: progressChange,
         isCompleted,
         progressType 
       }, 'GOALS_SERVICE');
@@ -700,6 +781,7 @@ export class GoalsService {
       });
     }
     
+    // Event already dispatched by updateGoalProgress
     return result;
   }
 
@@ -723,6 +805,7 @@ export class GoalsService {
       });
     }
     
+    // Event already dispatched by updateGoalProgress
     return result;
   }
 
@@ -747,6 +830,7 @@ export class GoalsService {
       });
     }
     
+    // Event already dispatched by updateGoalProgress
     return result;
   }
 
@@ -771,6 +855,7 @@ export class GoalsService {
       });
     }
     
+    // Event already dispatched by updateGoalProgress
     return result;
   }
 }

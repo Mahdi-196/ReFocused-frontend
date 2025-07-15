@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Pomodoro from "@/components/pomodoro";
 import QuickNotes from "@/components/QuickNotes";
 import AuthGuard from '@/components/AuthGuard';
@@ -11,9 +11,8 @@ import { StudyPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 import StudySetsPanel from './components/StudySetsPanel';
 import FlashcardDisplay from './components/FlashcardDisplay';
 import StatisticsSection from './components/StatisticsSection';
-import TestingSection from './components/TestingSection';
+import StatisticsDevTools from './components/StatisticsDevTools';
 import StudyModals from './components/StudyModals';
-import BackendDebugger from './components/BackendDebugger';
 
 // Import the custom hooks
 import { useStudyData } from './hooks/useStudyData';
@@ -24,9 +23,6 @@ export default function StudyPage() {
   // Use custom hooks for data management
   const studyData = useStudyData();
   const statistics = useStatistics();
-  
-  // Local state for testing section
-  const [showTesting, setShowTesting] = useState(false);
 
   return (
     <AuthGuard>
@@ -80,20 +76,11 @@ export default function StudyPage() {
                 stats={statistics.stats}
                 statsLoading={statistics.statsLoading}
                 onTimeFilterChange={statistics.setTimeFilter}
-                forceRefresh={statistics.forceRefresh}
-                isAuthenticated={statistics.isAuthenticated}
+                onRefresh={statistics.forceRefresh}
               />
 
-              {/* Testing Section - Development Only */}
-              {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
-                <TestingSection
-                  showTesting={showTesting}
-                  setShowTesting={setShowTesting}
-                  timeFilter={statistics.timeFilter}
-                  setStats={statistics.setStats}
-                  setStatsLoading={statistics.setStatsLoading}
-                />
-              )}
+              {/* Statistics Dev Tools - Development Only */}
+              <StatisticsDevTools onRefresh={statistics.forceRefresh} />
 
               {/* Modals */}
               <StudyModals
@@ -113,9 +100,6 @@ export default function StudyPage() {
             </div>
           </div>
         </SkeletonDemo>
-
-        {/* Backend Debugger - Development Only */}
-        {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <BackendDebugger />}
       </PageTransition>
     </AuthGuard>
   );

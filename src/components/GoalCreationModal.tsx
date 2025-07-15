@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, CheckSquare, Target, BarChart3 } from 'lucide-react';
 import { GoalType, CreateGoalRequest, validateGoalInput, sanitizeGoalName, getDurationDisplayName } from '@/types/goal';
 
 interface GoalCreationModalProps {
@@ -29,8 +29,11 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
     e.preventDefault();
     setError(null);
     
+    // Ensure goalName is a string
+    const goalNameStr = typeof goalName === 'string' ? goalName : '';
+    
     // Client-side validation
-    const sanitizedName = sanitizeGoalName(goalName);
+    const sanitizedName = sanitizeGoalName(goalNameStr);
     const validationError = validateGoalInput(sanitizedName, goalType, duration, targetValue);
     
     if (validationError) {
@@ -146,7 +149,9 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                     type="text"
                     value={goalName}
                     onChange={(e) => {
-                      setGoalName(e.target.value);
+                      // Ensure we always set a string value
+                      const value = typeof e.target.value === 'string' ? e.target.value : '';
+                      setGoalName(value);
                       setError(null);
                     }}
                     placeholder="Enter your goal name..."
@@ -163,31 +168,31 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                     Goal Type
                   </label>
                   <div className="space-y-2">
-                    {/* Percentage Goal */}
+                    {/* Checklist Goal */}
                     <div
                       className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                        goalType === 'percentage'
+                        goalType === 'checklist'
                           ? 'border-blue-500/50 bg-blue-500/10 shadow-md shadow-blue-500/20'
                           : 'border-gray-700/50 bg-gray-800/30 hover:border-gray-600/50 hover:bg-gray-800/50'
                       }`}
-                      onClick={() => !isSubmitting && handleGoalTypeChange('percentage')}
+                      onClick={() => !isSubmitting && handleGoalTypeChange('checklist')}
                     >
                       <div className="flex items-center">
                         <input
                           type="radio"
-                          value="percentage"
-                          checked={goalType === 'percentage'}
-                          onChange={() => handleGoalTypeChange('percentage')}
+                          value="checklist"
+                          checked={goalType === 'checklist'}
+                          onChange={() => handleGoalTypeChange('checklist')}
                           className="mr-3 accent-blue-500"
                           disabled={isSubmitting}
                         />
-                        <div>
-                          <div className="text-white text-sm font-medium flex items-center gap-2">
-                            <span>📊</span>
-                            Percentage
+                                                  <div>
+                            <div className="text-white text-sm font-medium flex items-center gap-2">
+                              <CheckSquare className="w-4 h-4 text-green-400" />
+                              Checklist
+                            </div>
+                            <div className="text-xs text-gray-400">Simple task - either done or not done</div>
                           </div>
-                          <div className="text-xs text-gray-400">Track progress from 0% to 100%</div>
-                        </div>
                       </div>
                     </div>
 
@@ -209,41 +214,41 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                           className="mr-3 accent-blue-500"
                           disabled={isSubmitting}
                         />
-                        <div>
-                          <div className="text-white text-sm font-medium flex items-center gap-2">
-                            <span>🔢</span>
-                            Counter
+                                                  <div>
+                            <div className="text-white text-sm font-medium flex items-center gap-2">
+                              <Target className="w-4 h-4 text-blue-400" />
+                              Counter
+                            </div>
+                            <div className="text-xs text-gray-400">Set a target number and count up to it</div>
                           </div>
-                          <div className="text-xs text-gray-400">Set a target number and count up to it</div>
-                        </div>
                       </div>
                     </div>
 
-                    {/* Checklist Goal */}
+                    {/* Percentage Goal */}
                     <div
                       className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                        goalType === 'checklist'
+                        goalType === 'percentage'
                           ? 'border-blue-500/50 bg-blue-500/10 shadow-md shadow-blue-500/20'
                           : 'border-gray-700/50 bg-gray-800/30 hover:border-gray-600/50 hover:bg-gray-800/50'
                       }`}
-                      onClick={() => !isSubmitting && handleGoalTypeChange('checklist')}
+                      onClick={() => !isSubmitting && handleGoalTypeChange('percentage')}
                     >
                       <div className="flex items-center">
                         <input
                           type="radio"
-                          value="checklist"
-                          checked={goalType === 'checklist'}
-                          onChange={() => handleGoalTypeChange('checklist')}
+                          value="percentage"
+                          checked={goalType === 'percentage'}
+                          onChange={() => handleGoalTypeChange('percentage')}
                           className="mr-3 accent-blue-500"
                           disabled={isSubmitting}
                         />
-                        <div>
-                          <div className="text-white text-sm font-medium flex items-center gap-2">
-                            <span>✅</span>
-                            Checklist
+                                                  <div>
+                            <div className="text-white text-sm font-medium flex items-center gap-2">
+                              <BarChart3 className="w-4 h-4 text-purple-400" />
+                              Percentage
+                            </div>
+                            <div className="text-xs text-gray-400">Track progress from 0% to 100%</div>
                           </div>
-                          <div className="text-xs text-gray-400">Simple task - either done or not done</div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -292,7 +297,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                   </button>
                   <button
                     type="submit"
-                    disabled={!goalName.trim() || isSubmitting}
+                    disabled={!goalName || typeof goalName !== 'string' || !goalName.trim() || isSubmitting}
                     className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 font-medium shadow-lg shadow-blue-500/20"
                   >
                     {isSubmitting ? (

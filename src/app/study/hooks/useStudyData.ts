@@ -66,11 +66,39 @@ export function useStudyData() {
         const fetchedSets = await getStudySets();
         console.log('📚 [STUDY PAGE] Study sets loaded:', fetchedSets.length, 'sets');
         
-        setStudySets(fetchedSets);
+        // Only update if we don't have any study sets yet (initial load)
+        setStudySets(prevSets => {
+          // If we already have sets (from optimistic updates), merge with server data
+          if (prevSets.length > 0) {
+            const mergedSets = [...prevSets];
+            
+            // Update any real sets from server, keep optimistic ones
+            fetchedSets.forEach(serverSet => {
+              const existingIndex = mergedSets.findIndex(set => set.id === serverSet.id);
+              if (existingIndex !== -1) {
+                mergedSets[existingIndex] = serverSet;
+              } else {
+                // Add new sets from server that aren't optimistic
+                if (!mergedSets.some(set => set.name === serverSet.name)) {
+                  mergedSets.push(serverSet);
+                }
+              }
+            });
+            
+            return mergedSets;
+          }
+          
+          // Initial load - use server data
+          return fetchedSets;
+        });
         
-        if (fetchedSets.length > 0 && !selectedSetId) {
-          setSelectedSetId(fetchedSets[0].id);
-        }
+        // Set initial selected set only on first load
+        setSelectedSetId(prevId => {
+          if (!prevId && fetchedSets.length > 0) {
+            return fetchedSets[0].id;
+          }
+          return prevId;
+        });
       } catch (error) {
         console.error('Failed to load study sets:', error);
         setError('Failed to load study sets from server.');
@@ -80,9 +108,31 @@ export function useStudyData() {
     };
 
     loadStudySets();
-  }, [isClient, selectedSetId]);
+  }, [isClient]);
 
   const selectedSet = studySets.find(set => set.id === selectedSetId);
+
+  // Function to refresh study sets from server
+  const refreshStudySets = async () => {
+    try {
+      console.log('🔄 [STUDY PAGE] Refreshing study sets from server');
+      const fetchedSets = await getStudySets();
+      setStudySets(fetchedSets);
+      
+      // Ensure selected set is still valid
+      if (selectedSetId && !fetchedSets.find(set => set.id === selectedSetId)) {
+        if (fetchedSets.length > 0) {
+          setSelectedSetId(fetchedSets[0].id);
+        } else {
+          setSelectedSetId(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh study sets:', error);
+      setError('Failed to refresh study sets from server.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
 
   // Function to handle adding a new set
   const handleAddSet = async () => {
@@ -97,48 +147,60 @@ export function useStudyData() {
         last_updated: new Date().toISOString()
       };
       
-      const updatedSets = [...studySets, optimisticSet];
-      setStudySets(updatedSets);
-      setSelectedSetId(optimisticSet.id);
+      // Clear form and close modal immediately for better UX
+      const setName = newSetName.trim();
       setNewSetName('');
       setModalOpen(null);
       
+      // Optimistic update
+      setStudySets(prevSets => [...prevSets, optimisticSet]);
+      setSelectedSetId(optimisticSet.id);
+      
       const payload = {
-        title: optimisticSet.name,
+        title: setName,
         cards: []
       };
       
       console.log('Creating new study set:', payload);
-      createStudySet(payload)
-        .then(createdSet => {
-          console.log('✅ Study set created:', createdSet);
-          
-          setStudySets(prevSets => 
-            prevSets.map(set => 
-              set.id === optimisticSet.id ? createdSet : set
-            )
-          );
-          
-          if (selectedSetId === optimisticSet.id) {
-            setSelectedSetId(createdSet.id);
+      
+      try {
+        const createdSet = await createStudySet(payload);
+        console.log('✅ Study set created:', createdSet);
+        
+        // Replace optimistic set with real set
+        setStudySets(prevSets => 
+          prevSets.map(set => 
+            set.id === optimisticSet.id ? createdSet : set
+          )
+        );
+        
+        // Update selected ID if it was the optimistic one
+        setSelectedSetId(prevId => 
+          prevId === optimisticSet.id ? createdSet.id : prevId
+        );
+        
+      } catch (serverError) {
+        console.error('Failed to create study set on server:', serverError);
+        setError('Failed to save to server. Please try again.');
+        
+        // Revert optimistic update
+        setStudySets(prevSets => prevSets.filter(set => set.id !== optimisticSet.id));
+        
+        // Reset selection if needed
+        setSelectedSetId(prevId => {
+          if (prevId === optimisticSet.id) {
+            const remainingSets = studySets.filter(set => set.id !== optimisticSet.id);
+            return remainingSets.length > 0 ? remainingSets[0].id : null;
           }
-        })
-        .catch(error => {
-          console.error('Failed to create study set on server:', error);
-          setError('Failed to save to server. Please try again.');
-          
-          setStudySets(prevSets => prevSets.filter(set => set.id !== optimisticSet.id));
-          
-          setTimeout(() => {
-            setError(null);
-          }, 3000);
+          return prevId;
         });
+        
+        setTimeout(() => setError(null), 3000);
+      }
     } catch (error) {
       console.error('Failed to create study set:', error);
       setError('Failed to create study set. Please try again.');
-      setTimeout(() => {
-        setError(null);
-      }, 3000);
+      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -242,46 +304,45 @@ export function useStudyData() {
       
       console.log('Adding card to study set:', cardPayload);
       
-      client.post(STUDY.CARDS(selectedSetId), cardPayload)
-        .then(response => {
-          console.log('Card added response:', response.data);
-          
-          if (response.data && response.data.id) {
-            const backendId = response.data.id.toString();
-            
-            setStudySets(prevSets => 
-              prevSets.map(set => 
-                set.id === selectedSetId
-                  ? {
-                      ...set,
-                      cards: set.cards.map(card => 
-                        card.id === optimisticCard.id 
-                          ? { ...card, id: backendId } 
-                          : card
-                      )
-                    }
-                  : set
-              )
-            );
-          }
-        })
-        .catch(error => {
-          console.error('Failed to save card to backend:', error);
-          setError('Failed to save card to server.');
+      try {
+        const response = await client.post(STUDY.CARDS(selectedSetId), cardPayload);
+        console.log('Card added response:', response.data);
+        
+        if (response.data && response.data.id) {
+          const backendId = response.data.id.toString();
           
           setStudySets(prevSets => 
             prevSets.map(set => 
               set.id === selectedSetId
                 ? {
                     ...set,
-                    cards: set.cards.filter(card => card.id !== optimisticCard.id)
+                    cards: set.cards.map(card => 
+                      card.id === optimisticCard.id 
+                        ? { ...card, id: backendId } 
+                        : card
+                    )
                   }
                 : set
             )
           );
-          
-          setTimeout(() => setError(null), 3000);
-        });
+        }
+      } catch (error) {
+        console.error('Failed to save card to backend:', error);
+        setError('Failed to save card to server.');
+        
+        setStudySets(prevSets => 
+          prevSets.map(set => 
+            set.id === selectedSetId
+              ? {
+                  ...set,
+                  cards: set.cards.filter(card => card.id !== optimisticCard.id)
+                }
+              : set
+          )
+        );
+        
+        setTimeout(() => setError(null), 3000);
+      }
     } catch (error) {
       console.error('Failed to add card:', error);
       setError('Failed to add card. Please try again.');
@@ -315,29 +376,28 @@ export function useStudyData() {
       if (!cardId.startsWith('temp-')) {
         console.log('Deleting card from backend:', cardId);
         
-        deleteCardFromSet(selectedSetId, cardId)
-          .then(() => {
-            console.log('✅ Card deleted successfully');
-          })
-          .catch(error => {
-            console.error('Failed to delete card from server:', error);
-            setError('Failed to delete card from server.');
-            
-            if (cardToDelete) {
-              setStudySets(prevSets => 
-                prevSets.map(set => 
-                  set.id === selectedSetId
-                    ? {
-                        ...set,
-                        cards: [...set.cards, cardToDelete]
-                      }
-                    : set
-                )
-              );
-            }
-            
-            setTimeout(() => setError(null), 3000);
-          });
+        try {
+          await deleteCardFromSet(selectedSetId, cardId);
+          console.log('✅ Card deleted successfully');
+        } catch (error) {
+          console.error('Failed to delete card from server:', error);
+          setError('Failed to delete card from server.');
+          
+          if (cardToDelete) {
+            setStudySets(prevSets => 
+              prevSets.map(set => 
+                set.id === selectedSetId
+                  ? {
+                      ...set,
+                      cards: [...set.cards, cardToDelete]
+                    }
+                  : set
+              )
+            );
+          }
+          
+          setTimeout(() => setError(null), 3000);
+        }
       }
     } catch (error) {
       console.error('Failed to delete card:', error);
@@ -388,6 +448,7 @@ export function useStudyData() {
     handleDeleteSet,
     handleAddCard,
     handleDeleteCard,
+    refreshStudySets,
     
     // Modal handlers
     openNewSetModal,

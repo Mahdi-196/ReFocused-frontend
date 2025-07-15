@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
-import { Lightbulb, Heart, BarChart3, Plus, Loader2, AlertCircle } from "lucide-react";
+import { Lightbulb, Heart, BarChart3, Plus, Loader2, AlertCircle, Edit } from "lucide-react";
 import type { GratitudeEntry } from "../types";
 import { WRITING_PROMPTS } from "../utils";
 
 interface SidebarProps {
   gratitudes: GratitudeEntry[];
   onAddGratitude: (text: string) => Promise<boolean>;
+  onEditGratitude?: (id: string, text: string) => Promise<boolean>;
   totalEntries: number;
   totalGratitudes: number;
   isLoadingGratitudes?: boolean;
@@ -16,12 +17,13 @@ interface SidebarProps {
 }
 
 /**
- * Sidebar component containing writing prompts, gratitude log, and journal statistics
+ * Sidebar component containing writing prompts, gratitude, and journal statistics
  * Provides inspiration and tracking features for journaling with backend integration
  */
 export const Sidebar: React.FC<SidebarProps> = ({
   gratitudes,
   onAddGratitude,
+  onEditGratitude,
   totalEntries,
   totalGratitudes,
   isLoadingGratitudes = false,
@@ -31,9 +33,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isAddingGratitude, setIsAddingGratitude] = React.useState(false);
   const [newGratitude, setNewGratitude] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
+  const [editingGratitudeId, setEditingGratitudeId] = React.useState<string | null>(null);
+  const [editingText, setEditingText] = React.useState("");
+  const [autoSaveTimeout, setAutoSaveTimeout] = React.useState<NodeJS.Timeout | null>(null);
+  const [isAutoSaving, setIsAutoSaving] = React.useState(false);
 
   const handleAddGratitude = async () => {
     if (!newGratitude.trim() || isSaving) return;
+
+    // Check if already at maximum of 3 gratitudes
+    if (gratitudes.length >= 3) {
+      alert("You can only have up to 3 gratitude entries. Please delete one before adding a new one.");
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -54,6 +66,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setNewGratitude("");
   };
 
+  const handleEditGratitude = (gratitude: GratitudeEntry) => {
+    setEditingGratitudeId(gratitude.id);
+    setEditingText(gratitude.text);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingGratitudeId || isSaving || !onEditGratitude) return;
+
+    setIsSaving(true);
+    setIsAutoSaving(true);
+    try {
+      const success = await onEditGratitude(editingGratitudeId, editingText.trim());
+      // Don't close editing mode, just save the changes
+    } catch (error) {
+      console.error("Failed to edit gratitude:", error);
+    } finally {
+      setIsSaving(false);
+      setIsAutoSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingGratitudeId(null);
+    setEditingText("");
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout);
+      setAutoSaveTimeout(null);
+    }
+  };
+
+  const handleTextChange = (newText: string) => {
+    setEditingText(newText);
+    
+    // Clear existing timeout
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout);
+    }
+    
+    // Set new timeout for 2 seconds
+    const timeout = setTimeout(() => {
+      handleSaveEdit();
+    }, 2000);
+    
+    setAutoSaveTimeout(timeout);
+  };
+
+  const handleBlur = () => {
+    // Close editing mode when user clicks outside
+    if (editingText.trim()) {
+      handleSaveEdit();
+    }
+    handleCancelEdit();
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       handleAddGratitude();
@@ -61,6 +127,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       handleCancel();
     }
   };
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
+    };
+  }, [autoSaveTimeout]);
 
   return (
     <div className="flex-1 xl:max-w-sm space-y-8">
@@ -85,14 +160,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Gratitude Log Section */}
+      {/* Gratitude Section */}
       <div 
         className="p-6 rounded-xl shadow-lg border border-gray-600 transition-all duration-300 hover:shadow-xl"
         style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
       >
         <div className="flex items-center gap-3 mb-6">
           <Heart className="text-red-400" size={24} />
-          <h2 className="text-xl font-semibold text-white">Gratitude Log</h2>
+          <h2 className="text-xl font-semibold text-white">Gratitude</h2>
         </div>
 
         {/* Error Display */}
@@ -113,6 +188,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
+
+
         {/* Loading State */}
         {isLoadingGratitudes ? (
           <div className="flex items-center justify-center py-8">
@@ -125,10 +202,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {gratitudes.length > 0 ? (
                 gratitudes.slice(0, 4).map((gratitude) => (
                   <div key={gratitude.id} className="bg-gray-700/30 p-4 rounded-lg border border-gray-600/50">
-                    <p className="text-base text-gray-300 mb-2 leading-relaxed">{gratitude.text}</p>
-                    <span className="text-sm text-gray-500">
-                      {gratitude.date || new Date(gratitude.createdAt || '').toLocaleDateString()}
-                    </span>
+                    {editingGratitudeId === gratitude.id ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editingText}
+                          onChange={(e) => handleTextChange(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              handleCancelEdit();
+                            }
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Edit your gratitude..."
+                          className="w-full p-3 text-base bg-gray-600 text-white placeholder-gray-400 rounded-lg border border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                          rows={2}
+                          autoFocus
+                        />
+
+                      </div>
+                    ) : (
+                      <div 
+                        onClick={() => handleEditGratitude(gratitude)}
+                        className="cursor-pointer hover:bg-gray-600/30 transition-colors rounded p-2 -m-2"
+                      >
+                        <p className="text-base text-gray-300 leading-relaxed">{gratitude.text}</p>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
@@ -182,12 +281,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <button
             onClick={() => setIsAddingGratitude(true)}
-            disabled={isLoadingGratitudes}
+            disabled={isLoadingGratitudes || gratitudes.length >= 3}
             className="w-full flex items-center justify-center gap-2 py-3 px-5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             aria-label="Add new gratitude entry"
           >
             <Plus size={18} />
-            Add Gratitude
+            {gratitudes.length >= 3 ? "Maximum 3 gratitude entries" : "Add Gratitude"}
           </button>
         )}
       </div>

@@ -342,7 +342,7 @@ export function useJournalState() {
     passwordError,
     totalEntries,
     nameExists,
-
+    
     // Loading and Error States
     collectionsLoading,
     collectionsError,

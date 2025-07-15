@@ -93,6 +93,15 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
             className="p-6 rounded-xl shadow-lg border border-gray-600 flex flex-col justify-between transition-all duration-300 hover:shadow-xl transform hover:scale-105 cursor-pointer min-h-[200px]"
             style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
             onClick={() => onEditEntry(entry.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onEditEntry(entry.id);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`Edit entry: ${entry.title || 'Untitled'}`}
           >
             <div>
               <div className="flex justify-between items-start mb-3">

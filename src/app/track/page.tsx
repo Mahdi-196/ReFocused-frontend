@@ -11,7 +11,6 @@ import TrackingStats from './components/TrackingStats';
 import HabitTracking from './components/HabitTracking';
 import CalendarView from './components/CalendarView';
 import CacheControls from './components/CacheControls';
-import GoalTrackingDebugger from '@/components/GoalTrackingDebugger';
 
 // Import hooks
 import { useTrackingData } from './hooks/useTrackingData';
@@ -26,7 +25,6 @@ export default function TrackPage() {
   const [currentMonth, setCurrentMonth] = useState(() => {
     return new Date(currentDate + 'T00:00:00');
   });
-  const [showDebugger, setShowDebugger] = useState(false);
 
   // Update currentMonth when currentDate changes (timezone-aware)
   useEffect(() => {
@@ -144,20 +142,6 @@ export default function TrackPage() {
                 setCurrentMonth={setCurrentMonth}
                 habits={habits}
               />
-
-              {/* Development Debugger */}
-              {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
-                <div className="mt-8">
-                  <button
-                    onClick={() => setShowDebugger(!showDebugger)}
-                    className="mb-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-md font-medium transition-colors"
-                  >
-                    {showDebugger ? '🔒 Hide' : '🐛 Show'} Goal Tracking Debugger
-                  </button>
-                  
-                  {showDebugger && <GoalTrackingDebugger />}
-                </div>
-              )}
             </div>
           </div>
         </SkeletonDemo>

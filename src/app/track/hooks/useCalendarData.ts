@@ -11,6 +11,8 @@ import { saveMoodRating } from '@/services/moodService';
 import { markHabitCompletion } from '@/services/habitsService';
 import { useCurrentDate, useTime } from '@/contexts/TimeContext';
 
+// Store previous progress values from goal update events
+const goalPreviousValues: Record<number, number> = {};
 
 /**
  * Enhanced Calendar Data Hook
@@ -45,11 +47,9 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       setError(null);
       
       const { startDate, endDate } = getMonthDateRange();
-      console.log('🔍 Loading REAL calendar data for range:', { startDate, endDate });
       
       // Load calendar entries from REAL services (not mock API)
       const entries = await getCalendarEntries(startDate, endDate);
-      console.log('📥 Received REAL calendar entries:', entries.length, 'entries');
       
       // Convert to map for easy lookup
       const entriesMap: { [key: string]: DailyCalendarEntry } = {};
@@ -57,16 +57,9 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
         entriesMap[entry.date] = entry;
       });
       
-      console.log('📋 Real calendar entries map has', Object.keys(entriesMap).length, 'entries');
-      if (Object.keys(entriesMap).length > 0) {
-        console.log('📋 Available dates:', Object.keys(entriesMap).slice(0, 5).join(', ') + 
-                   (Object.keys(entriesMap).length > 5 ? '...' : ''));
-      }
-      
       setCalendarEntries(entriesMap);
       
     } catch (err) {
-      console.error('Failed to load REAL calendar data:', err);
       setError('Failed to load calendar data. Please refresh to try again.');
     } finally {
       setLoading(false);
@@ -137,7 +130,6 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
         };
       });
       
-      console.error('Failed to toggle habit completion:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to update habit completion.';
       return { success: false, error: errorMessage };
     }
@@ -162,7 +154,6 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       
       return { success: true };
     } catch (err) {
-      console.error('Failed to save mood data:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to save mood data.';
       return { success: false, error: errorMessage };
     }
@@ -173,14 +164,6 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
    */
   const getCalendarEntryForDate = (date: string): DailyCalendarEntry | null => {
     const entry = calendarEntries[date] || null;
-    // Debug logging
-    if (entry && process.env.NEXT_PUBLIC_APP_ENV === 'development') {
-      console.log(`🔍 getCalendarEntryForDate(${date}):`, {
-        hasHabits: entry.habitCompletions?.length || 0,
-        hasMood: !!entry.moodEntry,
-        hasGoals: entry.goalActivities?.length || 0
-      });
-    }
     return entry;
   };
 
@@ -239,7 +222,6 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
    * Refresh calendar data - now uses REAL data
    */
   const refreshCalendarData = () => {
-    console.log('🧹 Clearing REAL calendar cache and reloading data...');
     clearCalendarCache();
     loadCalendarData();
   };
@@ -248,10 +230,43 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   useEffect(() => {
     // Force clear cache on initial load to ensure fresh data
     if (Object.keys(calendarEntries).length === 0) {
-      console.log('🔄 Initial load - clearing REAL calendar cache...');
       clearCalendarCache();
     }
     loadCalendarData();
+  }, [loadCalendarData]);
+
+  // Listen for goal updates and refresh calendar
+  useEffect(() => {
+    const handleGoalUpdate = (event: CustomEvent) => {
+      // Store the previous value for smart messages
+      const { goalId, previousValue, newValue } = event.detail;
+      if (previousValue !== undefined) {
+        goalPreviousValues[goalId] = previousValue;
+      }
+      
+      // Clear cache and reload to get fresh goal data
+      clearCalendarCache();
+      loadCalendarData();
+    };
+
+    const handleGoalCreation = (event: CustomEvent) => {
+      // Clear cache and reload to get fresh goal data
+      clearCalendarCache();
+      loadCalendarData();
+    };
+
+    // Listen for goal progress updates and creation
+    if (typeof window !== 'undefined') {
+      window.addEventListener('goalProgressUpdated', handleGoalUpdate as EventListener);
+      window.addEventListener('goalCreated', handleGoalCreation as EventListener);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('goalProgressUpdated', handleGoalUpdate as EventListener);
+        window.removeEventListener('goalCreated', handleGoalCreation as EventListener);
+      }
+    };
   }, [loadCalendarData]);
 
   return {

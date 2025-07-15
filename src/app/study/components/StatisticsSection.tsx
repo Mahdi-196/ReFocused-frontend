@@ -11,8 +11,7 @@ interface StatisticsSectionProps {
   };
   statsLoading: boolean;
   onTimeFilterChange: (filter: 'D' | 'W' | 'M') => void;
-  forceRefresh?: () => Promise<void>;
-  isAuthenticated?: boolean;
+  onRefresh?: () => Promise<void>;
 }
 
 export default function StatisticsSection({
@@ -20,8 +19,7 @@ export default function StatisticsSection({
   stats,
   statsLoading,
   onTimeFilterChange,
-  forceRefresh,
-  isAuthenticated
+  onRefresh
 }: StatisticsSectionProps) {
   // Helper function to format focus time
   const formatFocusTime = (minutes: number): string => {
@@ -41,9 +39,9 @@ export default function StatisticsSection({
   );
 
   const handleRefresh = async () => {
-    if (forceRefresh) {
+    if (onRefresh) {
       try {
-        await forceRefresh();
+        await onRefresh();
       } catch (error) {
         console.error('Failed to refresh statistics:', error);
       }
@@ -82,41 +80,29 @@ export default function StatisticsSection({
           </button>
         </div>
 
-        {/* Refresh button and status */}
-        <div className="flex items-center gap-2">
-          {/* Authentication status */}
-          <div className={`px-2 py-1 rounded text-xs ${
-            isAuthenticated 
-              ? 'bg-green-100 text-green-700' 
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {isAuthenticated ? '🔐 Authenticated' : '❌ Not Authenticated'}
-          </div>
-          
-          {/* Refresh button */}
-          {forceRefresh && (
-            <button
-              onClick={handleRefresh}
-              disabled={statsLoading}
-              className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 text-sm"
+        {/* Refresh button */}
+        {onRefresh && (
+          <button
+            onClick={handleRefresh}
+            disabled={statsLoading}
+            className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 text-sm"
+          >
+            <svg 
+              className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
             >
-              <svg 
-                className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
-                />
-              </svg>
-              Refresh
-            </button>
-          )}
-        </div>
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+              />
+            </svg>
+            Refresh
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

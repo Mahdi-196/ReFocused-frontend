@@ -38,6 +38,12 @@ export function useGratitude() {
   const addGratitude = async (text: string, date?: string): Promise<boolean> => {
     if (!text.trim()) return false;
 
+    // Check if already at maximum of 3 gratitudes
+    if (gratitudes.length >= 3) {
+      setError("You can only have up to 3 gratitude entries. Please delete one before adding a new one.");
+      return false;
+    }
+
     try {
       const newGratitude = await journalService.createGratitude(text.trim(), date);
       setGratitudes(prev => [newGratitude, ...prev]);
@@ -52,8 +58,6 @@ export function useGratitude() {
 
   // Update gratitude
   const updateGratitude = async (id: number | string, text: string): Promise<boolean> => {
-    if (!text.trim()) return false;
-
     try {
       const updatedGratitude = await journalService.updateGratitude(id.toString(), text.trim());
       setGratitudes(prev =>
