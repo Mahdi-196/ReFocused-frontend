@@ -243,18 +243,29 @@ export class TimeService implements ITimeService {
         const rawData = response.data;
         logger.debug('🔄 Transforming raw data:', rawData, 'TIME_SERVICE');
         
+        // Log the actual structure to debug the issue
+        logger.debug('🔍 Raw response structure:', {
+          keys: Object.keys(rawData),
+          current_date: rawData.current_date,
+          current_time: rawData.current_time,
+          timezone: rawData.timezone,
+          mock_date_enabled: rawData.mock_date_enabled,
+          is_mock_time: rawData.is_mock_time
+        }, 'TIME_SERVICE');
+        
+        // Map the actual backend response format to our interface
         const timeData: BackendTimeResponse = {
-          user_current_date: rawData.user_date || rawData.user_current_date || rawData.date,
-          user_current_datetime: rawData.user_datetime || rawData.user_current_datetime || rawData.datetime,
+          user_current_date: rawData.current_date || rawData.date || rawData.user_date,
+          user_current_datetime: rawData.current_time || rawData.datetime || rawData.user_datetime,
           user_timezone: rawData.timezone || rawData.timezone_id || rawData.user_timezone,
-          utc_datetime: rawData.utc_datetime || rawData.server_utc || rawData.utc,
-          is_mock_date: rawData.is_mock_date ?? rawData.is_mock_enabled ?? false,
+          utc_datetime: rawData.current_time || rawData.datetime || rawData.utc_datetime, // Backend provides timezone-aware datetime
+          is_mock_date: rawData.mock_date_enabled || rawData.is_mock_time || rawData.is_mock_date || false,
           day_of_week: rawData.day_of_week || 'Unknown',
           week_number: rawData.week_number || 0,
-          is_weekend: rawData.is_weekend ?? false,
-          day_boundaries: rawData.day_boundaries || {
-            start_utc: rawData.utc_datetime || rawData.server_utc || new Date().toISOString(),
-            end_utc: rawData.utc_datetime || rawData.server_utc || new Date().toISOString()
+          is_weekend: rawData.day_of_week === 'Saturday' || rawData.day_of_week === 'Sunday',
+          day_boundaries: {
+            start_utc: rawData.current_time || rawData.datetime || new Date().toISOString(), // We'll calculate proper boundaries if needed
+            end_utc: rawData.current_time || rawData.datetime || new Date().toISOString()
           }
         };
         
@@ -262,8 +273,7 @@ export class TimeService implements ITimeService {
         const requiredFields = [
           { key: 'user_current_date', value: timeData.user_current_date },
           { key: 'user_current_datetime', value: timeData.user_current_datetime },
-          { key: 'user_timezone', value: timeData.user_timezone },
-          { key: 'utc_datetime', value: timeData.utc_datetime }
+          { key: 'user_timezone', value: timeData.user_timezone }
         ];
         
         const missingFields = requiredFields
@@ -308,9 +318,28 @@ export class TimeService implements ITimeService {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
     } catch (error) {
+      // Check if it's an authentication error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const isAuthError = errorMessage.includes('Authentication required') || 
+                         errorMessage.includes('401') || 
+                         errorMessage.includes('403');
+      
+      if (isAuthError) {
+        logger.debug('🔐 Authentication required for time sync, using local time', {
+          isAuthenticated: this.isAuthenticated
+        }, 'TIME_SERVICE');
+        
+        // Don't count auth errors as sync failures
+        if (!this.state.currentTime) {
+          this.state.currentTime = this.createFallbackTimeData();
+          this.state.isReady = true;
+        }
+        return this.state.currentTime;
+      }
+      
       this.state.syncErrors++;
       logger.warn(`⚠️ Time sync failed (${this.state.syncErrors}/${this.MAX_SYNC_ERRORS}), falling back to local time`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         isAuthenticated: this.isAuthenticated
       }, 'TIME_SERVICE');
 
@@ -697,7 +726,9 @@ export class TimeService implements ITimeService {
   // Fallback method removed - no local fallbacks allowed
 
   private getWeekRange(): { start: string; end: string } {
-    const today = new Date(this.getCurrentDate());
+    // Use backend's current date if available, otherwise fall back to local
+    const currentDate = this.getCurrentDate();
+    const today = new Date(currentDate);
     const startOfWeek = new Date(today);
     
     // Calculate Monday as start of week (Monday = 1, Sunday = 0)
@@ -715,7 +746,9 @@ export class TimeService implements ITimeService {
   }
 
   private getMonthRange(): { start: string; end: string } {
-    const today = new Date(this.getCurrentDate());
+    // Use backend's current date if available, otherwise fall back to local
+    const currentDate = this.getCurrentDate();
+    const today = new Date(currentDate);
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 

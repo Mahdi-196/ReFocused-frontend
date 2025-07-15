@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { History } from 'lucide-react';
+import { IoCheckmarkDoneCircleSharp, IoCheckmarkDoneSharp, IoCheckmark } from "react-icons/io5";
 import { 
   Goal, 
   CreateGoalRequest, 
@@ -18,51 +19,115 @@ import GoalCreationModal from '@/components/GoalCreationModal';
 import GoalsHistoryModal from '@/components/GoalsHistoryModal';
 import { SkeletonWrapper, Skeleton } from '@/components/skeletons/SkeletonConfig';
 
-// Separate component for percentage input to fix React hooks issue
+// Separate component for percentage input with hover-based progress bar
 const PercentageInput: React.FC<{ goal: Goal; onUpdate: (value: number) => void }> = ({ goal, onUpdate }) => {
-  const [inputValue, setInputValue] = useState(goal.current_value.toString());
-  const [isEditing, setIsEditing] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragValue, setDragValue] = useState(goal.current_value);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const progress = calculateGoalProgress(goal);
+  const completed = isGoalCompleted(goal);
 
-  const handleSubmit = () => {
-    const newValue = parseInt(inputValue);
-    if (newValue >= 0 && newValue <= 100) {
-      onUpdate(newValue);
-      setIsEditing(false);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    updateValueFromMouse(e);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      updateValueFromMouse(e);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSubmit();
-    } else if (e.key === 'Escape') {
-      setInputValue(goal.current_value.toString());
-      setIsEditing(false);
+  const handleMouseUp = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      onUpdate(Math.round(dragValue));
     }
   };
 
-  if (isEditing) {
-    return (
-      <input
-        type="number"
-        min="0"
-        max="100"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onBlur={handleSubmit}
-        onKeyPress={handleKeyPress}
-        className="w-16 px-2 py-1 text-xs bg-gray-600 border border-gray-500 rounded text-white"
-        autoFocus
-      />
-    );
-  }
+  // Global mouse event handlers for dragging outside the component
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        updateValueFromMouse(e as any);
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        onUpdate(Math.round(dragValue));
+      }
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isDragging, dragValue, onUpdate]);
+
+  const updateValueFromMouse = (e: React.MouseEvent | MouseEvent) => {
+    if (!progressBarRef.current) return;
+    
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setDragValue(percentage);
+  };
+
+  const currentValue = isDragging ? dragValue : goal.current_value;
+  const currentProgress = isDragging ? dragValue : progress;
 
   return (
-    <button
-      onClick={() => setIsEditing(true)}
-      className="text-gray-300 text-xs hover:text-white transition-colors"
+    <div 
+      className="relative h-6 py-2 select-none"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        if (!isDragging) {
+          setIsHovered(false);
+        }
+      }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
     >
-      {Math.round(goal.current_value)}%
-    </button>
+      {/* Progress bar background */}
+      <div 
+        ref={progressBarRef}
+        className="h-full bg-gray-600/50 rounded-full cursor-pointer relative overflow-visible"
+      >
+        {/* Progress fill */}
+        <div 
+          className={`h-full rounded-full ${
+            isDragging ? 'transition-none' : 'transition-all duration-300 ease-out'
+          } ${
+            completed 
+              ? 'bg-gradient-to-r from-green-500 to-green-600' 
+              : 'bg-gradient-to-r from-blue-500 to-blue-600'
+          }`} 
+          style={{ width: `${Math.min(100, currentProgress)}%` }}
+        />
+        
+        {/* Blue circle at the progress position - only show when hovering */}
+        {isHovered && (
+          <div 
+            className="absolute w-3 h-3 bg-blue-400 rounded-full border-2 shadow-md z-10"
+            style={{ 
+              left: `${Math.min(100, currentProgress)}%`, 
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              borderColor: '#2D3748'
+            }}
+          />
+        )}
+      </div>
+    </div>
   );
 };
 
@@ -73,33 +138,18 @@ const GoalTracker: React.FC = () => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'2_week' | 'long_term'>('2_week');
+  const [editingPercentageGoals, setEditingPercentageGoals] = useState<Set<number>>(new Set());
 
   const loadGoals = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('🎯 [GOAL_TRACKER] Loading goals for timeframe:', selectedTimeframe);
-      
       // Use the new method that includes recently completed goals
       const fetchedGoals = await goalsService.getActiveAndRecentGoals(selectedTimeframe);
       
-      console.log('🎯 [GOAL_TRACKER] Goals loaded:', {
-        count: fetchedGoals.length,
-        timeframe: selectedTimeframe,
-        goals: fetchedGoals.map(g => ({
-          id: g.id,
-          name: g.name,
-          type: g.goal_type,
-          status: g.is_completed ? 'completed' : 'active',
-          completed_at: g.completed_at,
-          expires_at: g.expires_at
-        }))
-      });
-      
       setGoals(fetchedGoals);
     } catch (error) {
-      console.error('❌ [GOAL_TRACKER] Failed to load goals:', error);
       setError(error instanceof Error ? error.message : 'Failed to load goals');
     } finally {
       setIsLoading(false);
@@ -254,72 +304,30 @@ const GoalTracker: React.FC = () => {
     }
   };
 
+  const togglePercentageEditing = (goalId: number) => {
+    setEditingPercentageGoals(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(goalId)) {
+        newSet.delete(goalId);
+      } else {
+        newSet.add(goalId);
+      }
+      return newSet;
+    });
+  };
+
   const renderGoalActions = (goal: Goal): React.ReactNode[] => {
     const actions: React.ReactNode[] = [];
     const expired = isGoalExpired(goal);
     const goalStatus = getGoalStatus(goal);
     
-    // Don't show actions for expired goals or recently completed goals
-    if (expired || goalStatus === 'completed_recent') {
+    // Don't show actions for expired goals
+    if (expired) {
       return actions;
     }
     
-    // Add type-specific action buttons
-    if (goal.goal_type === 'checklist') {
-      const isCompleted = isGoalCompleted(goal);
-      actions.push(
-        <button
-          key="toggle"
-          onClick={() => handleChecklistToggle(goal)}
-          className={`p-1 rounded-full transition-colors ${
-            isCompleted 
-              ? 'text-green-400 hover:text-green-300' 
-              : 'text-gray-400 hover:text-green-400'
-          }`}
-          aria-label={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {isCompleted ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            )}
-          </svg>
-        </button>
-      );
-    } else if (goal.goal_type === 'counter') {
-      // Decrement button (only show if current_value > 0)
-      if (goal.current_value > 0) {
-        actions.push(
-          <button
-            key="decrement"
-            onClick={() => handleCounterDecrement(goal)}
-            className="p-1 text-gray-400 hover:text-red-400 rounded-full transition-colors"
-            aria-label="Subtract progress"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-            </svg>
-          </button>
-        );
-      }
-      
-      // Increment button (only show if not completed)
-      if (!isGoalCompleted(goal)) {
-        actions.push(
-          <button
-            key="increment"
-            onClick={() => handleCounterIncrement(goal)}
-            className="p-1 text-gray-400 hover:text-blue-400 rounded-full transition-colors"
-            aria-label="Add progress"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
-        );
-      }
-    }
+    // Add any additional action buttons here if needed in the future
+    // Counter buttons are now handled directly in the layout
     
     return actions;
   };
@@ -332,45 +340,23 @@ const GoalTracker: React.FC = () => {
     const expirationText = getExpirationText(goal);
     const goalStatus = getGoalStatus(goal);
     const completionText = getCompletionTimeText(goal);
+    const [isAnimating, setIsAnimating] = useState(false);
     
     return (
       <div className={`group relative ${
-        expired ? 'opacity-60' : 
-        goalStatus === 'completed_recent' ? 'ring-1 ring-green-500/30 bg-green-500/5' : ''
+        expired ? 'opacity-60' : ''
       }`}>
         <div className="flex justify-between items-center text-sm mb-1">
           <div className="flex items-center gap-2">
             <span className={`font-medium ${
-              expired ? 'text-gray-400 line-through' : 
-              goalStatus === 'completed_recent' ? 'text-green-200' :
-              'text-gray-200'
+              expired ? 'text-gray-400 line-through' : 'text-gray-200'
             }`}>
               {goal.name}
             </span>
             
-            {/* Goal type badges */}
-            {goal.goal_type === 'checklist' && (
-              <span className="text-xs bg-green-600/20 text-green-400 px-2 py-1 rounded">
-                 Checklist
-              </span>
-            )}
-            {goal.goal_type === 'counter' && (
-              <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded">
-                🔢 {goal.current_value}/{goal.target_value}
-              </span>
-            )}
-            {goal.goal_type === 'percentage' && (
-              <span className="text-xs bg-purple-600/20 text-purple-400 px-2 py-1 rounded">
-                📊 Percentage
-              </span>
-            )}
+            {/* Goal type badges - removed as requested */}
             
-            {/* Completion status indicator */}
-            {goalStatus === 'completed_recent' && completionText && (
-              <span className="text-xs bg-green-600/20 text-green-400 px-2 py-1 rounded">
-                🏆 {completionText}
-              </span>
-            )}
+
             
             {/* Expiration indicator for 2-week goals */}
             {expirationText && goalStatus !== 'completed_recent' && (
@@ -384,46 +370,81 @@ const GoalTracker: React.FC = () => {
             )}
           </div>
           <div className="flex items-center gap-1">
-            {goal.goal_type === 'percentage' && !expired && goalStatus !== 'completed_recent' ? (
+            {/* Counter decrement button - show on the left for counter goals only on hover */}
+            {goal.goal_type === 'counter' && goal.current_value > 0 && (
+              <button
+                onClick={() => handleCounterDecrement(goal)}
+                className="p-1 text-gray-400 hover:text-red-400 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                aria-label="Subtract progress"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+              </button>
+            )}
+            
+            {goal.goal_type === 'checklist' ? (
+              <button
+                onClick={() => handleChecklistToggle(goal)}
+                className="p-1 rounded-full transition-all duration-200 hover:bg-gray-700/50 hover:scale-105 active:scale-95"
+                aria-label={isGoalCompleted(goal) ? 'Mark as incomplete' : 'Mark as complete'}
+              >
+                {isGoalCompleted(goal) ? (
+                  <IoCheckmarkDoneSharp className="w-6 h-6 text-green-500 transition-all duration-300 ease-out transform scale-110 drop-shadow-sm" />
+                ) : (
+                  <IoCheckmark className="w-6 h-6 text-gray-400 transition-all duration-300 ease-out hover:text-gray-300 drop-shadow-sm" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => goal.goal_type === 'percentage' && togglePercentageEditing(goal.id)}
+                className={`text-gray-300 text-xs hover:text-white transition-colors ${
+                  goal.goal_type === 'percentage' ? 'cursor-pointer' : 'cursor-default'
+                }`}
+              >
+                {getGoalProgressText(goal)}
+              </button>
+            )}
+            
+            {/* Counter increment button - show on the right for counter goals */}
+            {goal.goal_type === 'counter' && !isGoalCompleted(goal) && (
+              <button
+                onClick={() => handleCounterIncrement(goal)}
+                className="p-1 text-gray-400 hover:text-blue-400 rounded-full transition-colors"
+                aria-label="Add progress"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {/* Progress bar - show for active goals or when editing percentage goals */}
+        {goal.goal_type !== 'checklist' && (goalStatus !== 'completed_recent' || editingPercentageGoals.has(goal.id)) && (
+          <div className="relative">
+            {goal.goal_type === 'percentage' && !expired && (goalStatus !== 'completed_recent' || editingPercentageGoals.has(goal.id)) ? (
               <PercentageInput 
                 goal={goal} 
                 onUpdate={(value) => handlePercentageUpdate(goal, value)} 
               />
             ) : (
-              <span className="text-gray-300 text-xs">
-                {getGoalProgressText(goal)}
-              </span>
+              <div className="h-2 bg-gray-600/50 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full ${
+                    completed 
+                      ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                      : 'bg-gradient-to-r from-blue-500 to-blue-600'
+                  }`} 
+                  style={{ width: `${Math.min(100, progress)}%` }}
+                ></div>
+              </div>
             )}
-            {renderGoalActions(goal)}
-          </div>
-        </div>
-        
-        {/* Progress bar - hide for completed recent goals or checklists */}
-        {goal.goal_type !== 'checklist' && goalStatus !== 'completed_recent' && (
-          <div className="h-2 bg-gray-600/50 rounded-full overflow-hidden">
-            <div 
-              className={`h-full rounded-full ${
-                completed 
-                  ? 'bg-gradient-to-r from-green-500 to-green-600' 
-                  : 'bg-gradient-to-r from-blue-500 to-blue-600'
-              }`} 
-              style={{ width: `${Math.min(100, progress)}%` }}
-            ></div>
           </div>
         )}
         
-        {/* Completion celebration for recently completed goals */}
-        {goalStatus === 'completed_recent' && (
-          <div className="mt-2 p-2 bg-gradient-to-r from-green-600/10 to-emerald-600/10 border border-green-500/20 rounded-lg">
-            <div className="flex items-center gap-2">
-              <span className="text-green-400">🎉</span>
-              <span className="text-xs text-green-300">Goal completed!</span>
-              <span className="text-xs text-gray-400">
-                This will move to history in {24 - Math.floor((Date.now() - new Date(goal.completed_at!).getTime()) / (1000 * 60 * 60))} hours
-              </span>
-            </div>
-          </div>
-        )}
+
       </div>
     );
   };
@@ -537,10 +558,16 @@ const GoalTracker: React.FC = () => {
 
               {/* Goals List */}
               {!isLoading && !error && goals.length > 0 && (
-                <div className="space-y-4">
-                  {goals.map(goal => (
-                    <GoalItem key={goal.id} goal={goal} />
-                  ))}
+                <div className="max-h-96 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                  {goals
+                    .sort((a, b) => {
+                      // Sort by type: checklist -> counter -> percentage
+                      const typeOrder = { checklist: 0, counter: 1, percentage: 2 };
+                      return typeOrder[a.goal_type] - typeOrder[b.goal_type];
+                    })
+                    .map(goal => (
+                      <GoalItem key={goal.id} goal={goal} />
+                    ))}
                 </div>
               )}
             </>
@@ -561,6 +588,24 @@ const GoalTracker: React.FC = () => {
           onClose={() => setIsHistoryModalOpen(false)}
         />
       </div>
+
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(55, 65, 81, 0.5);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(156, 163, 175, 0.8);
+        }
+      `}</style>
     </div>
   );
 };

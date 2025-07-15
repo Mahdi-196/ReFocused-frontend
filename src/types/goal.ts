@@ -123,7 +123,7 @@ export function isGoalCompleted(goal: Goal): boolean {
 export function getGoalProgressText(goal: Goal): string {
   switch (goal.goal_type) {
     case 'checklist':
-      return isGoalCompleted(goal) ? 'Complete' : 'Pending';
+      return isGoalCompleted(goal) ? 'Complete' : 'checkmark';
     case 'percentage':
       return `${Math.round(goal.current_value)}%`;
     case 'counter':
@@ -200,7 +200,8 @@ export function getExpirationText(goal: Goal): string | null {
 
 // Helper function to validate goal creation input
 export function validateGoalInput(name: string, goalType: GoalType, duration: GoalDuration, targetValue?: number): string | null {
-  if (!name.trim()) {
+  // Ensure name is a string and handle null/undefined cases
+  if (!name || typeof name !== 'string' || !name.trim()) {
     return 'Goal name is required';
   }
 
@@ -219,6 +220,10 @@ export function validateGoalInput(name: string, goalType: GoalType, duration: Go
 
 // Helper function to sanitize user input
 export function sanitizeGoalName(name: string): string {
+  // Ensure name is a string and handle null/undefined cases
+  if (!name || typeof name !== 'string') {
+    return '';
+  }
   return name.trim().replace(/[<>]/g, '');
 }
 

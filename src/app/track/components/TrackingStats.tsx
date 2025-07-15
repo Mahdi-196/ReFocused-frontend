@@ -17,24 +17,13 @@ export default function TrackingStats({ stats }: TrackingStatsProps) {
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm text-gray-300">Best Streak</h3>
-            <div className={`${stats.currentStreak > 0 ? 'text-orange-400' : 'text-gray-400'}`}>
-              {stats.currentStreak > 0 ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8z"/>
-                </svg>
-              ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              )}
+            <div className={`${stats.currentStreak > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+              <FireIcon className="w-5 h-5" />
             </div>
           </div>
           <div className="flex items-center gap-2">
             <p className="text-2xl font-bold text-white">{stats.currentStreak}</p>
             <span className="text-gray-300 text-sm">day{stats.currentStreak !== 1 ? 's' : ''}</span>
-            {stats.currentStreak > 0 && (
-              <FireIcon className="w-5 h-5" />
-            )}
           </div>
         </div>
 

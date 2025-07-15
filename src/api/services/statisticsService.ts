@@ -1,6 +1,7 @@
 import client from "@/api/client";
 import { STATISTICS } from "@/api/endpoints";
 import logger from "@/utils/logger";
+import { timeService } from "@/services/timeService";
 
 /**
  * Statistics API Models - Backend Response Types
@@ -30,13 +31,27 @@ export interface ApiResponse<T> {
 }
 
 export interface BackendStatistics {
-  focus_time: number;
+  focus_time?: number;
+  focusTime?: number; // Keep both for compatibility
   sessions: number;
-  tasks_done: number;
+  tasks_done?: number;
+  tasksDone?: number; // Keep both for compatibility
+}
+
+export interface DailyStatistics {
+  date: string;
+  focusTime: number;
+  sessions: number;
+  tasksDone: number;
+}
+
+export interface DetailedStatisticsResponse {
+  summary: BackendStatistics;
+  daily: DailyStatistics[];
 }
 
 /**
- * Enhanced error logging for debugging API issues
+ * Enhanced error logging for API issues
  */
 function logApiError(endpoint: string, error: unknown, payload?: unknown) {
   const apiError = error as { response?: { status?: number; data?: { message?: string } }; message?: string };
@@ -47,48 +62,6 @@ function logApiError(endpoint: string, error: unknown, payload?: unknown) {
     data: apiError.response?.data,
     message: apiError.response?.data?.message || apiError.message
   }, 'API');
-  
-  if (apiError.response?.status === 422) {
-    const response = apiError.response as { 
-      status: number; 
-      statusText?: string; 
-      data?: { detail?: unknown; errors?: unknown; message?: string };
-      headers?: unknown;
-    };
-    const config = (apiError as { config?: { method?: string; url?: string; data?: unknown } }).config;
-    
-    logger.error('API Validation Error (422)', {
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data,
-      headers: response.headers,
-      config: {
-        method: config?.method,
-        url: config?.url,
-        data: config?.data
-      }
-    }, 'API');
-    
-    // Try to parse and show validation errors with more detail
-    if (response.data?.detail) {
-      logger.error('Validation errors', response.data.detail, 'API');
-      
-      // If it's an array, expand each item
-      if (Array.isArray(response.data.detail)) {
-        response.data.detail.forEach((errorItem: { loc?: unknown; msg?: unknown; type?: unknown; input?: unknown }, index: number) => {
-          logger.error(`Validation Error ${index + 1}`, {
-            location: errorItem.loc,
-            message: errorItem.msg,
-            type: errorItem.type,
-            input: errorItem.input
-          }, 'API');
-        });
-      }
-    }
-    if (response.data?.errors) {
-      logger.error('Field errors', response.data.errors, 'API');
-    }
-  }
 }
 
 /**
@@ -106,11 +79,37 @@ export const statisticsApiService = {
         params: { startDate, endDate }
       });
       // The API returns the aggregated object, or an object with zeros if no data.
-      return response.data || { focus_time: 0, sessions: 0, tasks_done: 0 };
+      return response.data || { focusTime: 0, sessions: 0, tasksDone: 0 };
     } catch (error: unknown) {
       logApiError(STATISTICS.BASE, error, { startDate, endDate });
       // On error, return a zeroed object to prevent crashes
-      return { focus_time: 0, sessions: 0, tasks_done: 0 };
+      return { focusTime: 0, sessions: 0, tasksDone: 0 };
+    }
+  },
+
+  /**
+   * Get statistics using filter parameter (D/W/M)
+   */
+  async getStatisticsByFilter(filter: 'D' | 'W' | 'M'): Promise<BackendStatistics> {
+    try {
+      const currentDate = timeService.getCurrentDate();
+      
+      const params = { 
+        filter,
+        current_date: currentDate  // Send current date to backend
+      };
+      
+      logger.apiCall(STATISTICS.BASE, 'GET', params);
+      const response = await client.get<BackendStatistics>(STATISTICS.BASE, {
+        params
+      });
+      
+      // The API returns the aggregated object, or an object with zeros if no data.
+      return response.data || { focusTime: 0, sessions: 0, tasksDone: 0 };
+    } catch (error: unknown) {
+      logApiError(STATISTICS.BASE, error, { filter });
+      // On error, return a zeroed object to prevent crashes
+      return { focusTime: 0, sessions: 0, tasksDone: 0 };
     }
   },
 
@@ -119,10 +118,16 @@ export const statisticsApiService = {
    */
   async addFocusTime(minutes: number): Promise<StatisticsEntry> {
     try {
-      logger.apiCall(STATISTICS.FOCUS, 'POST', { minutes });
-      const response = await client.post<StatisticsEntry>(STATISTICS.FOCUS, {
-        minutes: minutes  // Backend expects: {"minutes": int}
-      });
+      const currentDate = timeService.getCurrentDate();
+      
+      const payload = {
+        minutes: minutes,  // Backend expects: {"minutes": int}
+        current_date: currentDate  // Send current date to backend
+      };
+      
+      logger.apiCall(STATISTICS.FOCUS, 'POST', payload);
+      const response = await client.post<StatisticsEntry>(STATISTICS.FOCUS, payload);
+      
       logger.info('Focus time added successfully', undefined, 'API');
       return response.data;
     } catch (error: unknown) {
@@ -139,10 +144,16 @@ export const statisticsApiService = {
    */
   async incrementSessions(count: number = 1): Promise<StatisticsEntry> {
     try {
-      logger.apiCall(STATISTICS.SESSIONS, 'POST', { increment: count });
-      const response = await client.post<StatisticsEntry>(STATISTICS.SESSIONS, {
-        increment: count  // Backend expects: {"increment": int}
-      });
+      const currentDate = timeService.getCurrentDate();
+      
+      const payload = { 
+        increment: count,  // Backend expects: {"increment": int}
+        current_date: currentDate  // Send current date to backend
+      };
+      
+      logger.apiCall(STATISTICS.SESSIONS, 'POST', payload);
+      const response = await client.post<StatisticsEntry>(STATISTICS.SESSIONS, payload);
+      
       logger.info('Sessions incremented successfully', undefined, 'API');
       return response.data;
     } catch (error: unknown) {
@@ -159,10 +170,16 @@ export const statisticsApiService = {
    */
   async incrementTasks(count: number = 1): Promise<StatisticsEntry> {
     try {
-      logger.apiCall(STATISTICS.TASKS, 'POST', { increment: count });
-      const response = await client.post<StatisticsEntry>(STATISTICS.TASKS, {
-        increment: count  // Backend expects: {"increment": int}
-      });
+      const currentDate = timeService.getCurrentDate();
+      
+      const payload = {
+        increment: count,  // Backend expects: {"increment": int}
+        current_date: currentDate  // Send current date to backend
+      };
+      
+      logger.apiCall(STATISTICS.TASKS, 'POST', payload);
+      const response = await client.post<StatisticsEntry>(STATISTICS.TASKS, payload);
+      
       logger.info('Tasks incremented successfully', undefined, 'API');
       return response.data;
     } catch (error: unknown) {
@@ -197,15 +214,45 @@ export const statisticsApiService = {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      // Use local date calculation to match frontend logic
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      console.log(`🔍 [HEALTH CHECK] Using local date: ${today}`);
-      await this.getStatistics(today, today);
+      // Use filter-based approach to test API
+      console.log(`🔍 [HEALTH CHECK] Testing with filter: D`);
+      await this.getStatisticsByFilter('D');
       return true;
     } catch (error) {
       logger.warn('Health check failed - API not available', error, 'API');
       return false;
+    }
+  },
+
+  /**
+   * Get detailed statistics with daily breakdown
+   */
+  async getDetailedStatistics(filter: 'D' | 'W' | 'M'): Promise<DetailedStatisticsResponse> {
+    try {
+      logger.apiCall(`${STATISTICS.BASE}/detailed`, 'GET', { filter });
+      const response = await client.get<DetailedStatisticsResponse>(`${STATISTICS.BASE}/detailed`, {
+        params: { filter }
+      });
+      return response.data || { summary: { focusTime: 0, sessions: 0, tasksDone: 0 }, daily: [] };
+    } catch (error: unknown) {
+      logApiError(`${STATISTICS.BASE}/detailed`, error, { filter });
+      return { summary: { focusTime: 0, sessions: 0, tasksDone: 0 }, daily: [] };
+    }
+  },
+
+  /**
+   * Get detailed statistics for custom date range
+   */
+  async getDetailedStatisticsByDateRange(startDate: string, endDate: string): Promise<DetailedStatisticsResponse> {
+    try {
+      logger.apiCall(`${STATISTICS.BASE}/detailed`, 'GET', { startDate, endDate });
+      const response = await client.get<DetailedStatisticsResponse>(`${STATISTICS.BASE}/detailed`, {
+        params: { startDate, endDate }
+      });
+      return response.data || { summary: { focusTime: 0, sessions: 0, tasksDone: 0 }, daily: [] };
+    } catch (error: unknown) {
+      logApiError(`${STATISTICS.BASE}/detailed`, error, { startDate, endDate });
+      return { summary: { focusTime: 0, sessions: 0, tasksDone: 0 }, daily: [] };
     }
   }
 }; 

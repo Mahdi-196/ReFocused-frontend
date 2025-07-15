@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UserHabit, SimpleFilter } from '../types';
-import { CheckIcon } from '@/components/icons';
+import { CheckIcon, FireIcon } from '@/components/icons';
+import { Bookmark, Trash2 } from 'lucide-react';
+import ConfirmationDialog from '@/components/ConfirmationDialog';
 
 interface HabitTrackingProps {
   habits: UserHabit[];
@@ -24,6 +26,15 @@ export default function HabitTracking({
   const [newHabit, setNewHabit] = useState('');
   const [habitError, setHabitError] = useState('');
   const [simpleFilter, setSimpleFilter] = useState<SimpleFilter>('all');
+  const [editDialog, setEditDialog] = useState<{
+    isOpen: boolean;
+    habit: UserHabit | null;
+  }>({ isOpen: false, habit: null });
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    habit: UserHabit | null;
+  }>({ isOpen: false, habit: null });
+  const [pinError, setPinError] = useState('');
 
   const handleAddHabit = async () => {
     if (!newHabit.trim()) return;
@@ -55,6 +66,62 @@ export default function HabitTracking({
       console.error('Failed to toggle habit completion:', result.error);
     }
   };
+
+  const openEditDialog = (habitId: number) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (habit) {
+      setEditDialog({
+        isOpen: true,
+        habit: habit
+      });
+    }
+  };
+
+  const handlePinToggle = async () => {
+    if (!editDialog.habit) return;
+    
+    const habit = editDialog.habit;
+    
+    // Check if we're trying to pin and already have 3 pinned habits
+    if (!habit.isFavorite) {
+      const pinnedCount = habits.filter(h => h.isFavorite).length;
+      if (pinnedCount >= 3) {
+        setPinError('You can only pin up to 3 habits at a time.');
+        setTimeout(() => setPinError(''), 3000);
+        return;
+      }
+    }
+    
+    await onToggleFavorite(habit.id);
+    setEditDialog({ isOpen: false, habit: null });
+  };
+
+  const handleDeleteFromEdit = async () => {
+    if (!editDialog.habit) return;
+    
+    const habit = editDialog.habit;
+    setEditDialog({ isOpen: false, habit: null });
+    
+    // If habit has streak >= 1, show confirmation dialog
+    if (habit.streak >= 1) {
+      setDeleteConfirmation({
+        isOpen: true,
+        habit: habit
+      });
+    } else {
+      // Delete immediately for habits with 0 streak
+      await onDeleteHabit(habit.id);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirmation.habit) {
+      await onDeleteHabit(deleteConfirmation.habit.id);
+    }
+    setDeleteConfirmation({ isOpen: false, habit: null });
+  };
+
+
 
   // Memoized filtering and sorting
   const filteredAndSortedHabits = useMemo(() => {
@@ -178,6 +245,9 @@ export default function HabitTracking({
             {habitError && (
               <p className="text-red-400 text-sm mt-2">{habitError}</p>
             )}
+            {pinError && (
+              <p className="text-yellow-400 text-sm mt-2">{pinError}</p>
+            )}
           </div>
 
           {/* Habits List */}
@@ -221,9 +291,11 @@ export default function HabitTracking({
                       {/* Habit Name */}
                       <div className="flex items-center gap-2">
                         {habit.isFavorite && (
-                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                          </svg>
+                          <Bookmark 
+                            size={16} 
+                            className="text-blue-400" 
+                            fill="currentColor"
+                          />
                         )}
                         <span className={`font-medium ${
                           isCompleted ? 'text-gray-400 line-through' : 'text-white'
@@ -238,19 +310,31 @@ export default function HabitTracking({
                       {/* Streak Display */}
                       <div className="flex items-center gap-2">
                         {habit.streak > 0 && (
-                          <div className="flex items-center gap-1 text-orange-400">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8z"/>
-                            </svg>
-                            <span className="text-sm font-medium">{habit.streak}</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-medium text-gray-300">{habit.streak}</span>
+                            <span className="text-gray-300 text-sm">
+                              day{habit.streak !== 1 ? 's' : ''}
+                            </span>
+                            <FireIcon className="w-4 h-4 text-red-500" />
                           </div>
                         )}
-                        <span className="text-gray-300 text-sm">
-                          {habit.streak === 0 ? '0 days' : `${habit.streak} day${habit.streak !== 1 ? 's' : ''}`}
-                        </span>
                       </div>
 
-
+                      {/* Edit Button */}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(habit.id);
+                          }}
+                          className="p-1 rounded hover:bg-gray-600 text-gray-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                          title="Edit habit"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -260,9 +344,91 @@ export default function HabitTracking({
         </div>
       </section>
 
+      {/* Edit Habit Dialog */}
+      {editDialog.isOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" onClick={() => setEditDialog({ isOpen: false, habit: null })}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" aria-hidden="true" />
+          <div 
+            className="bg-gray-800 rounded-lg shadow-xl w-[400px] p-6 border border-gray-600 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">Edit Habit</h3>
+              <button
+                onClick={() => setEditDialog({ isOpen: false, habit: null })}
+                className="text-gray-400 hover:text-gray-300 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  {editDialog.habit?.isFavorite && (
+                    <Bookmark 
+                      size={20} 
+                      className="text-blue-400" 
+                      fill="currentColor"
+                    />
+                  )}
+                  <h4 className="text-xl font-medium text-white">{editDialog.habit?.name}</h4>
+                </div>
+              </div>
+              
+              {editDialog.habit && editDialog.habit.streak > 0 && (
+                <div className="flex items-center gap-2 text-orange-400 mb-4">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8z"/>
+                  </svg>
+                  <span className="text-sm">{editDialog.habit.streak} day{editDialog.habit.streak !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handlePinToggle}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+              >
+                <Bookmark 
+                  size={14} 
+                  fill={editDialog.habit?.isFavorite ? 'currentColor' : 'none'}
+                />
+                {editDialog.habit?.isFavorite ? 'Unpin' : 'Pin'}
+              </button>
+              
+              <button
+                onClick={handleDeleteFromEdit}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+              
+              <button
+                onClick={() => setEditDialog({ isOpen: false, habit: null })}
+                className="w-full px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 border border-gray-600 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-
-
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, habit: null })}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Habit"
+        message={`Are you sure you want to delete "${deleteConfirmation.habit?.name}"? This habit has a ${deleteConfirmation.habit?.streak} day streak that will be lost.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </>
   );
 } 

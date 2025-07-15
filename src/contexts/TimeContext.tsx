@@ -117,7 +117,6 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
 
     // Listen for day changes
     const handleDayChange = (event: CustomEvent) => {
-      console.log('📅 Day changed in TimeProvider:', event.detail);
       // Force update to reflect new day
       if (mounted) {
         handleTimeUpdate();
@@ -316,7 +315,6 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
   const setMockDateTime = useCallback(async (isoDateTime: string | null): Promise<void> => {
     try {
       setLoading(true);
-      console.log('🔄 TimeContext: Setting mock date...', isoDateTime);
       
       await timeService.setMockDateTime(isoDateTime);
       
@@ -324,37 +322,45 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Force multiple syncs to ensure we get the updated data
-      console.log('🔄 TimeContext: Forcing fresh sync (attempt 1)...');
       await timeService.syncWithBackend();
       
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      console.log('🔄 TimeContext: Forcing fresh sync (attempt 2)...');
       await timeService.syncWithBackend();
       
-      // Update state after mock date change
+      // Get fresh state from service
       const serviceState = timeService.getState();
-      console.log('🔍 TimeContext: New service state:', serviceState.currentTime);
       
-      setTimeData(serviceState.currentTime);
+      // Force timeData update with completely new object reference
+      const newTimeData = { ...serviceState.currentTime! };
+      
+      setTimeData(newTimeData);
       setError(null);
       
-      // Force a complete re-render by updating the timeData reference
-      setTimeData(prevData => ({
-        ...serviceState.currentTime!
-      }));
+      // Trigger immediate state update by forcing a re-render
+      setTimeout(() => {
+        const freshState = timeService.getState();
+        if (freshState.currentTime) {
+          setTimeData({ ...freshState.currentTime });
+        }
+      }, 100);
       
-      console.log('✅ TimeContext: Mock date operation completed');
+      // Dispatch mock date change event for other services to listen to
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mockDateChanged', {
+          detail: { mockDateTime: isoDateTime, newTimeData }
+        }));
+      }
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to set mock date';
-      console.error('❌ TimeContext: Mock date error:', err);
+      console.error('Failed to set mock date:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [timeData]);
 
   const value: TimeContextValue = {
     timeData,

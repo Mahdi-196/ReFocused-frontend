@@ -34,8 +34,6 @@ class CacheInvalidation {
       cacheService.delete(key);
       logger.debug(`Cache invalidated: ${key}`, undefined, 'CACHE');
     });
-    
-    console.log(`🗑️ [CACHE] Invalidated cache for time service date: ${today}`);
   }
 }
 
@@ -52,7 +50,7 @@ class LocalStorageFallback {
         return JSON.parse(data);
       }
     } catch (error) {
-      console.warn('🚨 [FALLBACK] Error reading from localStorage:', error);
+      logger.warn('Error reading from localStorage', error, 'FALLBACK');
     }
     
     return { focusTime: 0, sessions: 0, tasksDone: 0 };
@@ -193,6 +191,12 @@ class DateUtils {
  */
 class StatisticsService {
   private isApiAvailable: boolean | null = null;
+  private timeListeners: { handleDayChange: () => void; handleMockDateChange: () => void } | null = null;
+
+  constructor() {
+    // Setup time listeners for cache invalidation
+    this.setupTimeListeners();
+  }
 
   /**
    * Check API availability (cached for session)
@@ -255,13 +259,13 @@ class StatisticsService {
   }
 
   /**
-   * Convert API snake_case to frontend camelCase
+   * Convert API response to frontend format
    */
   private convertBackendStats(backendStats: BackendStatistics): Statistics {
     return {
-      focusTime: backendStats.focus_time || 0,
+      focusTime: backendStats.focus_time || backendStats.focusTime || 0,
       sessions: backendStats.sessions || 0,
-      tasksDone: backendStats.tasks_done || 0,
+      tasksDone: backendStats.tasks_done || backendStats.tasksDone || 0,
     };
   }
 
@@ -270,8 +274,6 @@ class StatisticsService {
    */
   async getFilteredStats(filter: TimeFilter = 'D'): Promise<Statistics> {
     const cacheKey = this.getCacheKey(filter);
-    
-    logger.debug(`getFilteredStats called, filter: ${filter}, cache key: ${cacheKey}`, undefined, 'SERVICE');
     
     // Check cache first
     const cached = cacheService.get<Statistics>(cacheKey);
@@ -287,13 +289,12 @@ class StatisticsService {
     
     if (apiAvailable) {
       try {
-        const { start, end } = DateUtils.getDateRange(filter);
-        const backendStats = await statisticsApiService.getStatistics(start, end);
+        const backendStats = await statisticsApiService.getStatisticsByFilter(filter);
         const stats = this.convertBackendStats(backendStats);
         
         // Cache the result
         cacheService.set(cacheKey, stats, CacheTTL.SHORT);
-        logger.info('Statistics loaded from API and cached', stats, 'SERVICE');
+        logger.info('Statistics loaded from API and cached', { filter, stats, cacheKey }, 'SERVICE');
         
         return stats;
       } catch (error) {
@@ -304,7 +305,7 @@ class StatisticsService {
 
     // Fallback to localStorage
     const fallbackStats = LocalStorageFallback.get();
-    logger.debug('Using localStorage fallback', fallbackStats, 'SERVICE');
+    logger.debug('Using localStorage fallback', { filter, fallbackStats }, 'SERVICE');
     return fallbackStats;
   }
 
@@ -322,8 +323,6 @@ class StatisticsService {
         
         // Invalidate cache and refresh
         CacheInvalidation.invalidateStatsData('current');
-        
-        // Dispatch update events for all time filters
         this.dispatchAllFiltersUpdate();
         
         logger.info('Focus time added via API', undefined, 'SERVICE');
@@ -339,7 +338,6 @@ class StatisticsService {
     this.dispatchAllFiltersUpdate();
     logger.debug('Focus time added via fallback', fallbackStats, 'SERVICE');
     
-    // For fallback, always return the requested filter stats
     return await this.getFilteredStats(filter);
   }
 
@@ -357,8 +355,6 @@ class StatisticsService {
         
         // Invalidate cache and refresh
         CacheInvalidation.invalidateStatsData('current');
-        
-        // Dispatch update events for all time filters
         this.dispatchAllFiltersUpdate();
         
         logger.info('Sessions incremented via API', undefined, 'SERVICE');
@@ -374,7 +370,6 @@ class StatisticsService {
     this.dispatchAllFiltersUpdate();
     logger.debug('Sessions incremented via fallback', fallbackStats, 'SERVICE');
     
-    // For fallback, always return the requested filter stats
     return await this.getFilteredStats(filter);
   }
 
@@ -392,8 +387,6 @@ class StatisticsService {
         
         // Invalidate cache and refresh
         CacheInvalidation.invalidateStatsData('current');
-        
-        // Dispatch update events for all time filters
         this.dispatchAllFiltersUpdate();
         
         logger.info('Tasks incremented via API', undefined, 'SERVICE');
@@ -409,7 +402,6 @@ class StatisticsService {
     this.dispatchAllFiltersUpdate();
     logger.debug('Tasks incremented via fallback', fallbackStats, 'SERVICE');
     
-    // For fallback, always return the requested filter stats
     return await this.getFilteredStats(filter);
   }
 
@@ -422,6 +414,9 @@ class StatisticsService {
     // Clear cache first
     const cacheKey = this.getCacheKey(filter);
     cacheService.delete(cacheKey);
+    
+    // Clear all cache for current user to be safe
+    CacheInvalidation.invalidateStatsData('current');
     
     // Reset API availability check
     this.isApiAvailable = null;
@@ -534,50 +529,79 @@ class StatisticsService {
   }
 
   /**
-   * Comprehensive debug information for troubleshooting
+   * Clear cache when mock date changes
    */
-  async getDebugInfo(): Promise<Record<string, unknown>> {
-    const userId = 'current';
-    const filter = 'D';
-    const cacheKey = this.getCacheKey(filter);
-    const dateRange = DateUtils.getDateRange(filter);
+  clearCacheForMockDateChange(): void {
+    logger.info('Clearing statistics cache due to mock date change', undefined, 'SERVICE');
+    CacheInvalidation.invalidateStatsData('current');
     
-    try {
-      return {
-        // Date and timezone information
-        dateDebug: DateUtils.debugDates(),
-        
-        // Current configuration
-        userId,
-        filter,
-        cacheKey,
-        dateRange,
-        
-        // API availability
-        apiAvailable: await this.checkApiAvailability(),
-        
-        // Cache status
-        cached: cacheService.get(cacheKey) !== null,
-        
-        // Raw API response (if available)
-        rawApiResponse: this.isApiAvailable ? 
-          await statisticsApiService.getStatistics(dateRange.start, dateRange.end).catch(e => `Error: ${e.message}`) : 
-          'API not available',
-          
-        // Current statistics
-        currentStats: await this.getFilteredStats(filter),
-        
-        // System info
-        timestamp: new Date().toISOString(),
-        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'Server-side'
-      };
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString(),
-        dateDebug: DateUtils.debugDates()
-      };
-    }
+    // Also reset API availability to force fresh API calls
+    this.isApiAvailable = null;
+  }
+
+  /**
+   * Setup listeners for time-related changes
+   */
+  setupTimeListeners(): void {
+    if (typeof window === 'undefined') return;
+    
+    // Listen for day changes
+    const handleDayChange = () => {
+      logger.info('Day changed, clearing statistics cache', undefined, 'SERVICE');
+      CacheInvalidation.invalidateStatsData('current');
+    };
+    
+    // Listen for mock date changes (custom event)
+    const handleMockDateChange = () => {
+      logger.info('Mock date changed, clearing statistics cache', undefined, 'SERVICE');
+      this.clearCacheForMockDateChange();
+    };
+    
+    window.addEventListener('dayChanged', handleDayChange);
+    window.addEventListener('mockDateChanged', handleMockDateChange);
+    
+    // Store listeners for cleanup
+    this.timeListeners = { handleDayChange, handleMockDateChange };
+  }
+
+  /**
+   * Cleanup time listeners
+   */
+  cleanupTimeListeners(): void {
+    if (typeof window === 'undefined' || !this.timeListeners) return;
+    
+    window.removeEventListener('dayChanged', this.timeListeners.handleDayChange);
+    window.removeEventListener('mockDateChanged', this.timeListeners.handleMockDateChange);
+    this.timeListeners = null;
+  }
+
+  /**
+   * Get debug information about current dates and ranges
+   */
+  getDebugInfo(): Record<string, unknown> {
+    const currentDate = DateUtils.getCurrentDate();
+    const isMockDate = timeService.isMockDate();
+    const timezone = timeService.getUserTimezone();
+    
+    const dailyRange = DateUtils.getDateRange('D');
+    const weeklyRange = DateUtils.getDateRange('W');
+    const monthlyRange = DateUtils.getDateRange('M');
+    
+    return {
+      currentDate,
+      isMockDate,
+      timezone,
+      ranges: {
+        daily: dailyRange,
+        weekly: weeklyRange,
+        monthly: monthlyRange
+      },
+      cacheKeys: {
+        daily: this.getCacheKey('D'),
+        weekly: this.getCacheKey('W'),
+        monthly: this.getCacheKey('M')
+      }
+    };
   }
 }
 
@@ -597,6 +621,8 @@ export const checkAndResetAtMidnight = (): Promise<void> => statisticsService.ch
 export const refreshStatistics = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.refreshStatistics(filter);
 export const clearAllStatistics = (): Promise<void> => statisticsService.clearAllData();
 export const resetApiAvailability = (): void => statisticsService.resetApiAvailability();
+export const clearCacheForMockDateChange = (): void => statisticsService.clearCacheForMockDateChange();
+export const getStatisticsDebugInfo = (): Record<string, unknown> => statisticsService.getDebugInfo();
 
 // Export utility classes
 export { LocalStorageFallback, DateUtils, CacheInvalidation }; 

@@ -95,6 +95,7 @@ const Journal: React.FC = () => {
     isLoading: gratitudesLoading,
     error: gratitudesError,
     addGratitude,
+    updateGratitude,
     clearError: clearGratitudeError,
     totalGratitudes,
   } = gratitudeHook;
@@ -253,6 +254,7 @@ const Journal: React.FC = () => {
             <Sidebar
               gratitudes={gratitudes}
               onAddGratitude={addGratitude}
+              onEditGratitude={updateGratitude}
               totalEntries={totalEntries}
               totalGratitudes={totalGratitudes}
               isLoadingGratitudes={gratitudesLoading}

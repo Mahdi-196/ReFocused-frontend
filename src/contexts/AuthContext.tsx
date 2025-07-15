@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { initializeAuth } from '@/api/client';
 import { authService } from '@/api/services/authService';
+import { timeService } from '@/services/timeService';
 import logger from '@/utils/logger';
 
 interface User {
@@ -65,6 +66,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           logger.debug('Using cached user data in AuthContext', undefined, 'AUTH');
           setUser(cachedUser);
           setIsAuthenticated(true);
+          
+          // Initialize time service after authentication is confirmed
+          await timeService.initialize(true);
+          timeService.setAuthenticationStatus(true);
+          
           setIsLoading(false);
           return;
         }
@@ -74,20 +80,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userData = await authService.getCurrentUser();
           setUser(userData);
           setIsAuthenticated(true);
+          
+          // Initialize time service after authentication is confirmed
+          await timeService.initialize(true);
+          timeService.setAuthenticationStatus(true);
         } catch {
           // Token is invalid, clear it
           authService.logout();
           setUser(null);
           setIsAuthenticated(false);
+          timeService.setAuthenticationStatus(false);
         }
       } else {
         setUser(null);
         setIsAuthenticated(false);
+        // Initialize time service without authentication
+        await timeService.initialize(false);
+        timeService.setAuthenticationStatus(false);
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
       setUser(null);
       setIsAuthenticated(false);
+      // Initialize time service without authentication on error
+      await timeService.initialize(false);
+      timeService.setAuthenticationStatus(false);
     } finally {
       setIsLoading(false);
     }
@@ -99,6 +116,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Save auth data and cache user
       authService.saveAuthData(response);
+      
+      // Update time service authentication status
+      timeService.setAuthenticationStatus(true);
       
       // Update state
       setUser(response.user);
@@ -121,6 +141,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Save auth data and cache user
       authService.saveAuthData(response);
+
+      // Update time service authentication status
+      timeService.setAuthenticationStatus(true);
 
       // Update state
       setUser(response.user);
@@ -146,6 +169,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     // Use auth service to clear everything
     authService.logout();
+    
+    // Update time service authentication status
+    timeService.setAuthenticationStatus(false);
     
     // Reset state
     setUser(null);
