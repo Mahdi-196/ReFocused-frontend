@@ -8,7 +8,7 @@ import { WRITING_PROMPTS } from "../utils";
 interface SidebarProps {
   gratitudes: GratitudeEntry[];
   onAddGratitude: (text: string) => Promise<boolean>;
-  onEditGratitude?: (id: string, text: string) => Promise<boolean>;
+  onEditGratitude?: (id: number, text: string) => Promise<boolean>;
   totalEntries: number;
   totalGratitudes: number;
   isLoadingGratitudes?: boolean;
@@ -33,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isAddingGratitude, setIsAddingGratitude] = React.useState(false);
   const [newGratitude, setNewGratitude] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
-  const [editingGratitudeId, setEditingGratitudeId] = React.useState<string | null>(null);
+  const [editingGratitudeId, setEditingGratitudeId] = React.useState<number | null>(null);
   const [editingText, setEditingText] = React.useState("");
   const [autoSaveTimeout, setAutoSaveTimeout] = React.useState<NodeJS.Timeout | null>(null);
   const [isAutoSaving, setIsAutoSaving] = React.useState(false);
@@ -216,16 +216,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           placeholder="Edit your gratitude..."
                           className="w-full p-3 text-base bg-gray-600 text-white placeholder-gray-400 rounded-lg border border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                           rows={2}
+                          maxLength={125}
                           autoFocus
                         />
-
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-400">Maximum 125 characters</span>
+                          <span className={`${editingText.length > 110 ? 'text-yellow-400' : 'text-gray-400'}`}>
+                            {editingText.length}/125
+                          </span>
+                        </div>
                       </div>
                     ) : (
                       <div 
                         onClick={() => handleEditGratitude(gratitude)}
                         className="cursor-pointer hover:bg-gray-600/30 transition-colors rounded p-2 -m-2"
                       >
-                        <p className="text-base text-gray-300 leading-relaxed">{gratitude.text}</p>
+                        <p className="text-base text-gray-300 leading-relaxed break-words overflow-hidden">{gratitude.text}</p>
                       </div>
                     )}
                   </div>
@@ -250,9 +256,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               placeholder="What are you grateful for?"
               className="w-full p-4 text-base bg-gray-700 text-white placeholder-gray-400 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               rows={3}
+              maxLength={125}
               autoFocus
               disabled={isSaving}
             />
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-400">Maximum 125 characters</span>
+              <span className={`${newGratitude.length > 110 ? 'text-yellow-400' : 'text-gray-400'}`}>
+                {newGratitude.length}/125
+              </span>
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={handleAddGratitude}
