@@ -7,6 +7,7 @@ import DropdownMenu from "@/components/DropdownMenu";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { JournalPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 import { initializeAuth } from '@/api/client';
+import { timeService } from '@/services/timeService';
 
 // Import new components
 import { CollectionModal } from "./components/CollectionModal";
@@ -19,6 +20,7 @@ import { Sidebar } from "./components/Sidebar";
 // Import hooks
 import { useJournalState } from "./hooks/useJournalState";
 import { useGratitude } from "./hooks/useGratitude";
+import { useConsistentDate } from "@/hooks/useConsistentDate";
 
 /**
  * Main Journal page component
@@ -29,22 +31,21 @@ const Journal: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
-      console.log('🔐 JOURNAL: Checking authentication...', { hasToken: !!token, tokenPreview: token?.substring(0, 20) + '...' });
       
       if (!token || token === 'dummy-auth-token') {
-        console.log('🔐 JOURNAL: No valid authentication token found, redirecting to landing page');
         window.location.href = '/';
         return;
       }
       
       // Initialize authentication in axios client
-      console.log('🔐 JOURNAL: Initializing authentication in axios client...');
       initializeAuth();
     }
   }, []);
 
   const journalState = useJournalState();
   const gratitudeHook = useGratitude();
+  const { isReady: dateReady } = useConsistentDate();
+  
 
   const {
     // State
@@ -100,8 +101,8 @@ const Journal: React.FC = () => {
     totalGratitudes,
   } = gratitudeHook;
 
-  // Show loading state while initial data loads
-  if (collectionsLoading && collections.length === 0) {
+  // Show loading state while initial data loads or time service is not ready
+  if ((collectionsLoading && collections.length === 0) || !dateReady) {
     return (
       <PageTransition>
         <JournalPageSkeleton />
@@ -117,7 +118,7 @@ const Journal: React.FC = () => {
           <div className="text-center max-w-md mx-auto px-6">
             <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-6" />
             <h2 className="text-2xl font-bold text-white mb-4">Unable to Load Journal</h2>
-            <p className="text-gray-300 mb-6 leading-relaxed">{collectionsError}</p>
+            <p className="text-gray-300 mb-6 leading-relaxed break-words overflow-hidden">{collectionsError}</p>
             <div className="space-y-3">
               <button
                 onClick={() => window.location.reload()}

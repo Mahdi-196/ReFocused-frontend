@@ -146,8 +146,12 @@ export const TimeProvider: React.FC<TimeProviderProps> = ({ children }) => {
   // Core functions - with graceful fallbacks for unauthenticated state
   const getCurrentDate = useCallback((): string => {
     try {
-      return timeService.getCurrentDate();
+      const date = timeService.getCurrentDate();
+      
+      
+      return date;
     } catch (error) {
+      
       // If service isn't ready but we have cached data, use it
       if (timeData?.user_current_date) {
         return timeData.user_current_date;

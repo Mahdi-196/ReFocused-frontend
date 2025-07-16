@@ -415,6 +415,7 @@ class JournalService {
       isEncrypted: data.is_encrypted,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
+      lastSavedAt: data.updated_at, // Use updated_at for lastSavedAt
     };
   }
 

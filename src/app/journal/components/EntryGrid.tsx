@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar, Edit } from "lucide-react";
 import type { Entry, Collection, DropdownState } from "../types";
 import { getTimeAgo, formatEntryDate, getPreviewText } from "../utils";
+import { timeService } from '@/services/timeService';
+import { useConsistentDate } from '@/hooks/useConsistentDate';
 
 interface EntryGridProps {
   entries: Entry[];
@@ -32,6 +34,21 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
   collections,
   isLoading = false
 }) => {
+  const [, setTimeUpdate] = useState(0);
+  const { currentDate: consistentDate, isReady: dateReady } = useConsistentDate();
+
+  // Force re-render when time service updates
+  useEffect(() => {
+    const handleTimeUpdate = () => {
+      setTimeUpdate(prev => prev + 1);
+    };
+    
+    timeService.addEventListener(handleTimeUpdate);
+    
+    return () => {
+      timeService.removeEventListener(handleTimeUpdate);
+    };
+  }, []);
   const handleEntryEditClick = (e: React.MouseEvent, entry: Entry) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -85,7 +102,12 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
     <>
       {entries.map((entry) => {
         const previewText = getPreviewText(entry.content, 100);
-        const entryDate = formatEntryDate(entry.createdAt);
+        
+        
+        // Use created_at first, then fall back to createdAt
+        const createdDate = entry.created_at || entry.createdAt;
+        const entryDate = formatEntryDate(createdDate);
+        const currentDateTime = dateReady && consistentDate ? timeService.getCurrentDateTime() : undefined;
 
         return (
           <div 
@@ -127,7 +149,7 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
               <Calendar size={16} className="mr-2 flex-shrink-0" />
               <span>{entryDate}</span>
               <span className="ml-auto text-sm text-gray-500">
-                {getTimeAgo(entry.lastSavedAt)}
+                {getTimeAgo(entry.lastSavedAt, currentDateTime)}
               </span>
             </div>
           </div>
