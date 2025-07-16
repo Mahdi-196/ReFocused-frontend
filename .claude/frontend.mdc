@@ -1,0 +1,107 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# MDC Rules Configuration
+
+
+
+
+# Save this as `.mdc/config.yml` in your project root
+
+
+
+
+rules:
+
+
+
+
+* name: "use-yarn"
+ description: "Reject npm commands; always use yarn."
+ apply:
+ when: command
+ pattern: "^npm "
+ message: "⚠️ Please use `yarn` instead of `npm`."
+
+
+
+
+* name: "typescript-only"
+ description: "Reject non-TypeScript files; allow only .ts/.tsx."
+ apply:
+ when: file
+ pattern: ".tsx?\$"
+ message: "❌ File '{path}' must be .ts or .tsx."
+
+
+
+
+* name: "frontend-only"
+ description: "Allow only frontend code; detect backend requests."
+ apply:
+ when: generate
+ target: "backend"
+ action: "skip"
+ message: |
+ 🚧 Backend-related request detected. Skipping backend code.
+ At the end of your response, summarize required backend tasks and how to implement them.
+
+
+
+
+* name: "lean-code"
+ description: "Favor minimal imports and concise implementations."
+ apply:
+ when: code
+ pattern: "console.log\\(|TODO"
+ message: "🔍 Remove debug statements and TODO comments."
+
+
+
+
+* name: "tailwind-only"
+ description: "Enforce using Tailwind CSS for all styling; reject custom stylesheets."
+ apply:
+ when: file
+ pattern: "\\.(css|scss|sass)\$"
+ message: "🎨 Please use Tailwind CSS; avoid custom stylesheets."
+
+
+
+
+* name: "assistant-guidelines"
+ description: "Enforce structured, concise responses with headings, lists, code blocks, and diffs."
+ apply:
+ when: response
+ checks:
+ heading:
+ type: regex
+ pattern: "^#{1,6}\s+"
+ bullets:
+ type: regex
+ pattern: "^\s\*\[-\*]\s+.+"
+ codeBlock:
+ type: regex
+ pattern: "`[\\s\\S]*?`"
+ diffBlock:
+ type: composite
+ patterns:
+ \- "\\+ .+"
+ \- "`diff"
+     noTodo:
+       type: regex
+       pattern: "\\bTODO\\b"
+   messages:
+     heading: "❌ Please include a Markdown heading."
+     bullets: "❌ Use bullet points for lists."
+     codeBlock: "❌ Wrap code examples in fenced code blocks."
+     diffBlock: "❌ Show diffs with `diff."
+ noTodo: "❌ Remove any TODO comments."
+
+
+
+
+
+

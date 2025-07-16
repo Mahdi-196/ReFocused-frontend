@@ -1,5 +1,6 @@
 import client from '../client';
 import { AUTH } from '../endpoints';
+import { tokenValidator } from '@/utils/tokenValidator';
 import { cacheService, CacheKeys, CacheTTL, CacheInvalidation } from '../../services/cacheService';
 
 interface LoginCredentials {
@@ -91,12 +92,10 @@ export const authService = {
       // First check cache
       const cachedUser = cacheService.get(CacheKeys.USER_PROFILE());
       if (cachedUser) {
-        console.log('👤 User profile loaded from cache');
         return cachedUser;
       }
 
       // If not in cache, fetch from API
-      console.log('👤 Fetching user profile from API');
       const response = await client.get(AUTH.ME);
       
       // Cache the response
@@ -104,12 +103,9 @@ export const authService = {
       
       return response.data;
     } catch (error: unknown) {
-      console.error(`API Error [${AUTH.ME}]:`, error);
-      
       // Try to return cached data even if API fails
       const cachedUser = cacheService.get(CacheKeys.USER_PROFILE());
       if (cachedUser) {
-        console.log('👤 Using cached user profile after API failure');
         return cachedUser;
       }
       
@@ -167,7 +163,22 @@ export const authService = {
    */
   isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem('REF_TOKEN');
+    
+    const token = localStorage.getItem('REF_TOKEN');
+    if (!token || token === 'dummy-auth-token' || token.trim() === '') {
+      return false;
+    }
+
+    // Validate the token
+    const validation = tokenValidator.validateJWT(token);
+
+    // If token is expired, clear it automatically
+    if (validation.isExpired) {
+      this.logout();
+      return false;
+    }
+    
+    return validation.isValid;
   },
 
   /**

@@ -59,7 +59,7 @@ export function clearGoalCaches(): void {
   
   cacheKeys.forEach(key => {
     if (key.startsWith(CALENDAR_CACHE_PREFIX)) {
-      cacheService.remove(key);
+      cacheService.delete(key);
     }
   });
   

@@ -9,6 +9,7 @@ type Props = {
   onChange: (html: string) => void;
   onCountUpdate?: (counts: { words: number; chars: number }) => void;
   disabled?: boolean;
+  maxCharacters?: number;
 };
 
 const TextEditor: React.FC<Props> = ({
@@ -16,6 +17,7 @@ const TextEditor: React.FC<Props> = ({
   onChange,
   onCountUpdate,
   disabled = false,
+  maxCharacters,
 }) => {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
@@ -46,13 +48,20 @@ const TextEditor: React.FC<Props> = ({
     quillRef.current.on("text-change", () => {
       if (quillRef.current) {
         const html = quillRef.current.root.innerHTML;
-        const text = quillRef.current.getText().trim();
-        onChange(html);
-
+        const text = quillRef.current.getText();
+        
         // ✅ Word and character count logic
-        const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
-        const charCount = text.replace(/\s/g, "").length;
+        const wordCount = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+        const charCount = text.length;
 
+        // Check character limit
+        if (maxCharacters && charCount > maxCharacters) {
+          // Prevent the change by reverting to the previous content
+          quillRef.current.history.undo();
+          return;
+        }
+
+        onChange(html);
         onCountUpdate?.({ words: wordCount, chars: charCount });
       }
     });
@@ -81,6 +90,57 @@ const TextEditor: React.FC<Props> = ({
 
   return (
     <div className="h-full w-full overflow-y-auto max-h-[calc(100vh-16rem)] min-h-[300px]">
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .ql-toolbar .ql-stroke {
+            stroke: white !important;
+          }
+          .ql-toolbar .ql-fill {
+            fill: white !important;
+          }
+          .ql-toolbar .ql-picker-label {
+            color: white !important;
+          }
+          .ql-toolbar button:hover .ql-stroke {
+            stroke: #60a5fa !important;
+          }
+          .ql-toolbar button:hover .ql-fill {
+            fill: #60a5fa !important;
+          }
+          .ql-toolbar button.ql-active .ql-stroke {
+            stroke: #3b82f6 !important;
+          }
+          .ql-toolbar button.ql-active .ql-fill {
+            fill: #3b82f6 !important;
+          }
+          .ql-editor {
+            color: white !important;
+          }
+          .ql-editor p {
+            color: white !important;
+          }
+          .ql-picker-options {
+            background: white !important;
+            border: 1px solid #d1d5db !important;
+          }
+          .ql-picker-item {
+            color: #374151 !important;
+          }
+          .ql-picker-item:hover {
+            background: #f3f4f6 !important;
+            color: #111827 !important;
+          }
+          .ql-picker-options * {
+            color: #374151 !important;
+          }
+          .ql-picker-options *::before {
+            color: #374151 !important;
+          }
+          .ql-picker-options *::after {
+            color: #374151 !important;
+          }
+        `
+      }} />
       <div ref={editorRef} className="h-full" />
     </div>
   );

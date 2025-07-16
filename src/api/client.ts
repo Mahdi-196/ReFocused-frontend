@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { tokenValidator } from '@/utils/tokenValidator';
 import logger from '@/utils/logger';
 
 // Create axios instance with proper TypeScript typing
@@ -17,9 +18,30 @@ client.interceptors.request.use(
     // Add auth token if available
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
-      if (token && token !== 'dummy-auth-token') {
-        config.headers = config.headers || {};
-        config.headers.Authorization = `Bearer ${token}`;
+      
+      if (token && token !== 'dummy-auth-token' && token.trim() !== '') {
+        // Validate token before using it
+        const validation = tokenValidator.validateJWT(token);
+        
+        if (validation.isValid) {
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${token}`;
+          
+          // Check if token needs refresh (reuse validation result)
+          if (validation.payload?.exp && validation.payload.exp - Math.floor(Date.now() / 1000) < 300) {
+            // Dispatch event to notify auth context about upcoming expiry
+            window.dispatchEvent(new CustomEvent('tokenNearExpiry', { 
+              detail: { timeLeft: validation.payload.exp - Math.floor(Date.now() / 1000) }
+            }));
+          }
+        } else {
+          if (validation.isExpired) {
+            localStorage.removeItem('REF_TOKEN');
+            localStorage.removeItem('REF_USER');
+            localStorage.removeItem('REF_COLLECTION_TOKENS');
+            window.dispatchEvent(new CustomEvent('userLoggedOut'));
+          }
+        }
       }
     }
     
@@ -130,9 +152,13 @@ client.interceptors.response.use(
     if (error.response?.status === 401 || error.response?.status === 403) {
       // Handle unauthorized/forbidden access - token expired, invalid, or insufficient permissions
       const errorType = error.response.status === 401 ? 'unauthorized' : 'forbidden';
+      const currentToken = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
+      
+      
       logger.warn(`Authentication failed - ${errorType} access`, { 
         url: error.config?.url,
-        status: error.response.status 
+        status: error.response.status,
+        hasToken: !!currentToken
       }, 'API');
       
       if (typeof window !== 'undefined') {
@@ -148,8 +174,6 @@ client.interceptors.response.use(
         // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('userLoggedOut'));
         
-        // Show a brief message before redirect (optional)
-        console.log('🔐 Session expired or access denied. Redirecting to landing page...');
         
         // Redirect to landing page for re-authentication
         window.location.href = '/';

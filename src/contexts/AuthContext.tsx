@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { initializeAuth } from '@/api/client';
 import { authService } from '@/api/services/authService';
 import { timeService } from '@/services/timeService';
+import { authDebugUtils } from '@/utils/authDebug';
+import { tokenRefreshManager } from '@/utils/tokenRefresh';
 import logger from '@/utils/logger';
 
 interface User {
@@ -54,9 +56,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
+
       const token = localStorage.getItem('REF_TOKEN');
+      const isTokenValid = token && token !== 'dummy-auth-token' && token.trim() !== '';
       
-      if (token && token !== 'dummy-auth-token') {
+      if (isTokenValid) {
         // Initialize auth headers
         initializeAuth();
         
@@ -71,6 +75,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await timeService.initialize(true);
           timeService.setAuthenticationStatus(true);
           
+          // Start token monitoring
+          tokenRefreshManager.startMonitoring();
+          
           setIsLoading(false);
           return;
         }
@@ -84,7 +91,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Initialize time service after authentication is confirmed
           await timeService.initialize(true);
           timeService.setAuthenticationStatus(true);
-        } catch {
+          
+          // Start token monitoring
+          tokenRefreshManager.startMonitoring();
+        } catch (error) {
+          console.error('Failed to fetch user data, clearing auth:', error);
           // Token is invalid, clear it
           authService.logout();
           setUser(null);
@@ -99,7 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         timeService.setAuthenticationStatus(false);
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('Error in checkAuthStatus:', error);
       setUser(null);
       setIsAuthenticated(false);
       // Initialize time service without authentication on error
@@ -119,6 +130,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Update time service authentication status
       timeService.setAuthenticationStatus(true);
+      
+      // Start token monitoring
+      tokenRefreshManager.startMonitoring();
       
       // Update state
       setUser(response.user);
@@ -144,6 +158,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Update time service authentication status
       timeService.setAuthenticationStatus(true);
+      
+      // Start token monitoring
+      tokenRefreshManager.startMonitoring();
 
       // Update state
       setUser(response.user);
@@ -167,6 +184,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Stop token monitoring
+    tokenRefreshManager.stopMonitoring();
+    
     // Use auth service to clear everything
     authService.logout();
     
