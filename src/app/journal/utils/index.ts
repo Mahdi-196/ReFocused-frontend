@@ -1,9 +1,24 @@
+import { timeService } from '@/services/timeService';
+
 /**
  * Formats a timestamp into a human-readable "time ago" string
+ * @param isoString - The timestamp to format
+ * @param currentDateTime - The current datetime for comparison (optional)
  */
-export function getTimeAgo(isoString: string | undefined): string {
+export function getTimeAgo(isoString: string | undefined, currentDateTime?: string): string {
   if (!isoString) return "Never";
-  const now = new Date();
+  
+  // Use provided current datetime or get from time service
+  let now: Date;
+  if (currentDateTime) {
+    now = new Date(currentDateTime);
+  } else {
+    const serviceState = timeService.getState();
+    now = (serviceState.isReady && serviceState.currentTime) 
+      ? new Date(serviceState.currentTime.user_current_datetime) 
+      : new Date();
+  }
+    
   const saved = new Date(isoString);
   const diff = Math.floor((now.getTime() - saved.getTime()) / 1000);
   const minutes = Math.floor(diff / 60);
@@ -17,25 +32,76 @@ export function getTimeAgo(isoString: string | undefined): string {
 
 /**
  * Formats date for display in journal entries
+ * @param isoString - The ISO date string to format
  */
 export function formatEntryDate(isoString?: string): string {
   if (!isoString) return 'No date';
-  return new Date(isoString).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
+  
+  // Use time service for consistent formatting if ready
+  if (timeService.isReady()) {
+    try {
+      return timeService.formatUserDate(isoString, { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      // Fall through to local formatting
+    }
+  }
+  
+  // Fallback to local formatting
+  try {
+    return new Date(isoString).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  } catch (error) {
+    return 'Invalid date';
+  }
 }
 
 /**
  * Formats date for current entry creation
+ * @param currentDate - The current date to format (required - no fallbacks)
  */
-export function formatCurrentDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
+export function formatCurrentDate(currentDate: string): string {
+  if (!currentDate || currentDate === 'LOADING_DATE' || currentDate === 'Loading...') {
+    return "Loading...";
+  }
+  
+  // Use time service for consistent formatting if ready
+  if (timeService.isReady()) {
+    return timeService.formatUserDate(currentDate, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+  
+  // Fallback to local formatting if time service not ready
+  try {
+    // Handle date-only strings properly to avoid timezone shifts
+    if (currentDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = currentDate.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } else {
+      const date = new Date(currentDate);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+  } catch (error) {
+    return "Invalid date";
+  }
 }
 
 /**

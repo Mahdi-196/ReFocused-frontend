@@ -234,7 +234,7 @@ export function useCollections() {
   };
 
   // Save entry to collection
-  const saveEntry = async (collectionId: string, entry: Entry): Promise<boolean> => {
+  const saveEntry = async (collectionId: string, entry: Entry): Promise<Entry | null> => {
     try {
       let savedEntry: Entry;
       
@@ -243,20 +243,33 @@ export function useCollections() {
       if (!collection) {
         console.error('❌ Collection not found:', collectionId);
         setError(`Collection not found: ${collectionId}`);
-        return false;
+        return null;
       }
       
-      const existingEntry = collection.entries.find(e => e.id === entry.id);
+      // Check if this is an update (entry has a valid ID and exists in collection)
+      const hasValidId = entry.id && (typeof entry.id === 'string' ? entry.id.trim() !== "" : entry.id !== null && entry.id !== undefined);
+      const existingEntry = hasValidId ? collection.entries.find(e => e.id === entry.id) : null;
       
-      if (existingEntry) {
+      console.log('🔍 [AUTOSAVE DEBUG] Entry detection:', {
+        entryId: entry.id,
+        hasValidId,
+        collectionEntriesCount: collection.entries.length,
+        collectionEntryIds: collection.entries.map(e => e.id),
+        existingEntryFound: !!existingEntry,
+        isUpdate: hasValidId && existingEntry
+      });
+      
+      if (hasValidId && existingEntry) {
         // Update existing entry
         const updateData = {
           title: entry.title,
           content: entry.content,
           is_encrypted: entry.is_encrypted,
+          // Include timestamp field to ensure mock date is used
+          updated_at: entry.updated_at,
         };
         
-        console.log('📝 Updating entry:', entry.id, 'in collection:', collectionId);
+        console.log('📝 Updating existing entry:', entry.id, 'in collection:', collectionId);
         savedEntry = await journalService.updateEntry(entry.id, updateData);
       } else {
         // Create new entry
@@ -264,7 +277,7 @@ export function useCollections() {
         if (isNaN(collectionIdInt)) {
           console.error('❌ Invalid collection ID format:', collectionId);
           setError(`Invalid collection ID: ${collectionId}`);
-          return false;
+          return null;
         }
         
         const createData = {
@@ -272,16 +285,30 @@ export function useCollections() {
           content: entry.content,
           collection_id: collectionIdInt,
           is_encrypted: entry.is_encrypted,
+          // Include timestamp fields to ensure mock date is used
+          created_at: entry.created_at,
+          updated_at: entry.updated_at,
         };
         
         console.log('📝 Creating new entry in collection:', collectionIdInt, 'with data:', createData);
         savedEntry = await journalService.createEntry(createData);
-        console.log('✅ Entry created successfully:', savedEntry.id);
+        console.log('✅ Entry created successfully with backend ID:', savedEntry.id);
+        console.log('🔍 TIMESTAMP VERIFICATION:', {
+          sent_mock_date: createData.created_at,
+          backend_returned: savedEntry.created_at,
+          backend_uses_timeservice: savedEntry.created_at?.includes('2025-08-05') ? '✅ YES' : '❌ NO - BACKEND ISSUE'
+        });
+        console.log('🔍 [AUTOSAVE DEBUG] New entry details:', {
+          backendId: savedEntry.id,
+          backendIdType: typeof savedEntry.id,
+          title: savedEntry.title,
+          collectionId: savedEntry.collection_id
+        });
       }
 
       // Update local state
-      setCollections(prev =>
-        prev.map(col =>
+      setCollections(prev => {
+        const updated = prev.map(col =>
           col.id.toString() === collectionId
             ? {
                 ...col,
@@ -292,10 +319,19 @@ export function useCollections() {
                 entryCount: (col.entryCount || 0) + (existingEntry ? 0 : 1),
               }
             : col
-        )
-      );
+        );
+        
+        console.log('🔍 [AUTOSAVE DEBUG] Local state updated:', {
+          collectionId,
+          wasUpdate: !!existingEntry,
+          newEntryCount: updated.find(c => c.id.toString() === collectionId)?.entries.length,
+          allEntryIds: updated.find(c => c.id.toString() === collectionId)?.entries.map(e => e.id)
+        });
+        
+        return updated;
+      });
       
-      return true;
+      return savedEntry;
     } catch (err) {
       const error = err as JournalApiError;
       console.error("❌ Failed to save entry:", error);
@@ -310,7 +346,7 @@ export function useCollections() {
       } else {
         setError(`Failed to save entry: ${error.message}`);
       }
-      return false;
+      return null;
     }
   };
 

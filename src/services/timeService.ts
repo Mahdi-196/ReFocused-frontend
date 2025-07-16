@@ -368,9 +368,10 @@ export class TimeService implements ITimeService {
       return this.state.currentTime.user_current_date;
     }
 
-    // Safe fallback instead of throwing error, but log only if not ready
+    // If service is not ready, try to wait a moment for it to initialize
     if (!this.state.isReady) {
-      console.warn('Time service not ready, using local date fallback');
+      // Return a recognizable placeholder instead of falling back to local date
+      return 'LOADING_DATE';
     }
     return new Date().toISOString().split('T')[0];
   }
@@ -383,9 +384,9 @@ export class TimeService implements ITimeService {
       return this.state.currentTime.user_current_datetime;
     }
     
-    // Safe fallback instead of throwing error, but log only if not ready
+    // If service is not ready, return a placeholder
     if (!this.state.isReady) {
-      console.warn('Time service not ready, using local datetime fallback');
+      return 'LOADING_DATETIME';
     }
     return new Date().toISOString();
   }
@@ -398,9 +399,9 @@ export class TimeService implements ITimeService {
       return this.state.currentTime.user_timezone;
     }
     
-    // Safe fallback instead of throwing error, but log only if not ready
+    // If service is not ready, return a placeholder
     if (!this.state.isReady) {
-      console.warn('Time service not ready, using local timezone fallback');
+      return 'LOADING_TIMEZONE';
     }
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   }
@@ -602,8 +603,20 @@ export class TimeService implements ITimeService {
       day: 'numeric'
     };
 
+    // Handle date-only strings (YYYY-MM-DD) by treating them as local dates
+    let dateToFormat: Date;
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // For date-only strings, create a date in the user's timezone to avoid timezone shift
+      const [year, month, day] = dateString.split('-').map(Number);
+      dateToFormat = new Date(year, month - 1, day); // month is 0-indexed
+    } else {
+      // For full datetime strings, use as-is
+      dateToFormat = new Date(dateString);
+    }
+
+
     return new Intl.DateTimeFormat('en-US', { ...defaultOptions, ...options })
-      .format(new Date(dateString));
+      .format(dateToFormat);
   }
 
   /**

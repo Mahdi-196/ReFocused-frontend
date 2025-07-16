@@ -3,10 +3,12 @@
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, Save, AlertCircle, Loader2 } from "lucide-react";
+import { ChevronLeft, Save, AlertCircle, Loader2, BookOpen, Calendar, Clock } from "lucide-react";
 import { useTime } from '@/contexts/TimeContext';
+import { timeService } from '@/services/timeService';
 import PageTransition from '@/components/PageTransition';
 import { initializeAuth } from '@/api/client';
+import { useConsistentDate } from '@/hooks/useConsistentDate';
 
 // Import types and hooks
 import type { Entry } from "../types";
@@ -25,6 +27,8 @@ function EntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { collections, saveEntry, getEntry, isLoading: collectionsLoading, error: collectionsError } = useCollections();
+  const { loading: timeLoading, getCurrentDate } = useTime();
+  const { currentDate: consistentDate, isReady: dateReady } = useConsistentDate();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
@@ -33,7 +37,16 @@ function EntryContent() {
   const [entryId, setEntryId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [charCount, setCharCount] = useState(0);
+  const [wordCount, setWordCount] = useState(0);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+  const [autoSaveTimeoutId, setAutoSaveTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const { getCurrentDateTime } = useTime();
+  
+  const MAX_CHARACTERS = 100000;
+  const MAX_TITLE_CHARACTERS = 100;
+  const AUTOSAVE_DELAY = 30000; // 30 seconds
 
   // Authentication check and initialization
   useEffect(() => {
@@ -53,10 +66,32 @@ function EntryContent() {
     }
   }, []);
 
-  // Track changes for unsaved indicator
+  // Track changes for unsaved indicator and trigger autosave
   useEffect(() => {
     setHasUnsavedChanges(title.trim() !== "" || content.trim() !== "");
-  }, [title, content]);
+    
+    // Clear existing autosave timeout
+    if (autoSaveTimeoutId) {
+      clearTimeout(autoSaveTimeoutId);
+    }
+    
+    // Set new autosave timeout if there's content to save
+    if ((title.trim() || content.trim()) && selectedCollectionId) {
+      const timeoutId = setTimeout(() => {
+        handleSave(true); // Auto save
+      }, AUTOSAVE_DELAY);
+      setAutoSaveTimeoutId(timeoutId);
+    }
+  }, [title, content, selectedCollectionId]);
+
+  // Cleanup autosave timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutId) {
+        clearTimeout(autoSaveTimeoutId);
+      }
+    };
+  }, [autoSaveTimeoutId]);
 
   // Set collection ID and load entry data from URL
   useEffect(() => {
@@ -89,6 +124,10 @@ function EntryContent() {
         setTitle(entry.title || "");
         setContent(entry.content || "");
         setHasUnsavedChanges(false);
+        // Update character count when loading entry
+        const text = entry.content ? entry.content.replace(/<[^>]*>/g, '') : '';
+        setCharCount(text.length);
+        setWordCount(text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0);
       } else {
         // Entry not found, try to find it in collections
         const collection = collections.find(c => c.id.toString() === selectedCollectionId);
@@ -97,6 +136,10 @@ function EntryContent() {
           setTitle(localEntry.title || "");
           setContent(localEntry.content || "");
           setHasUnsavedChanges(false);
+          // Update character count when loading local entry
+          const text = localEntry.content ? localEntry.content.replace(/<[^>]*>/g, '') : '';
+          setCharCount(text.length);
+          setWordCount(text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0);
         }
       }
     } catch (error) {
@@ -107,65 +150,131 @@ function EntryContent() {
     }
   };
 
-  const formattedDate = formatCurrentDate();
+  const [formattedDate, setFormattedDate] = useState("Loading...");
+  
+  // Update formatted date when consistent date changes
+  useEffect(() => {
+    if (dateReady && consistentDate && consistentDate !== 'Loading...') {
+      const formatted = formatCurrentDate(consistentDate);
+      setFormattedDate(formatted);
+      
+    }
+  }, [consistentDate, dateReady]);
+  
 
-  const handleSave = async () => {
+  const handleSave = async (isAutoSave = false) => {
     if (!selectedCollectionId) {
-      setSaveError("Please select a collection first");
-      return;
+      if (!isAutoSave) setSaveError("Please select a collection first");
+      return false;
     }
 
     if (!title.trim() && !content.trim()) {
-      setSaveError("Entry cannot be empty");
-      return;
+      if (!isAutoSave) setSaveError("Entry cannot be empty");
+      return false;
+    }
+
+    if (charCount > MAX_CHARACTERS) {
+      if (!isAutoSave) setSaveError(`Entry exceeds the maximum limit of ${MAX_CHARACTERS.toLocaleString()} characters`);
+      return false;
     }
 
     // Validate that the selected collection exists
     const selectedCollection = collections.find(c => c.id.toString() === selectedCollectionId);
     if (!selectedCollection) {
-      setSaveError(`Selected collection (ID: ${selectedCollectionId}) not found. Please refresh and try again.`);
-      return;
+      if (!isAutoSave) setSaveError(`Selected collection (ID: ${selectedCollectionId}) not found. Please refresh and try again.`);
+      return false;
     }
 
+    // For new entries, don't generate an ID - let the backend assign it
+    // For existing entries, use the stored entryId from previous saves
+    const currentEntryId = entryId;
+    
     console.log('💾 Saving entry to collection:', {
       collectionId: selectedCollectionId,
       collectionName: selectedCollection.name,
       collectionIdInt: parseInt(selectedCollectionId),
-      isUpdate: !!entryId
+      isUpdate: !!entryId,
+      entryId: currentEntryId,
+      isAutoSave
     });
 
     try {
-      setIsSaving(true);
+      if (isAutoSave) {
+        setIsAutoSaving(true);
+      } else {
+        setIsSaving(true);
+      }
       setSaveError(null);
       
+      const currentDateTime = getCurrentDateTime();
       const entry: Entry = {
-        id: entryId || crypto.randomUUID(),
+        id: currentEntryId || "", // Will be assigned by backend for new entries
         title: title.trim() || "Untitled Entry",
         content,
         collection_id: parseInt(selectedCollectionId),
-        created_at: entryId ? undefined : getCurrentDateTime(),
-        updated_at: getCurrentDateTime(),
+        created_at: entryId ? undefined : currentDateTime,
+        updated_at: currentDateTime,
         // Frontend-friendly aliases
-        createdAt: entryId ? undefined : getCurrentDateTime(),
-        lastSavedAt: getCurrentDateTime(),
+        createdAt: entryId ? undefined : currentDateTime,
+        lastSavedAt: currentDateTime,
       };
 
       console.log('💾 Entry data to save:', entry);
+      console.log('🔍 TIME SERVICE STATE:', {
+        mockDate: timeService.getCurrentDate(),
+        mockDateTime: timeService.getCurrentDateTime(),
+        isMockActive: timeService.isMockDate(),
+        expectedInBackend: 'Should use TimeService.get_current_time_for_user(user)'
+      });
 
-      const success = await saveEntry(selectedCollectionId, entry);
+      const savedEntry = await saveEntry(selectedCollectionId, entry);
       
-      if (success) {
-        console.log('✅ Entry saved successfully, redirecting to journal');
+      if (savedEntry) {
+        // Set the entry ID from the backend response for future autosaves
+        if (!entryId && savedEntry.id) {
+          setEntryId(savedEntry.id);
+          console.log(`🆔 Entry ID set from backend: ${savedEntry.id}`);
+        }
+        
+        console.log(`✅ Entry ${isAutoSave ? 'auto-' : ''}saved successfully with ID: ${savedEntry.id}`);
         setHasUnsavedChanges(false);
-        router.push("/journal");
+        setLastSavedTime(new Date());
+        if (!isAutoSave) {
+          router.push("/journal");
+        }
+        return true;
       } else {
-        setSaveError("Failed to save entry. Please check the console for details and try again.");
+        if (!isAutoSave) setSaveError("Failed to save entry. Please check the console for details and try again.");
+        return false;
       }
     } catch (error) {
       console.error("💥 Failed to save entry:", error);
-      setSaveError(`Failed to save entry: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (!isAutoSave) setSaveError(`Failed to save entry: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
     } finally {
-      setIsSaving(false);
+      if (isAutoSave) {
+        setIsAutoSaving(false);
+      } else {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  const handleCountUpdate = (counts: { words: number; chars: number }) => {
+    setWordCount(counts.words);
+    setCharCount(counts.chars);
+    
+    // Clear existing autosave timeout
+    if (autoSaveTimeoutId) {
+      clearTimeout(autoSaveTimeoutId);
+    }
+    
+    // Set new autosave timeout if there's content to save
+    if ((title.trim() || content.trim()) && selectedCollectionId) {
+      const timeoutId = setTimeout(() => {
+        handleSave(true); // Auto save
+      }, AUTOSAVE_DELAY);
+      setAutoSaveTimeoutId(timeoutId);
     }
   };
 
@@ -177,13 +286,18 @@ function EntryContent() {
     router.push("/journal");
   };
 
-  // Show loading state while collections are loading
-  if (collectionsLoading) {
+  // Show loading state while collections are loading or time service is not ready
+  if (collectionsLoading || timeLoading || !dateReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#1A2537" }}>
-        <div className="flex items-center space-x-2 text-white">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading collections...</span>
+      <div className="min-h-screen flex items-center justify-center bg-slate-900" style={{ backgroundColor: '#0E172B' }}>
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <BookOpen className="w-8 h-8 text-white" />
+          </div>
+          <div className="flex items-center space-x-3 text-white">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-lg font-medium">Loading your journal...</span>
+          </div>
         </div>
       </div>
     );
@@ -192,161 +306,211 @@ function EntryContent() {
   // Show error if collections failed to load
   if (collectionsError) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#1A2537" }}>
-        <div className="text-center text-white">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
-          <h2 className="text-xl font-semibold mb-2">Failed to Load Collections</h2>
-          <p className="text-gray-300 mb-4">{collectionsError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Retry
-          </button>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-red-900 to-slate-900">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Unable to Load Journal</h2>
+          <p className="text-gray-300 mb-8 leading-relaxed">{collectionsError}</p>
+          <div className="space-y-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105 font-medium"
+            >
+              <Loader2 className="w-5 h-5" />
+              Retry Loading
+            </button>
+            <button
+              onClick={handleBack}
+              className="w-full px-6 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-600 transition-all duration-200 font-medium"
+            >
+              Back to Journal
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div 
-      className="min-h-screen p-8 font-sans"
-      style={{ backgroundColor: "#1A2537" }}
-    >
-      <div className="max-w-4xl mx-auto">
-        {/* Navigation and Collection Selector */}
-        <div 
-          className="flex items-center justify-between mb-6 p-4 rounded-lg shadow-md transition-all duration-300 hover:shadow-lg"
-          style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
-        >
-          <button
-            onClick={handleBack}
-            className="inline-flex items-center text-gray-300 hover:text-white transition-all duration-200 transform hover:scale-105"
-            aria-label="Return to journal"
-          >
-            <ChevronLeft className="w-5 h-5 mr-1" />
-            Back to Journal
-            {hasUnsavedChanges && <span className="ml-2 text-yellow-400 text-sm">• Unsaved changes</span>}
-          </button>
-          
-          <div className="flex items-center space-x-3">
-            <select
-              value={selectedCollectionId || ""}
-              onChange={(e) => setSelectedCollectionId(e.target.value)}
-              className="px-3 py-1.5 border border-gray-600 bg-gray-700 text-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              aria-label="Select collection for this entry"
-              disabled={isSaving || isLoadingEntry}
-            >
-              <option value="" disabled>Select Collection</option>
-              {collections.map(col => (
-                <option key={col.id} value={col.id}>
-                  {col.name} {col.isPrivate ? "(Private)" : ""}
-                </option>
-              ))}
-            </select>
-            
-            {/* Save Button in Header */}
-            <button
-              onClick={handleSave}
-              disabled={!selectedCollectionId || isSaving || isLoadingEntry || (!title.trim() && !content.trim())}
-              className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              aria-label={isSaving ? "Saving entry..." : "Save entry"}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-1" />
-                  Save
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Error Display */}
-        {saveError && (
-          <div className="mb-6 p-4 bg-red-900/50 border border-red-600 rounded-lg">
-            <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
-              <span className="text-red-200">{saveError}</span>
+    <PageTransition>
+      <div className="min-h-screen bg-slate-900" style={{ backgroundColor: '#0E172B' }}>
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          {/* Enhanced Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
               <button
-                onClick={() => setSaveError(null)}
-                className="ml-auto text-red-400 hover:text-red-300"
+                onClick={handleBack}
+                className="group inline-flex items-center gap-3 px-4 py-3 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 text-gray-300 hover:text-white rounded-xl transition-all duration-200 hover:bg-gray-700/50 hover:border-gray-600/50 transform hover:scale-105"
+                aria-label="Return to journal"
               >
-                ×
+                <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+                <span className="font-medium">Back to Journal</span>
               </button>
+              
+              <div className="flex items-center gap-4">
+                {/* Collection Selector */}
+                <div className="relative">
+                  <select
+                    value={selectedCollectionId || ""}
+                    onChange={(e) => setSelectedCollectionId(e.target.value)}
+                    className="appearance-none px-4 py-3 pr-10 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-700/50"
+                    aria-label="Select collection for this entry"
+                    disabled={isSaving || isLoadingEntry}
+                  >
+                    <option value="" disabled>Select Collection</option>
+                    {collections.map(col => (
+                      <option key={col.id} value={col.id}>
+                        {col.name} {col.isPrivate ? "🔒" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <BookOpen className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+                
+                {/* Save Button */}
+                <button
+                  onClick={() => handleSave(false)}
+                  disabled={!selectedCollectionId || isSaving || isLoadingEntry || (!title.trim() && !content.trim())}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 font-medium shadow-lg"
+                  aria-label={isSaving ? "Saving entry..." : "Save entry"}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      <span>Save Entry</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* Entry Editor */}
-        <div 
-          className="rounded-lg shadow-md border border-gray-600 p-8 transition-all duration-300 hover:shadow-lg"
-          style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
-        >
-          {/* Date Header */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="inline-flex items-center px-3 py-1 rounded-md bg-gray-700/50 text-gray-300 text-sm">
-              <span>{formattedDate}</span>
-            </div>
-            
-            {isLoadingEntry && (
-              <div className="flex items-center text-gray-400 text-sm">
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                Loading entry...
+            {/* Error Display */}
+            {saveError && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-red-900/50 to-pink-900/50 backdrop-blur-sm border border-red-600/50 rounded-xl animate-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center">
+                  <AlertCircle className="w-5 h-5 text-red-400 mr-3 flex-shrink-0" />
+                  <span className="text-red-200 flex-1">{saveError}</span>
+                  <button
+                    onClick={() => setSaveError(null)}
+                    className="ml-3 text-red-400 hover:text-red-300 transition-colors p-1 rounded-full hover:bg-red-500/20"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Title Input */}
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Entry title"
-            className="w-full text-3xl font-bold mb-8 border-none bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-0 transition-all duration-200"
-            autoFocus={!isLoadingEntry}
-            disabled={isSaving || isLoadingEntry}
-            aria-label="Entry title"
-          />
+          {/* Enhanced Entry Editor */}
+          <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Editor Header */}
+            <div className="p-8 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/50 to-slate-800/50">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/20 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
+                    <Calendar className="w-4 h-4" />
+                    <span>{formattedDate}</span>
+                  </div>
+                  
+                  {isLoadingEntry && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm rounded-lg">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Loading entry...</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-4 text-gray-400 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {isAutoSaving ? (
+                      <span className="text-blue-400 flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Auto-saving...
+                      </span>
+                    ) : lastSavedTime ? (
+                      <span>Last saved: {timeService.isReady() ? new Date(lastSavedTime).toLocaleTimeString('en-US', { timeZone: timeService.getUserTimezone() }) : lastSavedTime.toLocaleTimeString()}</span>
+                    ) : (
+                      <span>Not saved yet</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span>{wordCount.toLocaleString()} words</span>
+                    <span className={`${charCount > MAX_CHARACTERS * 0.9 ? 'text-yellow-400' : charCount > MAX_CHARACTERS ? 'text-red-400' : 'text-gray-400'}`}>
+                      {charCount.toLocaleString()}/{MAX_CHARACTERS.toLocaleString()} characters
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-          {/* Content Editor */}
-          <div className="mb-8">
-            <TextEditor
-              value={content}
-              onChange={setContent}
-              disabled={isSaving || isLoadingEntry}
-            />
-          </div>
+              {/* Enhanced Title Input */}
+              <div>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => {
+                    const newTitle = e.target.value;
+                    if (newTitle.length <= MAX_TITLE_CHARACTERS) {
+                      setTitle(newTitle);
+                    }
+                  }}
+                  placeholder="What's on your mind today?"
+                  className="w-full text-4xl font-bold bg-transparent text-white placeholder-gray-500 focus:outline-none focus:ring-0 transition-all duration-200 border-none"
+                  autoFocus={!isLoadingEntry}
+                  disabled={isSaving || isLoadingEntry}
+                  aria-label="Entry title"
+                />
+                {title.length >= MAX_TITLE_CHARACTERS && (
+                  <div className="mt-2 text-sm text-red-400">
+                    Title cannot exceed {MAX_TITLE_CHARACTERS} characters
+                  </div>
+                )}
+              </div>
+            </div>
 
-          {/* Save Button (Bottom) */}
-          <div className="flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={!selectedCollectionId || isSaving || isLoadingEntry || (!title.trim() && !content.trim())}
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
-              aria-label={isSaving ? "Saving entry..." : "Save entry"}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Saving Entry...
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5 mr-2" />
-                  Save Entry
-                </>
+            {/* Content Editor */}
+            <div className="p-8">
+              {/* Character limit warning */}
+              {charCount > MAX_CHARACTERS * 0.9 && (
+                <div className={`mb-4 p-3 rounded-xl border ${
+                  charCount > MAX_CHARACTERS 
+                    ? 'bg-red-900/50 border-red-600/50 text-red-200' 
+                    : 'bg-yellow-900/50 border-yellow-600/50 text-yellow-200'
+                }`}>
+                  <div className="flex items-center gap-2 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    {charCount > MAX_CHARACTERS ? (
+                      <span>Character limit exceeded! Please remove {(charCount - MAX_CHARACTERS).toLocaleString()} characters.</span>
+                    ) : (
+                      <span>Approaching character limit. {(MAX_CHARACTERS - charCount).toLocaleString()} characters remaining.</span>
+                    )}
+                  </div>
+                </div>
               )}
-            </button>
+
+              <div className="mb-8">
+                <TextEditor
+                  value={content}
+                  onChange={setContent}
+                  onCountUpdate={handleCountUpdate}
+                  disabled={isSaving || isLoadingEntry}
+                  maxCharacters={MAX_CHARACTERS}
+                />
+              </div>
+
+
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
 
@@ -357,10 +521,15 @@ function EntryContent() {
 export default function Entry() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#1A2537" }}>
-        <div className="flex items-center space-x-2 text-white">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-lg">Loading...</span>
+      <div className="min-h-screen flex items-center justify-center bg-slate-900" style={{ backgroundColor: '#0E172B' }}>
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <BookOpen className="w-8 h-8 text-white" />
+          </div>
+          <div className="flex items-center space-x-3 text-white">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-lg font-medium">Loading editor...</span>
+          </div>
         </div>
       </div>
     }>

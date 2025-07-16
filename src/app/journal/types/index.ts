@@ -85,12 +85,17 @@ export type CreateEntryRequest = {
   content: string;
   collection_id: number;
   is_encrypted?: boolean;
+  // Optional timestamp fields (backend may override if not provided)
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type UpdateEntryRequest = {
   title?: string;
   content?: string;
   is_encrypted?: boolean;
+  // Optional timestamp fields (backend may override if not provided)
+  updated_at?: string;
 };
 
 export type CreateGratitudeRequest = {
