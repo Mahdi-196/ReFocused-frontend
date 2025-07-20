@@ -18,6 +18,11 @@ export const USER = {
   PROFILE: '/user/profile',
   NOTES: '/user/notes',
   STATS: '/user/stats',
+  EXPORT: '/user/me/export',
+  EXPORT_STATUS: (taskId: string) => `/user/me/export/${taskId}/status`,
+  EXPORT_DOWNLOAD: (taskId: string) => `/user/me/export/${taskId}/download`,
+  CLEAR_ACTIVITY: '/user/me/activity',
+  DELETE_ACCOUNT: '/user/me',
 };
 
 // Goals endpoints

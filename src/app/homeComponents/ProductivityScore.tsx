@@ -44,44 +44,12 @@ const ProductivityScore = () => {
     <div className="lg:col-span-3">
       <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
         <div className="flex items-center gap-2 mb-6">
-          <span className="text-xl font-semibold text-white">📊 Today's Progress</span>
+          <span className="text-xl font-semibold text-white">📊 App Streak</span>
         </div>
         
         <div className="flex flex-col items-center">
           <ScoreCircularProgress value={productivityValue} />
           <span className="text-gray-300 text-sm mb-2">Productivity Score</span>
-
-          {/* Stats Grid */}
-          <div className="w-full grid grid-cols-2 gap-4 mt-2 bg-gray-700/30 p-3 rounded-lg">
-            <div className="text-center">
-              <div className="text-2xl font-semibold text-white">4</div>
-              <div className="text-sm text-gray-300">Tasks Done</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-semibold text-white">2</div>
-              <div className="text-sm text-gray-300">Pomodoros</div>
-            </div>
-          </div>
-
-          {/* Points Breakdown */}
-          <div className="w-full mt-2 space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">+1 point per task</span>
-              <span className="font-medium text-white">+4</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">+2 points per pomodoro</span>
-              <span className="font-medium text-white">+4</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">-1 skipped habit</span>
-              <span className="font-medium text-red-400">-1</span>
-            </div>
-            <div className="flex justify-between text-sm pt-1 border-t border-gray-600/50">
-              <span className="font-medium text-white">Total today</span>
-              <span className="font-medium text-white">7 pts</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
