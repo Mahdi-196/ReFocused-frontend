@@ -61,6 +61,17 @@ const Profile = () => {
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [showAvatarSuccess, setShowAvatarSuccess] = useState(false);
   
+  // Data management state
+  const [dataExportLoading, setDataExportLoading] = useState(false);
+  const [clearActivityLoading, setClearActivityLoading] = useState(false);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  
+  // Confirmation modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmationText, setConfirmationText] = useState('');
+  
   // Settings hook
   const { settings, updateSettings } = useSettings();
   
@@ -202,6 +213,86 @@ const Profile = () => {
     }
   };
 
+  const handleDataExport = async () => {
+    setDataExportLoading(true);
+    setShowExportModal(false);
+    setConfirmationText('');
+    
+    try {
+      initializeAuth();
+      
+      const response = await client.post(USER.EXPORT);
+      
+      if (response.data.status === 'completed') {
+        const taskId = response.data.task_id;
+        
+        const downloadResponse = await client.get(USER.EXPORT_DOWNLOAD(taskId), {
+          responseType: 'blob'
+        });
+        
+        const blob = new Blob([downloadResponse.data], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `refocused-data-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        alert('Data export completed successfully!');
+      }
+    } catch (error) {
+      console.error('Data export failed:', error);
+      alert('Failed to export data. Please try again.');
+    } finally {
+      setDataExportLoading(false);
+    }
+  };
+
+  const handleClearActivity = async () => {
+    setClearActivityLoading(true);
+    setShowClearModal(false);
+    setConfirmationText('');
+    
+    try {
+      initializeAuth();
+      
+      await client.delete(USER.CLEAR_ACTIVITY);
+      
+      alert('Activity data cleared successfully! You will be redirected to refresh the app.');
+      window.location.reload();
+    } catch (error) {
+      console.error('Clear activity failed:', error);
+      alert('Failed to clear activity data. Please try again.');
+    } finally {
+      setClearActivityLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteAccountLoading(true);
+    setShowDeleteModal(false);
+    setConfirmationText('');
+    
+    try {
+      initializeAuth();
+      
+      await client.delete(USER.DELETE_ACCOUNT);
+      
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      alert('Account deleted successfully. You will be redirected to the home page.');
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Account deletion failed:', error);
+      alert('Failed to delete account. Please try again.');
+    } finally {
+      setDeleteAccountLoading(false);
+    }
+  };
+
   const menuItems = [
     { id: 'profile', icon: <User size={18} />, label: 'Profile' },
     { id: 'settings', icon: <Settings size={18} />, label: 'Account Settings' },
@@ -291,6 +382,7 @@ const Profile = () => {
     disabled?: boolean;
   }) => (
     <button
+      type="button"
       onClick={() => !disabled && onChange(!enabled)}
       disabled={disabled}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
@@ -317,6 +409,7 @@ const Profile = () => {
           className="bg-gradient-to-br from-gray-900/95 to-slate-900/95 backdrop-blur-sm border border-gray-700/50 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl"
         >
           <button
+            type="button"
             onClick={() => setIsFeedbackModalOpen(false)}
             className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center transition-colors"
             aria-label="Close feedback modal"
@@ -340,6 +433,7 @@ const Profile = () => {
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
+                  type="button"
                   onClick={() => setFeedbackData(prev => ({ ...prev, rating: star }))}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
                     star <= feedbackData.rating
@@ -399,16 +493,145 @@ const Profile = () => {
 
           <div className="flex gap-4">
             <button
+              type="button"
               onClick={() => setIsFeedbackModalOpen(false)}
               className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg transition-colors font-medium"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleFeedbackSubmit}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
             >
               Submit Feedback
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
+  const ConfirmationModal = ({ 
+    isOpen, 
+    onClose, 
+    onConfirm, 
+    title, 
+    description, 
+    confirmText, 
+    type = 'warning',
+    loading = false 
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+    description: string;
+    confirmText: string;
+    type?: 'warning' | 'danger' | 'info';
+    loading?: boolean;
+  }) => {
+    if (!isOpen) return null;
+
+    const typeStyles = {
+      warning: {
+        bg: 'from-yellow-900/95 to-orange-900/95',
+        border: 'border-yellow-700/50',
+        icon: 'bg-yellow-500',
+        button: 'from-yellow-500 to-orange-600 hover:from-yellow-400 hover:to-orange-500'
+      },
+      danger: {
+        bg: 'from-red-900/95 to-red-900/95',
+        border: 'border-red-700/50',
+        icon: 'bg-red-500',
+        button: 'from-red-500 to-red-600 hover:from-red-400 hover:to-red-500'
+      },
+      info: {
+        bg: 'from-blue-900/95 to-indigo-900/95',
+        border: 'border-blue-700/50',
+        icon: 'bg-blue-500',
+        button: 'from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500'
+      }
+    };
+
+    const styles = typeStyles[type];
+    const isConfirmEnabled = confirmationText.toLowerCase() === confirmText.toLowerCase();
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className={`bg-gradient-to-br ${styles.bg} backdrop-blur-sm border ${styles.border} rounded-2xl max-w-md w-full p-8 relative shadow-2xl`}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 disabled:opacity-50 flex items-center justify-center transition-colors"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5 text-gray-300" />
+          </button>
+
+          <div className="text-center mb-8">
+            <div className={`w-16 h-16 ${styles.icon} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+              {type === 'danger' ? (
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              ) : type === 'warning' ? (
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              ) : (
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
+            <p className="text-gray-300 text-sm">{description}</p>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-300 mb-3">
+              Type "<span className="font-bold text-white">{confirmText}</span>" to confirm:
+            </label>
+            <input
+              type="text"
+              value={confirmationText}
+              onChange={(e) => setConfirmationText(e.target.value)}
+              disabled={loading}
+              placeholder={`Type "${confirmText}" here`}
+              className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:opacity-50"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 disabled:opacity-50 text-gray-300 rounded-lg transition-colors font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={!isConfirmEnabled || loading}
+              className={`flex-1 px-6 py-3 bg-gradient-to-r ${styles.button} disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none flex items-center justify-center gap-2`}
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : (
+                'Confirm'
+              )}
             </button>
           </div>
         </motion.div>
@@ -526,6 +749,7 @@ const Profile = () => {
                       </div>
                       
                       <button
+                        type="button"
                         onClick={() => setIsAvatarSelectorOpen(true)}
                         disabled={avatarSaving}
                         className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white text-sm rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
@@ -625,7 +849,7 @@ const Profile = () => {
                     />
                   </div>
                 </div>
-                <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+                <button type="button" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
                   Update Password
                 </button>
               </div>
@@ -646,6 +870,7 @@ const Profile = () => {
                       <p className="text-xs text-gray-400 mt-1">{userData?.email}</p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setIsSubscribed(!isSubscribed)}
                       className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
                         isSubscribed 
@@ -666,22 +891,58 @@ const Profile = () => {
                 <div className="p-4 bg-blue-900/20 border border-blue-800/50 rounded-lg">
                   <h4 className="text-blue-400 font-medium mb-2">Export Your Data</h4>
                   <p className="text-sm text-gray-300 mb-3">Download all your personal data including journal entries, goals, and settings.</p>
-                  <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium">
-                    Request Data Export
+                  <button 
+                    type="button"
+                    onClick={() => setShowExportModal(true)}
+                    disabled={dataExportLoading}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                  >
+                    {dataExportLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Exporting...
+                      </>
+                    ) : (
+                      'Request Data Export'
+                    )}
                   </button>
                 </div>
                 <div className="p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
                   <h4 className="text-yellow-400 font-medium mb-2">Clear Activity Data</h4>
                   <p className="text-sm text-gray-300 mb-3">Remove all your activity history while keeping your account active.</p>
-                  <button className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors text-sm font-medium">
-                    Clear Data
+                  <button 
+                    type="button"
+                    onClick={() => setShowClearModal(true)}
+                    disabled={clearActivityLoading}
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                  >
+                    {clearActivityLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Clearing...
+                      </>
+                    ) : (
+                      'Clear Data'
+                    )}
                   </button>
                 </div>
                 <div className="p-4 bg-red-900/20 border border-red-800/50 rounded-lg">
                   <h4 className="text-red-400 font-medium mb-2">Delete Account</h4>
                   <p className="text-sm text-gray-300 mb-3">Permanently delete your account and all associated data. This action cannot be undone.</p>
-                  <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium">
-                    Delete Account
+                  <button 
+                    type="button"
+                    onClick={() => setShowDeleteModal(true)}
+                    disabled={deleteAccountLoading}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                  >
+                    {deleteAccountLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete Account'
+                    )}
                   </button>
                 </div>
               </div>
@@ -756,6 +1017,7 @@ const Profile = () => {
                   {menuItems.map((item) => (
                     <button
                       key={item.id}
+                      type="button"
                       onClick={() => setActiveTab(item.id)}
                       className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left ${
                         activeTab === item.id
@@ -769,6 +1031,7 @@ const Profile = () => {
                   ))}
                   
                   <button
+                    type="button"
                     onClick={() => setIsFeedbackModalOpen(true)}
                     className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-gray-300 hover:text-white hover:bg-gray-700/50 border-t border-gray-700/50 mt-4 pt-4"
                   >
@@ -777,6 +1040,7 @@ const Profile = () => {
                   </button>
                   
                   <button 
+                    type="button"
                     onClick={handleLogout}
                     className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-red-400 hover:text-red-300 hover:bg-red-900/20"
                   >
@@ -801,6 +1065,48 @@ const Profile = () => {
           onSelect={handleAvatarSelect}
           currentAvatar={currentAvatar}
           userName={userData?.name || userData?.username || 'User'}
+        />
+
+        <ConfirmationModal
+          isOpen={showExportModal}
+          onClose={() => {
+            setShowExportModal(false);
+            setConfirmationText('');
+          }}
+          onConfirm={handleDataExport}
+          title="Export Your Data"
+          description="This will create and download a complete export of all your personal data including journal entries, goals, habits, mood tracking, and settings."
+          confirmText="EXPORT"
+          type="info"
+          loading={dataExportLoading}
+        />
+
+        <ConfirmationModal
+          isOpen={showClearModal}
+          onClose={() => {
+            setShowClearModal(false);
+            setConfirmationText('');
+          }}
+          onConfirm={handleClearActivity}
+          title="Clear Activity Data"
+          description="This will permanently delete ALL your activity data including goals, habits, journal entries, mood tracking, and study materials. Your account will remain active but all data will be lost forever."
+          confirmText="CLEAR ALL DATA"
+          type="warning"
+          loading={clearActivityLoading}
+        />
+
+        <ConfirmationModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setConfirmationText('');
+          }}
+          onConfirm={handleDeleteAccount}
+          title="Delete Account"
+          description="This will permanently delete your account and ALL associated data. This action cannot be undone and you will lose access to everything forever."
+          confirmText="DELETE FOREVER"
+          type="danger"
+          loading={deleteAccountLoading}
         />
       </div>
       

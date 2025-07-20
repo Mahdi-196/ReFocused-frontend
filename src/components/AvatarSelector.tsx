@@ -13,12 +13,12 @@ interface AvatarSelectorProps {
 }
 
 const AvatarSelector = ({ isOpen, onClose, onSelect, currentAvatar, userName = 'User' }: AvatarSelectorProps) => {
-  const [selectedStyle, setSelectedStyle] = useState('personas');
+  const [selectedStyle, setSelectedStyle] = useState('open-peeps');
   const [selectedAvatar, setSelectedAvatar] = useState(currentAvatar || '');
 
   const avatarStyles = [
     // Human-like styles
-    { id: 'personas', name: 'Personas', description: 'Diverse human faces' },
+    { id: 'open-peeps', name: 'Open Peeps', description: 'Hand-drawn illustrations' },
     { id: 'adventurer', name: 'Adventurer', description: 'Colorful characters' },
     
     // Artistic/Abstract styles
