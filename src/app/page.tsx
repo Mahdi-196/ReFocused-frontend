@@ -4,12 +4,16 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from '@/components/icons';
 import { FaBrain, FaRobot } from 'react-icons/fa';
+import { HiBeaker, HiUser, HiAcademicCap, HiSparkles } from 'react-icons/hi2';
 import AuthModal from '@/components/AuthModal';
 import { getStudySets } from '@/services/studyService';
 import { authService } from '@/api/services/authService';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentDate, useTime } from '@/contexts/TimeContext';
+import ProductivityScore from './homeComponents/ProductivityScore';
+import WordOfTheDay from './homeComponents/WordOfTheDay';
+import MindFuel from './homeComponents/MindFuel';
 
 // Type for orb configuration
 type Orb = {
@@ -243,7 +247,8 @@ Is authenticated: ${authService.isAuthenticated()}`);
                         {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
             <div className="bg-gradient-to-br from-gray-800/20 to-gray-900/20 backdrop-blur-sm border border-gray-600/30 rounded-xl p-6 max-w-2xl mx-auto">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                🧪 Cache System Testing
+                <HiBeaker className="w-5 h-5 mr-2 text-purple-400" />
+                Cache System Testing
                 <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded ml-2">DEVELOPMENT</span>
               </h3>
               
@@ -286,7 +291,7 @@ Is authenticated: ${authService.isAuthenticated()}`);
               )}
               
               <p className="text-xs text-gray-400 mt-2">
-                Open browser console to see detailed cache logs with emojis (👤 for auth, 📚 for study sets)
+                Open browser console to see detailed cache logs (<HiUser className="inline w-3 h-3 mx-1" /> for auth, <HiAcademicCap className="inline w-3 h-3 mx-1" /> for study sets)
               </p>
             </div>
           )}
@@ -464,7 +469,8 @@ Is authenticated: ${authService.isAuthenticated()}`);
               }}
               className="px-6 py-3 border-2 border-[#42b9e5] text-[#42b9e5] font-semibold rounded-xl hover:bg-[#42b9e5] hover:text-white transition-all duration-300 min-h-[48px] flex items-center justify-center text-sm"
             >
-              Join ReFocused✨
+              <HiSparkles className="w-4 h-4 mr-2" />
+              Join ReFocused
             </button>
           </div>
         </div>
@@ -476,6 +482,8 @@ Is authenticated: ${authService.isAuthenticated()}`);
         onClose={() => setIsAuthModalOpen(false)}
         defaultTab="register"
       />
+
+      {/* Debug panel temporarily moved to ProductivityScore component */}
     </div>
   );
 }

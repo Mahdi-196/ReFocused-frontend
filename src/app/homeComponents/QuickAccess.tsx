@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, MessageSquareQuote } from 'lucide-react';
 
 interface Quote {
   text: string;
@@ -92,8 +92,9 @@ const QuoteOfTheDay = () => {
       <article className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 h-[17rem] sm:h-[19rem] lg:h-[19rem] xl:h-[19rem] 2xl:h-[19rem] flex flex-col justify-between">
         <div>
           <header className="flex items-center justify-between mb-4">
-            <h2 id="daily-quote" className="text-lg font-semibold text-white">
-              💭 Quote of the Day
+            <h2 id="daily-quote" className="flex items-center gap-2 text-lg font-semibold text-white">
+              <MessageSquareQuote className="w-5 h-5 text-purple-400" />
+              Quote of the Day
             </h2>
             <button
               onClick={refreshQuote}

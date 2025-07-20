@@ -1,5 +1,7 @@
 "use client";
 
+import { BookOpen } from 'lucide-react';
+
 const WordOfTheDay = () => (
   <section 
     className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 h-[17rem] sm:h-[19rem] lg:h-[19rem] xl:h-[19rem] 2xl:h-[19rem] flex flex-col justify-between"
@@ -7,7 +9,8 @@ const WordOfTheDay = () => (
   >
     <div>
       <h2 id="word-of-the-day" className="flex items-center gap-2 mb-4 text-lg font-semibold text-white">
-        📚 Word of the Day
+        <BookOpen className="w-5 h-5 text-green-400" />
+        Word of the Day
       </h2>
       
       <div className="space-y-2">

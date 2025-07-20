@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { Target } from 'lucide-react';
 import MoodStats from './MoodStats';
 import HabitStreaks from './HabitStreaks';
 import TaskList, { Task } from './TaskList'; // Import Task type as well
@@ -28,7 +29,8 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
   >
     <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
       <h2 id="daily-momentum" className="flex items-center gap-2 mb-6 text-xl font-semibold text-white">
-        🎯 Daily Momentum
+        <Target className="w-5 h-5 text-blue-400" />
+        Daily Momentum
       </h2>
 
       <div className="mb-6">
