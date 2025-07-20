@@ -65,7 +65,11 @@ export default function NumberMood() {
       });
     } catch (err) {
       console.error('Failed to save mood ratings:', err);
-      setError('Failed to save mood ratings. Please try again.');
+      if (err instanceof Error && err.message.includes('Time service not ready')) {
+        setError('Loading... Please wait a moment and try again.');
+      } else {
+        setError('Failed to save mood ratings. Please try again.');
+      }
     }
   }, [moodRatings.happiness, moodRatings.focus, moodRatings.stress]);
 

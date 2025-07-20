@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { Lightbulb, Brain, RotateCcw } from 'lucide-react';
 
 interface MindFuelData {
   weeklyFocus: {
@@ -70,7 +71,8 @@ const MindFuel = () => {
       <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 h-full">
         <div className="flex items-center justify-between mb-4">
           <h2 id="mind-fuel" className="flex items-center gap-2 text-xl font-semibold text-white">
-            💡 Mind Fuel
+            <Lightbulb className="w-5 h-5 text-yellow-400" />
+            Mind Fuel
           </h2>
           <button
             onClick={fetchMindFuelData}
@@ -84,7 +86,8 @@ const MindFuel = () => {
               </>
             ) : (
               <>
-                🔄 Refresh
+                <RotateCcw className="w-3 h-3" />
+                Refresh
               </>
             )}
           </button>
@@ -98,7 +101,7 @@ const MindFuel = () => {
 
         {!mindFuelData && !loading && !error && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="text-4xl mb-3">🧠</div>
+            <Brain className="w-10 h-10 text-purple-400 mb-3" />
             <p className="text-gray-400 text-sm mb-4">Click "Refresh" to generate Mind Fuel content</p>
           </div>
         )}

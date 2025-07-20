@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { History } from 'lucide-react';
 import { IoCheckmarkDoneCircleSharp, IoCheckmarkDoneSharp, IoCheckmark } from "react-icons/io5";
+import { Target, Trophy } from 'lucide-react';
 import { 
   Goal, 
   CreateGoalRequest, 
@@ -453,7 +454,10 @@ const GoalTracker: React.FC = () => {
     <div className="lg:col-span-2">
       <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 h-full">
         <div className="flex items-center justify-between mb-6">
-          <span className="text-xl font-semibold text-white">🎯 Goals</span>
+          <div className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-yellow-400" />
+            <span className="text-xl font-semibold text-white">Goals</span>
+          </div>
           <div className="flex items-center gap-2">
             {/* History Button */}
             <button

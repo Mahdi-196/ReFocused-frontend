@@ -4,6 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { getHabits, getHabitCompletions, clearHabitsCache } from '@/services/habitsService';
 import type { UserHabit, HabitCompletion } from '@/services/habitsService';
 import { FireIcon, CheckIcon } from '@/components/icons';
+import { 
+  Brain, 
+  Dumbbell, 
+  BookOpen, 
+  Droplets, 
+  Moon, 
+  Footprints, 
+  PenTool, 
+  Code, 
+  Broom, 
+  GraduationCap,
+  CheckCircle 
+} from 'lucide-react';
 import { timeService } from '@/services/timeService';
 import { SkeletonWrapper, Skeleton } from '@/components/skeletons/SkeletonConfig';
 import { CacheInvalidation } from '@/services/cacheService';
@@ -126,19 +139,19 @@ const HabitStreaks = () => {
     return habitCompletions[completionKey] || false;
   };
 
-  const getHabitEmoji = (habitName: string) => {
+  const getHabitIcon = (habitName: string) => {
     const name = habitName.toLowerCase();
-    if (name.includes('meditat') || name.includes('mindful')) return '🧘';
-    if (name.includes('exercise') || name.includes('workout') || name.includes('gym')) return '💪';
-    if (name.includes('read') || name.includes('book')) return '📚';
-    if (name.includes('water') || name.includes('hydrat')) return '💧';
-    if (name.includes('sleep') || name.includes('rest')) return '😴';
-    if (name.includes('walk') || name.includes('run')) return '🚶';
-    if (name.includes('journal') || name.includes('write')) return '✍️';
-    if (name.includes('code') || name.includes('program')) return '💻';
-    if (name.includes('clean') || name.includes('tidy')) return '🧹';
-    if (name.includes('study') || name.includes('learn')) return '📖';
-    return '✅'; // Default emoji for other habits
+    if (name.includes('meditat') || name.includes('mindful')) return <Brain className="w-4 h-4 text-purple-400" />;
+    if (name.includes('exercise') || name.includes('workout') || name.includes('gym')) return <Dumbbell className="w-4 h-4 text-red-400" />;
+    if (name.includes('read') || name.includes('book')) return <BookOpen className="w-4 h-4 text-green-400" />;
+    if (name.includes('water') || name.includes('hydrat')) return <Droplets className="w-4 h-4 text-blue-400" />;
+    if (name.includes('sleep') || name.includes('rest')) return <Moon className="w-4 h-4 text-indigo-400" />;
+    if (name.includes('walk') || name.includes('run')) return <Footprints className="w-4 h-4 text-orange-400" />;
+    if (name.includes('journal') || name.includes('write')) return <PenTool className="w-4 h-4 text-yellow-400" />;
+    if (name.includes('code') || name.includes('program')) return <Code className="w-4 h-4 text-cyan-400" />;
+    if (name.includes('clean') || name.includes('tidy')) return <Broom className="w-4 h-4 text-pink-400" />;
+    if (name.includes('study') || name.includes('learn')) return <GraduationCap className="w-4 h-4 text-emerald-400" />;
+    return <CheckCircle className="w-4 h-4 text-gray-400" />; // Default icon for other habits
   };
 
   if (loading) {
@@ -186,7 +199,7 @@ const HabitStreaks = () => {
         return (
           <div key={habit.id} className="flex justify-between items-center">
             <span className="flex items-center gap-2 text-gray-300">
-              <span>{getHabitEmoji(habit.name)}</span>
+              {getHabitIcon(habit.name)}
               <span className={isCompleted ? 'line-through text-gray-400' : ''}>{habit.name}</span>
               {isCompleted && <CheckIcon className="w-4 h-4" />}
             </span>

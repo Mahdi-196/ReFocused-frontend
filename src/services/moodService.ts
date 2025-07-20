@@ -123,9 +123,9 @@ export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
   try {
     // Validate required fields - Updated for new backend requirements
     if (!moodEntry.date || 
-        moodEntry.happiness === undefined || 
-        moodEntry.focus === undefined || // Changed from satisfaction to focus
-        moodEntry.stress === undefined) {
+        moodEntry.happiness === undefined || moodEntry.happiness === null ||
+        moodEntry.focus === undefined || moodEntry.focus === null || // Changed from satisfaction to focus
+        moodEntry.stress === undefined || moodEntry.stress === null) {
       throw new Error('Missing required fields: date, happiness, focus, and stress are required');
     }
 
@@ -300,6 +300,11 @@ export async function saveMoodRating(ratings: {
   stress: number;
 }): Promise<MoodEntry> {
   const today = timeService.getCurrentDate();
+  
+  // Wait for time service to be ready if it's not initialized yet
+  if (today === 'LOADING_DATE' || !today) {
+    throw new Error('Time service not ready. Please try again in a moment.');
+  }
   
   const moodEntry: MoodEntry = {
     date: today,
