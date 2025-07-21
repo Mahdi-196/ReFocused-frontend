@@ -13,7 +13,7 @@ import {
   Footprints, 
   PenTool, 
   Code, 
-  Broom, 
+  Sparkles, 
   GraduationCap,
   CheckCircle 
 } from 'lucide-react';
@@ -149,7 +149,7 @@ const HabitStreaks = () => {
     if (name.includes('walk') || name.includes('run')) return <Footprints className="w-4 h-4 text-orange-400" />;
     if (name.includes('journal') || name.includes('write')) return <PenTool className="w-4 h-4 text-yellow-400" />;
     if (name.includes('code') || name.includes('program')) return <Code className="w-4 h-4 text-cyan-400" />;
-    if (name.includes('clean') || name.includes('tidy')) return <Broom className="w-4 h-4 text-pink-400" />;
+    if (name.includes('clean') || name.includes('tidy')) return <Sparkles className="w-4 h-4 text-pink-400" />;
     if (name.includes('study') || name.includes('learn')) return <GraduationCap className="w-4 h-4 text-emerald-400" />;
     return <CheckCircle className="w-4 h-4 text-gray-400" />; // Default icon for other habits
   };

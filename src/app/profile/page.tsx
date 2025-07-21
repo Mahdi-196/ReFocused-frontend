@@ -256,14 +256,16 @@ const Profile = () => {
     setConfirmationText('');
     
     try {
-      initializeAuth();
+      console.log('🗑️ [PROFILE] Starting activity data clearing...');
       
-      await client.delete(USER.CLEAR_ACTIVITY);
+      // Use the authService method which includes proper cache clearing
+      const result = await authService.clearActivityData();
+      console.log('✅ [PROFILE] Successfully cleared data:', result);
       
       alert('Activity data cleared successfully! You will be redirected to refresh the app.');
       window.location.reload();
     } catch (error) {
-      console.error('Clear activity failed:', error);
+      console.error('❌ [PROFILE] Clear activity failed:', error);
       alert('Failed to clear activity data. Please try again.');
     } finally {
       setClearActivityLoading(false);

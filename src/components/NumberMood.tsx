@@ -27,6 +27,25 @@ export default function NumberMood() {
     loadTodaysMood();
   }, []);
 
+  // Listen for mood data cleared event
+  useEffect(() => {
+    const handleMoodDataCleared = () => {
+      console.log('📢 [NUMBER MOOD] Received moodDataCleared event, resetting component...');
+      setMoodRatings({
+        happiness: null,
+        focus: null,
+        stress: null
+      });
+      setHasInitialSave(false);
+      setError(null);
+    };
+
+    window.addEventListener('moodDataCleared', handleMoodDataCleared);
+    return () => {
+      window.removeEventListener('moodDataCleared', handleMoodDataCleared);
+    };
+  }, []);
+
   const loadTodaysMood = async () => {
     try {
       setLoading(true);

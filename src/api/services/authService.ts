@@ -1,7 +1,8 @@
 import client from '../client';
-import { AUTH } from '../endpoints';
+import { AUTH, USER } from '../endpoints';
 import { tokenValidator } from '@/utils/tokenValidator';
 import { cacheService, CacheKeys, CacheTTL, CacheInvalidation } from '../../services/cacheService';
+import { clearMoodCache } from '../../services/moodService';
 
 interface LoginCredentials {
   email: string;
@@ -207,5 +208,58 @@ export const authService = {
     }
 
     return null;
+  },
+
+  /**
+   * Clear user activity data (keeping account active)
+   */
+  async clearActivityData(): Promise<{
+    message: string;
+    status: string;
+    user_account_preserved: boolean;
+    deleted_at: string;
+    deletion_summary: Record<string, number>;
+  }> {
+    try {
+      console.log('🗑️ [AUTH SERVICE] Calling clear activity endpoint...');
+      const response = await client.delete(USER.CLEAR_ACTIVITY);
+      console.log('✅ [AUTH SERVICE] Clear activity API response:', response.data);
+      
+      // Clear all user-related cache after successful deletion
+      console.log('🧹 [AUTH SERVICE] Clearing all user cache...');
+      CacheInvalidation.clearUserCache();
+      
+      // Clear mood-specific cache
+      console.log('🧹 [AUTH SERVICE] Clearing mood cache...');
+      clearMoodCache();
+      
+      // Dispatch custom event to notify mood components to refresh
+      if (typeof window !== 'undefined') {
+        console.log('📢 [AUTH SERVICE] Dispatching moodDataCleared event...');
+        window.dispatchEvent(new CustomEvent('moodDataCleared'));
+      }
+      
+      // Also clear localStorage cache if any
+      if (typeof window !== 'undefined') {
+        // Clear any cached data that might be in localStorage
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes('habit') || key.includes('goal') || key.includes('mood') || key.includes('journal') || key.includes('cache'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('🧹 [AUTH SERVICE] Cleared localStorage keys:', keysToRemove);
+      }
+      
+      return response.data;
+    } catch (error: unknown) {
+      console.error(`API Error [${USER.CLEAR_ACTIVITY}]:`, error);
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Failed to clear activity data.'
+        : 'Failed to clear activity data.';
+      throw new Error(errorMessage);
+    }
   }
 }; 

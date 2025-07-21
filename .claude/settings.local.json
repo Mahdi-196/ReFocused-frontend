@@ -3,7 +3,9 @@
     "allow": [
       "Bash(yarn build)",
       "mcp__ide__executeCode",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(grep:*)",
+      "Bash(yarn start)"
     ],
     "deny": []
   }
