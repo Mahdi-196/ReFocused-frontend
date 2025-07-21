@@ -28,6 +28,20 @@ const MoodStats = () => {
     loadTodaysMood();
   }, []);
 
+  // Listen for mood data cleared event
+  useEffect(() => {
+    const handleMoodDataCleared = () => {
+      console.log('📢 [MOOD STATS] Received moodDataCleared event, clearing mood data...');
+      setMoodData(null);
+      setError(null);
+    };
+
+    window.addEventListener('moodDataCleared', handleMoodDataCleared);
+    return () => {
+      window.removeEventListener('moodDataCleared', handleMoodDataCleared);
+    };
+  }, []);
+
   if (loading) {
     return (
       <SkeletonWrapper>

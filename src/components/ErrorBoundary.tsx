@@ -1,8 +1,9 @@
 "use client";
 
 import React, { Component, ReactNode } from 'react';
-import { AppError, reportError } from '@/lib/errors';
-import { performanceMonitor } from '@/lib/performance';
+// TODO: Implement error reporting and performance monitoring libs
+// import { AppError, reportError } from '@/lib/errors';
+// import { performanceMonitor } from '@/lib/performance';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -46,40 +47,42 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     const { errorId } = this.state;
 
     // Create structured error for reporting
-    const appError = new AppError(
-      error.message,
-      'REACT_ERROR',
-      500,
-      {
+    const errorData = {
+      message: error.message,
+      type: 'REACT_ERROR',
+      statusCode: 500,
+      metadata: {
         componentStack: errorInfo.componentStack,
         errorBoundaryLevel: level,
         errorId,
         route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
         userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
       }
-    );
+    };
 
     // Report error to monitoring systems
-    reportError(appError, {
-      errorInfo,
-      errorBoundaryLevel: level,
-    });
+    // TODO: Implement error reporting
+    // reportError(errorData, {
+    //   errorInfo,
+    //   errorBoundaryLevel: level,
+    // });
 
     // Track error in performance monitoring
-    performanceMonitor.recordMetric({
-      name: 'react_error',
-      value: 1,
-      timestamp: Date.now(),
-      tags: {
-        level,
-        errorType: error.name,
-        route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
-      },
-      context: {
-        message: error.message,
-        errorId,
-      },
-    });
+    // TODO: Implement performance monitoring
+    // performanceMonitor.recordMetric({
+    //   name: 'react_error',
+    //   value: 1,
+    //   timestamp: Date.now(),
+    //   tags: {
+    //     level,
+    //     errorType: error.name,
+    //     route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+    //   },
+    //   context: {
+    //     message: error.message,
+    //     errorId,
+    //   },
+    // });
 
     // Call custom error handler if provided
     if (onError) {
@@ -110,15 +113,16 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     });
 
     // Track retry attempts
-    performanceMonitor.recordMetric({
-      name: 'error_boundary_retry',
-      value: 1,
-      timestamp: Date.now(),
-      tags: {
-        level: this.props.level || 'component',
-        route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
-      },
-    });
+    // TODO: Implement performance monitoring
+    // performanceMonitor.recordMetric({
+    //   name: 'error_boundary_retry',
+    //   value: 1,
+    //   timestamp: Date.now(),
+    //   tags: {
+    //     level: this.props.level || 'component',
+    //     route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+    //   },
+    // });
   };
 
   private handleReload = () => {

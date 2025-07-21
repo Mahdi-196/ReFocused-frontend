@@ -121,11 +121,23 @@ export async function getMoodEntry(date: string): Promise<MoodEntry | null> {
  */
 export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
   try {
+    console.log('🔍 [MOOD DEBUG] saveMoodEntry received:', JSON.stringify(moodEntry, null, 2));
+    
     // Validate required fields - Updated for new backend requirements
     if (!moodEntry.date || 
         moodEntry.happiness === undefined || moodEntry.happiness === null ||
         moodEntry.focus === undefined || moodEntry.focus === null || // Changed from satisfaction to focus
         moodEntry.stress === undefined || moodEntry.stress === null) {
+      console.error('❌ [MOOD DEBUG] Validation failed for moodEntry:', {
+        date: moodEntry.date,
+        happiness: moodEntry.happiness,
+        focus: moodEntry.focus,
+        stress: moodEntry.stress,
+        dateCheck: !moodEntry.date,
+        happinessCheck: moodEntry.happiness === undefined || moodEntry.happiness === null,
+        focusCheck: moodEntry.focus === undefined || moodEntry.focus === null,
+        stressCheck: moodEntry.stress === undefined || moodEntry.stress === null
+      });
       throw new Error('Missing required fields: date, happiness, focus, and stress are required');
     }
 
@@ -299,27 +311,48 @@ export async function saveMoodRating(ratings: {
   focus: number; // Changed from satisfaction to focus
   stress: number;
 }): Promise<MoodEntry> {
-  const today = timeService.getCurrentDate();
+  // Extract and validate mood values - handle field name mapping
+  const happiness = parseInt(String(ratings.happiness));
+  const focus = parseInt(String((ratings as any).satisfaction || ratings.focus)); // Map 'satisfaction' to 'focus'
+  const stress = parseInt(String(ratings.stress));
   
-  // Wait for time service to be ready if it's not initialized yet
-  if (today === 'LOADING_DATE' || !today) {
-    throw new Error('Time service not ready. Please try again in a moment.');
-  }
-  
-  const moodEntry: MoodEntry = {
-    date: today,
-    happiness: ratings.happiness,
-    focus: ratings.focus, // Changed from satisfaction to focus
-    stress: ratings.stress,
-    notes: ''
+  // Client-side validation: ensure values are 1-5 integers
+  const validateMoodValue = (value: number, fieldName: string) => {
+    if (isNaN(value) || !Number.isInteger(value) || value < 1 || value > 5) {
+      throw new Error(`${fieldName} must be an integer between 1 and 5, got: ${value}`);
+    }
   };
   
-  return saveMoodEntry(moodEntry);
+  validateMoodValue(happiness, 'happiness');
+  validateMoodValue(focus, 'focus');
+  validateMoodValue(stress, 'stress');
+  
+  // Use the /mood/today endpoint which doesn't require date field
+  try {
+    const response = await client.post('/mood/today', {
+      happiness,
+      focus,
+      stress
+    });
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ [MOOD] Failed to save mood rating:', error);
+    
+    // Log the full error response for debugging
+    if (error.response?.data) {
+      console.error('📝 [MOOD] API Error Details:', JSON.stringify(error.response.data, null, 2));
+    }
+    
+    throw error;
+  }
 }
 
 /**
  * Clear all mood-related cache entries
  */
 export function clearMoodCache(): void {
+  console.log('🧹 [MOOD SERVICE] Clearing mood cache with pattern:', `${MOOD_CACHE_PREFIX}_*`);
   cacheService.invalidateByPattern(`${MOOD_CACHE_PREFIX}_*`);
+  console.log('✅ [MOOD SERVICE] Mood cache cleared');
 } 

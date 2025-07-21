@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { performanceMonitor } from '@/lib/performance';
+// TODO: Implement performance monitoring lib
+// import { performanceMonitor } from '@/lib/performance';
 import { SectionErrorBoundary } from './ErrorBoundary';
 
 interface PerformanceStats {
@@ -28,8 +29,10 @@ const PerformanceDashboard: React.FC = () => {
     if (!shouldShow) return;
 
     const updateStats = () => {
-      const summary = performanceMonitor.getPerformanceSummary();
-      setStats(summary as PerformanceStats);
+      // TODO: Implement performance monitoring
+      // const summary = performanceMonitor.getPerformanceSummary();
+      // setStats(summary as PerformanceStats);
+      setStats({});
     };
 
     // Update stats every 10 seconds
