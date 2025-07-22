@@ -1,92 +1,154 @@
 "use client";
 
-import { HiChartBar } from 'react-icons/hi2';
+import { useState } from 'react';
+import { HiChartBar, HiFire } from 'react-icons/hi2';
+import { useStreakData } from '@/hooks/useStreakData';
 
-// Note: This component currently uses static data.
-// You might need to pass props later for dynamic values.
-// We also need a circular progress component here (different style)
-// Reusing the existing one might require prop changes or a new component.
-
-// Placeholder for the specific circular progress used here.
-// Assuming a similar API to the previously extracted CircularProgress
-const ScoreCircularProgress = ({ value }: { value: number }) => (
-  <div className="relative w-24 h-24 mb-2">
-    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-      <circle
-        className="text-gray-600"
-        strokeWidth="8"
-        stroke="currentColor"
-        fill="transparent"
-        r="44"
-        cx="50"
-        cy="50"
-      />
-      <circle
-        className="text-blue-400"
-        strokeWidth="8"
-        strokeDasharray={`${value * 2.76} 276`} // 2 * PI * 44 approx 276
-        strokeLinecap="round"
-        stroke="currentColor"
-        fill="transparent"
-        r="44"
-        cx="50"
-        cy="50"
-      />
-    </svg>
-    <div className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-white">
-      {value}
+const StreakCircularProgress = ({ value, maxValue = 100 }: { value: number; maxValue?: number }) => {
+  const percentage = Math.min((value / maxValue) * 100, 100);
+  const strokeDasharray = `${percentage * 2.76} 276`; // 2 * PI * 44 approx 276
+  
+  return (
+    <div className="relative w-24 h-24 mb-2">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <circle
+          className="text-gray-600"
+          strokeWidth="8"
+          stroke="currentColor"
+          fill="transparent"
+          r="44"
+          cx="50"
+          cy="50"
+        />
+        <circle
+          className={value > 0 ? "text-orange-400" : "text-gray-500"}
+          strokeWidth="8"
+          strokeDasharray={strokeDasharray}
+          strokeLinecap="round"
+          stroke="currentColor"
+          fill="transparent"
+          r="44"
+          cx="50"
+          cy="50"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-white">
+        {value}
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
 
 const ProductivityScore = () => {
-  const productivityValue = 85; // Example static value
+  const { streakData, loading, error, manualCheckin } = useStreakData();
+  const [isCheckinLoading, setIsCheckinLoading] = useState(false);
+
+  const handleCheckin = async () => {
+    try {
+      setIsCheckinLoading(true);
+      const result = await manualCheckin();
+      
+      // Show success feedback
+      const event = new CustomEvent('showNotification', {
+        detail: {
+          type: 'success',
+          message: `Streak maintained! Current streak: ${result.current_streak} days`
+        }
+      });
+      window.dispatchEvent(event);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Check-in failed';
+      const event = new CustomEvent('showNotification', {
+        detail: {
+          type: 'error',
+          message: errorMessage
+        }
+      });
+      window.dispatchEvent(event);
+    } finally {
+      setIsCheckinLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="lg:col-span-3">
+        <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-xl font-semibold text-white flex items-center gap-2">
+              <HiFire className="w-5 h-5 text-orange-400" />
+              Daily Streak
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="w-24 h-24 mb-2 bg-gray-700 rounded-full animate-pulse" />
+            <div className="h-4 bg-gray-700 rounded w-32 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="lg:col-span-3">
+        <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-xl font-semibold text-white flex items-center gap-2">
+              <HiFire className="w-5 h-5 text-orange-400" />
+              Daily Streak
+            </span>
+          </div>
+          <div className="text-center text-red-400">
+            <p className="text-sm">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const {
+    current_streak = 0,
+    longest_streak = 0,
+    today_interactions = 0,
+    streak_at_risk = false,
+    recent_history = []
+  } = streakData || {};
 
   return (
     <div className="lg:col-span-3">
       <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center justify-between mb-6">
           <span className="text-xl font-semibold text-white flex items-center gap-2">
-            <HiChartBar className="w-5 h-5 text-blue-400" />
-            Today's Progress
+            <HiFire className="w-5 h-5 text-orange-400" />
+            Daily Streak
           </span>
+          {streak_at_risk && (
+            <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30">
+              ⚠️ At Risk
+            </span>
+          )}
         </div>
         
         <div className="flex flex-col items-center">
-          <ScoreCircularProgress value={productivityValue} />
-          <span className="text-gray-300 text-sm mb-2">Productivity Score</span>
-
-          {/* Stats Grid */}
-          <div className="w-full grid grid-cols-2 gap-4 mt-2 bg-gray-700/30 p-3 rounded-lg">
-            <div className="text-center">
-              <div className="text-2xl font-semibold text-white">4</div>
-              <div className="text-sm text-gray-300">Tasks Done</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-semibold text-white">2</div>
-              <div className="text-sm text-gray-300">Pomodoros</div>
-            </div>
+          <StreakCircularProgress value={current_streak} maxValue={Math.max(current_streak, longest_streak, 30)} />
+          
+          <div className="text-center mb-4">
+            <p className="text-sm text-gray-300">
+              Best: <span className="text-orange-400 font-semibold">{longest_streak}</span> days
+            </p>
           </div>
-
-          {/* Points Breakdown */}
-          <div className="w-full mt-2 space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">+1 point per task</span>
-              <span className="font-medium text-white">+4</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">+2 points per pomodoro</span>
-              <span className="font-medium text-white">+4</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">-1 skipped habit</span>
-              <span className="font-medium text-red-400">-1</span>
-            </div>
-            <div className="flex justify-between text-sm pt-1 border-t border-gray-600/50">
-              <span className="font-medium text-white">Total today</span>
-              <span className="font-medium text-white">7 pts</span>
-            </div>
-          </div>
+          
+          {today_interactions === 0 && (
+            <button 
+              onClick={handleCheckin}
+              disabled={isCheckinLoading}
+              className="bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isCheckinLoading ? 'Checking in...' : 'Check In to Maintain Streak'}
+            </button>
+          )}
         </div>
       </div>
     </div>

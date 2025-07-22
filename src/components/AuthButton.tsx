@@ -27,39 +27,52 @@ const AuthButton = () => {
       if (token && token !== 'dummy-auth-token') {
         setIsLoggedIn(true);
         
-        // First try to get cached user data
-        const cachedUser = authService.getCachedUser();
-        if (cachedUser) {
-          console.log('👤 Using cached user data in AuthButton');
-          const avatarUrl = cachedUser.avatar || 
-            `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(cachedUser.name || cachedUser.email)}&backgroundColor=transparent`;
-          setUserAvatar(avatarUrl);
-          setUserName(cachedUser.name || cachedUser.email || 'User');
-        } else {
-        // Try to fetch user profile to get avatar
-        try {
-            const userData = await authService.getCurrentUser();
-          
-          // Set avatar from user data or generate one
-          const avatarUrl = userData.avatar || 
-            `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
-          setUserAvatar(avatarUrl);
-          setUserName(userData.name || userData.email || 'User');
-        } catch (error) {
-          console.error('Failed to fetch user profile:', error);
-          // Fallback to stored user data
+        // First try to get cached user data or localStorage data
+        let userData = authService.getCachedUser();
+        
+        // If no cached data, try localStorage
+        if (!userData) {
           const storedUser = localStorage.getItem('REF_USER');
           if (storedUser) {
             try {
-              const userData = JSON.parse(storedUser);
-              const avatarUrl = userData.avatar || 
-                `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
-              setUserAvatar(avatarUrl);
-              setUserName(userData.name || userData.email || 'User');
+              userData = JSON.parse(storedUser);
             } catch (parseError) {
               console.error('Failed to parse stored user data:', parseError);
-              }
             }
+          }
+        }
+        
+        if (userData) {
+          console.log('👤 Using cached/stored user data in AuthButton');
+          // Prioritize profile_picture over avatar field
+          const avatarUrl = userData.profile_picture || userData.avatar || 
+            `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
+          
+          // Preload the avatar image to ensure it's cached
+          if (avatarUrl) {
+            const img = new Image();
+            img.src = avatarUrl;
+            img.onload = () => {
+              console.log('👤 Avatar preloaded and cached:', avatarUrl);
+            };
+          }
+          
+          setUserAvatar(avatarUrl);
+          setUserName(userData.name || userData.email || 'User');
+        } else {
+          // Only fetch from API if no cached/stored data exists
+          try {
+            const freshUserData = await authService.getCurrentUser();
+            
+            // Set avatar from user data or generate one
+            const avatarUrl = freshUserData.profile_picture || freshUserData.avatar || 
+              `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(freshUserData.name || freshUserData.email)}&backgroundColor=transparent`;
+            setUserAvatar(avatarUrl);
+            setUserName(freshUserData.name || freshUserData.email || 'User');
+          } catch (error) {
+            console.error('Failed to fetch user profile:', error);
+            setUserAvatar(null);
+            setUserName('User');
           }
         }
       } else {
@@ -85,17 +98,42 @@ const AuthButton = () => {
       if (e.key === 'REF_TOKEN') {
         checkAuth();
       } else if (e.key === 'REF_USER') {
-              // Update avatar when user data changes
-      const userData = e.newValue ? JSON.parse(e.newValue) : null;
-      if (userData && userData.avatar) {
-        setUserAvatar(userData.avatar);
-      }
+        // Update avatar when user data changes
+        try {
+          const userData = e.newValue ? JSON.parse(e.newValue) : null;
+          if (userData) {
+            // Prioritize profile_picture over avatar field
+            const avatarUrl = userData.profile_picture || userData.avatar;
+            if (avatarUrl) {
+              // Preload the updated avatar
+              const img = new Image();
+              img.src = avatarUrl;
+              img.onload = () => {
+                console.log('👤 Updated avatar preloaded and cached:', avatarUrl);
+              };
+              setUserAvatar(avatarUrl);
+            }
+            setUserName(userData.name || userData.email || 'User');
+          }
+        } catch (error) {
+          console.error('Failed to parse updated user data:', error);
+        }
       }
     };
     
     // Listen for custom avatar update events
     const handleAvatarUpdate = (event: CustomEvent) => {
       const { avatarUrl, userData } = event.detail;
+      
+      // Preload the new avatar to ensure it's cached
+      if (avatarUrl) {
+        const img = new Image();
+        img.src = avatarUrl;
+        img.onload = () => {
+          console.log('👤 Custom event avatar preloaded and cached:', avatarUrl);
+        };
+      }
+      
       setUserAvatar(avatarUrl);
       setUserName(userData.name || userData.email || 'User');
     };

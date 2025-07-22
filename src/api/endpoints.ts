@@ -23,6 +23,7 @@ export const USER = {
   EXPORT_DOWNLOAD: (taskId: string) => `/user/me/export/${taskId}/download`,
   CLEAR_ACTIVITY: '/user/me/activity',
   DELETE_ACCOUNT: '/user/me',
+  AVATAR: '/user/avatar',
 };
 
 // Goals endpoints
@@ -82,4 +83,14 @@ export const STATISTICS = {
   FOCUS: '/statistics/focus',
   SESSIONS: '/statistics/sessions',
   TASKS: '/statistics/tasks',
+};
+
+// Streak endpoints
+export const STREAK = {
+  STATUS: '/streak/status',
+  MANUAL_CHECKIN: '/streak/manual-checkin',
+  LEADERBOARD: '/streak/leaderboard',
+  HISTORY: '/streak/history',
+  INTERACTION_TYPES: '/streak/interaction-types',
+  STATS: '/streak/stats',
 }; 

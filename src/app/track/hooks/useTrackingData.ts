@@ -60,7 +60,7 @@ export function useTrackingData(currentMonth: Date) {
   const calculateCorrectStreak = useCallback((habitId: number, completions: {[key: string]: boolean}): number => {
     const today = new Date(todayString);
     let currentStreak = 0;
-    let checkDate = new Date(today);
+    const checkDate = new Date(today);
     
     // Go backwards day by day until we find a gap
     while (true) {

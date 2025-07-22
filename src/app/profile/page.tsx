@@ -9,7 +9,10 @@ import { useSettings } from '@/hooks/useSettings';
 import client, { initializeAuth } from '@/api/client';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/api/services/authService';
-import { USER } from '@/api/endpoints';
+import { USER, AUTH } from '@/api/endpoints';
+import { DeleteAccountModal } from '@/components/profile/DeleteAccountModal';
+import { ExportDataModal } from '@/components/profile/ExportDataModal';
+import { ClearActivityModal } from '@/components/profile/ClearActivityModal';
 
 interface FeedbackData {
   rating: number;
@@ -25,6 +28,7 @@ interface UserData {
   username?: string;
   createdAt: string;
   avatar?: string;
+  profile_picture?: string;
 }
 
 interface UserStats {
@@ -62,21 +66,24 @@ const Profile = () => {
   const [showAvatarSuccess, setShowAvatarSuccess] = useState(false);
   
   // Data management state
-  const [dataExportLoading, setDataExportLoading] = useState(false);
-  const [clearActivityLoading, setClearActivityLoading] = useState(false);
-  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
   
-  // Confirmation modal state
+  // Modal state
   const [showExportModal, setShowExportModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [confirmationText, setConfirmationText] = useState('');
   
   // Settings hook
   const { settings, updateSettings } = useSettings();
   
   // Add authentication check for this page
   const [isAuthenticatedUser, setIsAuthenticatedUser] = useState(false);
+  
+  // Update current avatar when user data changes
+  useEffect(() => {
+    if (userData?.profile_picture || userData?.avatar) {
+      setCurrentAvatar(userData.profile_picture || userData.avatar || currentAvatar);
+    }
+  }, [userData?.profile_picture, userData?.avatar, currentAvatar, userData]);
   
   useEffect(() => {
     const checkPageAuth = () => {
@@ -104,12 +111,16 @@ const Profile = () => {
       // Initialize auth headers
       initializeAuth();
       
-      // Load user profile data using cached auth service
-      const userData = await authService.getCurrentUser();
+      // Load user profile data (bypass cache to get fresh data)
+      const response = await client.get(AUTH.ME);
+      const userData = response.data;
       setUserData(userData);
       
-      // Set avatar from user data or generate one
-      const avatarUrl = userData.avatar ||
+      // Clear any cached user data to ensure fresh data loads
+      authService.clearUserCache();
+      
+      // Set avatar from user data (prioritize profile_picture over avatar) or generate one
+      const avatarUrl = userData.profile_picture || userData.avatar ||
         `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
       setCurrentAvatar(avatarUrl);
       
@@ -157,14 +168,22 @@ const Profile = () => {
       // Initialize auth headers
       initializeAuth();
 
-              // Save avatar to database
-        await client.patch(USER.PROFILE, {
-          avatar: avatarUrl
-        });
+      // Save avatar to both endpoints for consistency
+      await Promise.all([
+        client.patch(USER.PROFILE, {
+          avatar: avatarUrl,
+          profile_picture: avatarUrl
+        }),
+        // This is already handled by AvatarSelector, but included for robustness
+        // client.put(USER.AVATAR, { avatar_config: { style: 'custom', seed: 'user-selected', url: avatarUrl } })
+      ]);
+
+      // Clear user cache to ensure fresh data on next load
+      authService.clearUserCache();
 
       // Update userData state
       if (userData) {
-        const updatedUserData = { ...userData, avatar: avatarUrl };
+        const updatedUserData = { ...userData, avatar: avatarUrl, profile_picture: avatarUrl };
         setUserData(updatedUserData);
         
         // Update localStorage to sync with header
@@ -214,85 +233,31 @@ const Profile = () => {
   };
 
   const handleDataExport = async () => {
-    setDataExportLoading(true);
-    setShowExportModal(false);
-    setConfirmationText('');
-    
-    try {
-      initializeAuth();
-      
-      const response = await client.post(USER.EXPORT);
-      
-      if (response.data.status === 'completed') {
-        const taskId = response.data.task_id;
-        
-        const downloadResponse = await client.get(USER.EXPORT_DOWNLOAD(taskId), {
-          responseType: 'blob'
-        });
-        
-        const blob = new Blob([downloadResponse.data], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `refocused-data-export-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        alert('Data export completed successfully!');
-      }
-    } catch (error) {
-      console.error('Data export failed:', error);
-      alert('Failed to export data. Please try again.');
-    } finally {
-      setDataExportLoading(false);
-    }
+    initializeAuth();
+    const response = await client.post(USER.EXPORT);
+    return response.data;
+  };
+
+  const handleCheckExportStatus = async (taskId: string) => {
+    initializeAuth();
+    const response = await client.get(USER.EXPORT_STATUS(taskId));
+    return response.data;
   };
 
   const handleClearActivity = async () => {
-    setClearActivityLoading(true);
-    setShowClearModal(false);
-    setConfirmationText('');
-    
-    try {
-      console.log('🗑️ [PROFILE] Starting activity data clearing...');
-      
-      // Use the authService method which includes proper cache clearing
-      const result = await authService.clearActivityData();
-      console.log('✅ [PROFILE] Successfully cleared data:', result);
-      
-      alert('Activity data cleared successfully! You will be redirected to refresh the app.');
-      window.location.reload();
-    } catch (error) {
-      console.error('❌ [PROFILE] Clear activity failed:', error);
-      alert('Failed to clear activity data. Please try again.');
-    } finally {
-      setClearActivityLoading(false);
-    }
+    console.log('🗑️ [PROFILE] Starting activity data clearing...');
+    const result = await authService.clearActivityData();
+    console.log('✅ [PROFILE] Successfully cleared data:', result);
+    return result;
   };
 
   const handleDeleteAccount = async () => {
-    setDeleteAccountLoading(true);
-    setShowDeleteModal(false);
-    setConfirmationText('');
-    
-    try {
-      initializeAuth();
-      
-      await client.delete(USER.DELETE_ACCOUNT);
-      
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      alert('Account deleted successfully. You will be redirected to the home page.');
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Account deletion failed:', error);
-      alert('Failed to delete account. Please try again.');
-    } finally {
-      setDeleteAccountLoading(false);
-    }
+    initializeAuth();
+    await client.delete(USER.DELETE_ACCOUNT);
+    localStorage.clear();
+    sessionStorage.clear();
+    alert('Account deleted successfully. You will be redirected to the home page.');
+    window.location.href = '/';
   };
 
   const menuItems = [
@@ -514,132 +479,6 @@ const Profile = () => {
     );
   };
 
-  const ConfirmationModal = ({ 
-    isOpen, 
-    onClose, 
-    onConfirm, 
-    title, 
-    description, 
-    confirmText, 
-    type = 'warning',
-    loading = false 
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
-    title: string;
-    description: string;
-    confirmText: string;
-    type?: 'warning' | 'danger' | 'info';
-    loading?: boolean;
-  }) => {
-    if (!isOpen) return null;
-
-    const typeStyles = {
-      warning: {
-        bg: 'from-yellow-900/95 to-orange-900/95',
-        border: 'border-yellow-700/50',
-        icon: 'bg-yellow-500',
-        button: 'from-yellow-500 to-orange-600 hover:from-yellow-400 hover:to-orange-500'
-      },
-      danger: {
-        bg: 'from-red-900/95 to-red-900/95',
-        border: 'border-red-700/50',
-        icon: 'bg-red-500',
-        button: 'from-red-500 to-red-600 hover:from-red-400 hover:to-red-500'
-      },
-      info: {
-        bg: 'from-blue-900/95 to-indigo-900/95',
-        border: 'border-blue-700/50',
-        icon: 'bg-blue-500',
-        button: 'from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500'
-      }
-    };
-
-    const styles = typeStyles[type];
-    const isConfirmEnabled = confirmationText.toLowerCase() === confirmText.toLowerCase();
-
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className={`bg-gradient-to-br ${styles.bg} backdrop-blur-sm border ${styles.border} rounded-2xl max-w-md w-full p-8 relative shadow-2xl`}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 disabled:opacity-50 flex items-center justify-center transition-colors"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5 text-gray-300" />
-          </button>
-
-          <div className="text-center mb-8">
-            <div className={`w-16 h-16 ${styles.icon} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
-              {type === 'danger' ? (
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              ) : type === 'warning' ? (
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              ) : (
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
-            <p className="text-gray-300 text-sm">{description}</p>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Type "<span className="font-bold text-white">{confirmText}</span>" to confirm:
-            </label>
-            <input
-              type="text"
-              value={confirmationText}
-              onChange={(e) => setConfirmationText(e.target.value)}
-              disabled={loading}
-              placeholder={`Type "${confirmText}" here`}
-              className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:opacity-50"
-            />
-          </div>
-
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 disabled:opacity-50 text-gray-300 rounded-lg transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              disabled={!isConfirmEnabled || loading}
-              className={`flex-1 px-6 py-3 bg-gradient-to-r ${styles.button} disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none flex items-center justify-center gap-2`}
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Processing...
-                </>
-              ) : (
-                'Confirm'
-              )}
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  };
 
   const renderAudioSettings = () => (
     <div className="space-y-6">
@@ -896,17 +735,9 @@ const Profile = () => {
                   <button 
                     type="button"
                     onClick={() => setShowExportModal(true)}
-                    disabled={dataExportLoading}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
                   >
-                    {dataExportLoading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Exporting...
-                      </>
-                    ) : (
-                      'Request Data Export'
-                    )}
+                    Request Data Export
                   </button>
                 </div>
                 <div className="p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
@@ -915,17 +746,9 @@ const Profile = () => {
                   <button 
                     type="button"
                     onClick={() => setShowClearModal(true)}
-                    disabled={clearActivityLoading}
-                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors text-sm font-medium"
                   >
-                    {clearActivityLoading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Clearing...
-                      </>
-                    ) : (
-                      'Clear Data'
-                    )}
+                    Clear Data
                   </button>
                 </div>
                 <div className="p-4 bg-red-900/20 border border-red-800/50 rounded-lg">
@@ -934,17 +757,9 @@ const Profile = () => {
                   <button 
                     type="button"
                     onClick={() => setShowDeleteModal(true)}
-                    disabled={deleteAccountLoading}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
                   >
-                    {deleteAccountLoading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Deleting...
-                      </>
-                    ) : (
-                      'Delete Account'
-                    )}
+                    Delete Account
                   </button>
                 </div>
               </div>
@@ -1069,46 +884,26 @@ const Profile = () => {
           userName={userData?.name || userData?.username || 'User'}
         />
 
-        <ConfirmationModal
+        <ExportDataModal
           isOpen={showExportModal}
-          onClose={() => {
-            setShowExportModal(false);
-            setConfirmationText('');
-          }}
-          onConfirm={handleDataExport}
-          title="Export Your Data"
-          description="This will create and download a complete export of all your personal data including journal entries, goals, habits, mood tracking, and settings."
-          confirmText="EXPORT"
-          type="info"
-          loading={dataExportLoading}
+          onClose={() => setShowExportModal(false)}
+          onRequestExport={handleDataExport}
+          onCheckStatus={handleCheckExportStatus}
+          userEmail={userData?.email || ''}
         />
 
-        <ConfirmationModal
+        <ClearActivityModal
           isOpen={showClearModal}
-          onClose={() => {
-            setShowClearModal(false);
-            setConfirmationText('');
-          }}
-          onConfirm={handleClearActivity}
-          title="Clear Activity Data"
-          description="This will permanently delete ALL your activity data including goals, habits, journal entries, mood tracking, and study materials. Your account will remain active but all data will be lost forever."
-          confirmText="CLEAR ALL DATA"
-          type="warning"
-          loading={clearActivityLoading}
+          onClose={() => setShowClearModal(false)}
+          onClearActivity={handleClearActivity}
+          userEmail={userData?.email || ''}
         />
 
-        <ConfirmationModal
+        <DeleteAccountModal
           isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setConfirmationText('');
-          }}
-          onConfirm={handleDeleteAccount}
-          title="Delete Account"
-          description="This will permanently delete your account and ALL associated data. This action cannot be undone and you will lose access to everything forever."
-          confirmText="DELETE FOREVER"
-          type="danger"
-          loading={deleteAccountLoading}
+          onClose={() => setShowDeleteModal(false)}
+          onDeleteAccount={handleDeleteAccount}
+          userEmail={userData?.email || ''}
         />
       </div>
       

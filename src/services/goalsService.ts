@@ -236,11 +236,16 @@ export class GoalsService {
       }
 
       const url = `${GOALS.HISTORY}?${queryParams}`;
+      console.log('🔍 [GOALS_SERVICE] Making request to:', url);
+      
       const response = await client.get<GoalsHistoryResponse>(url);
       
       console.log('🔍 [GOALS_SERVICE] Raw API response:', response);
+      console.log('🔍 [GOALS_SERVICE] Response.status:', response.status);
+      console.log('🔍 [GOALS_SERVICE] Response.statusText:', response.statusText);
       console.log('🔍 [GOALS_SERVICE] Response.data:', response.data);
       console.log('🔍 [GOALS_SERVICE] Response.data type:', typeof response.data);
+      console.log('🔍 [GOALS_SERVICE] Response.data keys:', response.data ? Object.keys(response.data) : 'null');
       
       if (!response.data) {
         throw new Error('Invalid response from server');
@@ -249,6 +254,23 @@ export class GoalsService {
       console.log('🔍 [GOALS_SERVICE] Goals array:', response.data.goals);
       console.log('🔍 [GOALS_SERVICE] Goals array type:', typeof response.data.goals);
       console.log('🔍 [GOALS_SERVICE] Is goals array?', Array.isArray(response.data.goals));
+      
+      // Ensure goals is always an array
+      if (!Array.isArray(response.data.goals)) {
+        console.warn('🔍 [GOALS_SERVICE] Goals is not an array, converting to empty array');
+        response.data.goals = [];
+      }
+      
+      // Log each goal for debugging
+      response.data.goals.forEach((goal, index) => {
+        console.log(`🔍 [GOALS_SERVICE] Goal ${index}:`, {
+          id: goal.id,
+          name: goal.name,
+          goal_type: goal.goal_type,
+          completed_at: goal.completed_at,
+          completion_days: goal.completion_days
+        });
+      });
       
       logger.info('Successfully fetched goals history', { 
         count: response.data.goals.length,

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shuffle, Check, X } from 'lucide-react';
+import { avatarService, type AvatarConfig } from '@/api/services/avatarService';
+import { authService } from '@/api/services/authService';
 
 interface AvatarSelectorProps {
   isOpen: boolean;
@@ -15,6 +17,7 @@ interface AvatarSelectorProps {
 const AvatarSelector = ({ isOpen, onClose, onSelect, currentAvatar, userName = 'User' }: AvatarSelectorProps) => {
   const [selectedStyle, setSelectedStyle] = useState('open-peeps');
   const [selectedAvatar, setSelectedAvatar] = useState(currentAvatar || '');
+  const [isLoading, setIsLoading] = useState(false);
 
   const avatarStyles = [
     // Human-like styles
@@ -38,25 +41,14 @@ const AvatarSelector = ({ isOpen, onClose, onSelect, currentAvatar, userName = '
     const avatars = [];
     for (let i = 0; i < count; i++) {
       const seed = `${userName}-${style}-${i}-${Math.random().toString(36).substr(2, 9)}`;
-      let avatarUrl = '';
+      const config: AvatarConfig = {
+        style,
+        seed,
+        options: {}
+      };
       
-      // Special handling for different services
-      if (style === 'multiavatar') {
-        avatarUrl = `https://api.multiavatar.com/${seed}.svg`;
-      } else if (style === 'robohash-robots') {
-        avatarUrl = `https://robohash.org/${seed}?set=set1&size=200x200`;
-      } else if (style === 'robohash-monsters') {
-        avatarUrl = `https://robohash.org/${seed}?set=set2&size=200x200`;
-      } else if (style === 'ui-avatars') {
-        const colors = ['0D8ABC', '2DD4BF', 'F59E0B', 'EF4444', '8B5CF6', 'EC4899'];
-        const bgColor = colors[i % colors.length];
-        avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=${bgColor}&color=fff&size=200&font-size=0.6&rounded=true&bold=true`;
-      } else {
-        // Default DiceBear
-        avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundColor=transparent`;
-      }
-      
-      avatars.push({ seed, url: avatarUrl });
+      const avatarUrl = avatarService.generateAvatarUrl(config);
+      avatars.push({ seed, url: avatarUrl, config });
     }
     return avatars;
   };
@@ -74,10 +66,25 @@ const AvatarSelector = ({ isOpen, onClose, onSelect, currentAvatar, userName = '
     setSelectedAvatar('');
   };
 
-  const handleSelect = () => {
-    if (selectedAvatar) {
-      onSelect(selectedAvatar);
-      onClose();
+  const handleSelect = async () => {
+    if (selectedAvatar && !isLoading) {
+      setIsLoading(true);
+      try {
+        const selectedAvatarData = avatars.find(avatar => avatar.url === selectedAvatar);
+        if (selectedAvatarData) {
+          await avatarService.updateAvatar(selectedAvatarData.config);
+          
+          // Clear user cache to ensure fresh data on next load
+          authService.clearUserCache();
+          
+          onSelect(selectedAvatar);
+          onClose();
+        }
+      } catch (error) {
+        console.error('Failed to save avatar:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -173,10 +180,10 @@ const AvatarSelector = ({ isOpen, onClose, onSelect, currentAvatar, userName = '
           </button>
           <button
             onClick={handleSelect}
-            disabled={!selectedAvatar}
+            disabled={!selectedAvatar || isLoading}
             className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            Select Avatar
+            {isLoading ? 'Saving...' : 'Select Avatar'}
           </button>
         </div>
       </motion.div>

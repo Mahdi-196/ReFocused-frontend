@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Download, CheckCircle, Clock, AlertTriangle, RefreshCw, Package } from 'lucide-react';
+import { X, Download, CheckCircle, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface ExportDataModalProps {
   isOpen: boolean;
@@ -187,10 +187,7 @@ export const ExportDataModal = ({
         {step === 'info' && (
           <div className="space-y-6">
             <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
-              <h3 className="text-blue-400 font-semibold mb-2 flex items-center gap-2">
-                <Package className="w-4 h-4" />
-                What's Included
-              </h3>
+              <h3 className="text-blue-400 font-semibold mb-2">📦 What's Included</h3>
               <p className="text-sm text-gray-300 mb-4">
                 Your export will include all of your personal data:
               </p>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, AlertTriangle } from 'lucide-react';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { X, AlertTriangle } from "lucide-react";
 
 interface DeleteAccountModalProps {
   isOpen: boolean;
@@ -9,22 +9,22 @@ interface DeleteAccountModalProps {
   userEmail: string;
 }
 
-export const DeleteAccountModal = ({ 
-  isOpen, 
-  onClose, 
-  onDeleteAccount, 
-  userEmail 
+export const DeleteAccountModal = ({
+  isOpen,
+  onClose,
+  onDeleteAccount,
+  userEmail,
 }: DeleteAccountModalProps) => {
-  const [step, setStep] = useState<'warning' | 'confirm'>('warning');
-  const [confirmationText, setConfirmationText] = useState('');
+  const [step, setStep] = useState<"warning" | "confirm">("warning");
+  const [confirmationText, setConfirmationText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const resetModal = () => {
-    setStep('warning');
-    setConfirmationText('');
+    setStep("warning");
+    setConfirmationText("");
     setIsDeleting(false);
-    setError('');
+    setError("");
   };
 
   const handleClose = () => {
@@ -36,20 +36,19 @@ export const DeleteAccountModal = ({
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
-    setError('');
+    setError("");
 
     try {
       await onDeleteAccount();
       // The parent component should handle the success (redirect to login)
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete account. Please try again.';
-      setError(errorMessage);
+    } catch (err: any) {
+      setError(err.message || "Failed to delete account. Please try again.");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const isConfirmationValid = confirmationText === 'Delete All Data';
+  const isConfirmationValid = confirmationText === "Delete All Data";
 
   if (!isOpen) return null;
 
@@ -75,10 +74,14 @@ export const DeleteAccountModal = ({
             <AlertTriangle className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Delete Account</h2>
-          <p className="text-gray-300 text-sm">This action cannot be undone</p>
+          {step === 'warning' ? (
+            <p className="text-gray-300 text-sm">This action cannot be undone</p>
+          ) : (
+            <p className="text-gray-300 text-sm">Final confirmation required</p>
+          )}
         </div>
 
-        {step === 'warning' && (
+        {step === "warning" && (
           <div className="space-y-6">
             <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4">
               <h3 className="text-red-400 font-semibold mb-2">⚠️ Warning</h3>
@@ -103,13 +106,15 @@ export const DeleteAccountModal = ({
 
             <div className="flex gap-4">
               <button
+                type="button"
                 onClick={handleClose}
                 className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg transition-colors font-medium"
               >
                 Cancel
               </button>
               <button
-                onClick={() => setStep('confirm')}
+                type="button"
+                onClick={() => setStep("confirm")}
                 className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
               >
                 Continue
@@ -118,14 +123,16 @@ export const DeleteAccountModal = ({
           </div>
         )}
 
-        {step === 'confirm' && (
+        {step === "confirm" && (
           <div className="space-y-6">
             <div className="text-center">
               <p className="text-gray-300 mb-4">
                 To confirm account deletion, please type:
               </p>
               <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-3 mb-4">
-                <code className="text-red-400 font-mono text-sm select-none">Delete All Data</code>
+                <code className="text-red-400 font-mono text-sm select-none">
+                  Delete All Data
+                </code>
               </div>
             </div>
 
@@ -147,12 +154,14 @@ export const DeleteAccountModal = ({
 
             <div className="flex gap-4">
               <button
-                onClick={() => setStep('warning')}
+                type="button"
+                onClick={() => setStep("warning")}
                 className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg transition-colors font-medium"
               >
                 Back
               </button>
               <button
+                type="button"
                 onClick={handleDeleteAccount}
                 disabled={!isConfirmationValid}
                 className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -173,7 +182,9 @@ export const DeleteAccountModal = ({
           <div className="mt-4 p-4 bg-gray-800/50 border border-gray-700/50 rounded-lg">
             <div className="flex items-center justify-center gap-3">
               <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-gray-300 text-sm">Deleting account and all data...</p>
+              <p className="text-gray-300 text-sm">
+                Deleting account and all data...
+              </p>
             </div>
           </div>
         )}
