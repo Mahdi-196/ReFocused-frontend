@@ -474,7 +474,7 @@ export async function getCalendarEntryForDate(date: string): Promise<DailyCalend
         });
       }
       
-      if (goalUpdatedDate === date && goalUpdatedDate !== goalCreatedDate && !Boolean(goal.is_completed)) {
+      if (goalUpdatedDate === date && goalUpdatedDate !== goalCreatedDate && !goal.is_completed) {
         entry.goalActivities = entry.goalActivities || [];
         entry.goalActivities.push({
           goalId: goal.id,

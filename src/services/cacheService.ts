@@ -289,6 +289,9 @@ export const CacheKeys = {
   // Dashboard data
   DAILY_ENTRIES: (month: string, userId?: string) => 
     `daily_entries_${month}_${userId || 'current'}`,
+  
+  // Streak data
+  STREAK_STATUS: (userId?: string) => `streak_status_${userId || 'current'}`,
 };
 
 // Cache TTL constants with better categorization

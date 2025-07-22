@@ -43,7 +43,7 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
       loadHistory();
       loadStats();
     }
-  }, [isOpen, selectedFilter]);
+  }, [isOpen, selectedFilter.daysBack, selectedFilter.type, selectedFilter.duration]);
 
   const loadHistory = async () => {
     try {
@@ -110,13 +110,26 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
     onClose();
   };
 
-  // Group goals by completion date
+  // Group goals by completion date with date validation
   const groupedHistory = history.reduce((groups, goal) => {
-    const date = new Date(goal.completed_at).toDateString();
-    if (!groups[date]) {
-      groups[date] = [];
+    try {
+      // Validate and parse the date
+      const completedDate = new Date(goal.completed_at);
+      
+      // Check if date is valid
+      if (isNaN(completedDate.getTime())) {
+        console.warn('Invalid date found for goal:', goal.id, 'completed_at:', goal.completed_at);
+        return groups;
+      }
+      
+      const dateString = completedDate.toDateString();
+      if (!groups[dateString]) {
+        groups[dateString] = [];
+      }
+      groups[dateString].push(goal);
+    } catch (error) {
+      console.error('Error parsing date for goal:', goal.id, error);
     }
-    groups[date].push(goal);
     return groups;
   }, {} as Record<string, GoalHistoryEntry[]>);
 
@@ -218,7 +231,11 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
               <div className="flex flex-wrap gap-2 mt-4">
                 <select
                   value={selectedFilter.daysBack}
-                  onChange={(e) => setSelectedFilter(prev => ({ ...prev, daysBack: parseInt(e.target.value) }))}
+                  onChange={(e) => {
+                    const newDaysBack = parseInt(e.target.value);
+                    console.log('📅 [FILTER] Changing daysBack from', selectedFilter.daysBack, 'to', newDaysBack);
+                    setSelectedFilter(prev => ({ ...prev, daysBack: newDaysBack }));
+                  }}
                   className="px-3 py-1 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500/50"
                 >
                   <option value={30}>Last 30 days</option>
@@ -228,10 +245,14 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
 
                 <select
                   value={selectedFilter.type || ''}
-                  onChange={(e) => setSelectedFilter(prev => ({ 
-                    ...prev, 
-                    type: e.target.value as GoalType || undefined 
-                  }))}
+                  onChange={(e) => {
+                    const newType = e.target.value as GoalType || undefined;
+                    console.log('🎯 [FILTER] Changing type from', selectedFilter.type, 'to', newType);
+                    setSelectedFilter(prev => ({ 
+                      ...prev, 
+                      type: newType 
+                    }));
+                  }}
                   className="px-3 py-1 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500/50"
                 >
                   <option value="">All Types</option>
@@ -242,10 +263,14 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
 
                 <select
                   value={selectedFilter.duration || ''}
-                  onChange={(e) => setSelectedFilter(prev => ({ 
-                    ...prev, 
-                    duration: e.target.value as GoalDuration || undefined 
-                  }))}
+                  onChange={(e) => {
+                    const newDuration = e.target.value as GoalDuration || undefined;
+                    console.log('⏱️ [FILTER] Changing duration from', selectedFilter.duration, 'to', newDuration);
+                    setSelectedFilter(prev => ({ 
+                      ...prev, 
+                      duration: newDuration 
+                    }));
+                  }}
                   className="px-3 py-1 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500/50"
                 >
                   <option value="">All Durations</option>
@@ -258,8 +283,16 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                   onClick={() => {
                     console.log('🐛 [DEBUG] Current filter state:', selectedFilter);
                     console.log('🐛 [DEBUG] History length:', history.length);
+                    console.log('🐛 [DEBUG] History data:', history);
                     console.log('🐛 [DEBUG] Stats:', stats);
+                    console.log('🐛 [DEBUG] Grouped history:', groupedHistory);
+                    console.log('🐛 [DEBUG] Sorted dates:', sortedDates);
+                    console.log('🐛 [DEBUG] Loading state:', isLoading);
+                    console.log('🐛 [DEBUG] Error state:', error);
+                    
+                    // Force reload
                     loadHistory();
+                    loadStats();
                   }}
                   className="px-3 py-1 bg-yellow-600/20 text-yellow-400 rounded-lg text-sm hover:bg-yellow-600/30 transition-colors"
                 >
@@ -271,13 +304,56 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                   onClick={async () => {
                     try {
                       console.log('🧪 [RAW_API_TEST] Testing direct API call...');
-                      const response = await fetch('http://localhost:8000/api/v1/goals/history?days_back=90&limit=100');
+                      
+                      // Get auth token
+                      const token = localStorage.getItem('REF_TOKEN');
+                      console.log('🧪 [RAW_API_TEST] Auth token:', token ? 'present' : 'missing');
+                      
+                      const url = 'http://localhost:8000/api/v1/goals/history?days_back=90&limit=100';
+                      console.log('🧪 [RAW_API_TEST] Request URL:', url);
+                      
+                      const headers: HeadersInit = {
+                        'Content-Type': 'application/json',
+                      };
+                      
+                      if (token) {
+                        headers.Authorization = `Bearer ${token}`;
+                      }
+                      
+                      console.log('🧪 [RAW_API_TEST] Request headers:', headers);
+                      
+                      const response = await fetch(url, {
+                        method: 'GET',
+                        headers,
+                        credentials: 'include'
+                      });
+                      
                       console.log('🧪 [RAW_API_TEST] Response status:', response.status);
-                      console.log('🧪 [RAW_API_TEST] Response headers:', response.headers);
+                      console.log('🧪 [RAW_API_TEST] Response ok:', response.ok);
+                      console.log('🧪 [RAW_API_TEST] Response headers:', Object.fromEntries(response.headers));
+                      
+                      if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('🧪 [RAW_API_TEST] Error response:', errorText);
+                        throw new Error(`HTTP ${response.status}: ${errorText}`);
+                      }
+                      
                       const data = await response.json();
                       console.log('🧪 [RAW_API_TEST] Response data:', data);
+                      console.log('🧪 [RAW_API_TEST] Goals array length:', data?.goals?.length || 'N/A');
+                      
+                      // Show alert with results
+                      alert(`API Test Results:
+Status: ${response.status}
+Goals found: ${data?.goals?.length || 0}
+Total count: ${data?.total_count || 0}
+Date range: ${data?.date_range?.start || 'N/A'} to ${data?.date_range?.end || 'N/A'}
+
+Check console for full details.`);
+                      
                     } catch (error) {
                       console.error('🧪 [RAW_API_TEST] Error:', error);
+                      alert(`API Test Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     }
                   }}
                   className="px-3 py-1 bg-blue-600/20 text-blue-400 rounded-lg text-sm hover:bg-blue-600/30 transition-colors"
@@ -330,12 +406,23 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                       <div className="flex items-center gap-3">
                         <div className="h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent flex-1"></div>
                         <span className="text-sm font-medium text-gray-300 bg-gray-800/50 px-3 py-1 rounded-full">
-                          {new Date(date).toLocaleDateString('en-US', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
+                          {(() => {
+                            try {
+                              const displayDate = new Date(date);
+                              if (isNaN(displayDate.getTime())) {
+                                return 'Invalid Date';
+                              }
+                              return displayDate.toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                              });
+                            } catch (error) {
+                              console.error('Error formatting date header:', date, error);
+                              return 'Unknown Date';
+                            }
+                          })()}
                         </span>
                         <div className="h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent flex-1"></div>
                       </div>
@@ -370,10 +457,21 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                                   {goal.completion_days} day{goal.completion_days !== 1 ? 's' : ''}
                                 </span>
                                 <span className="text-xs text-gray-400">
-                                  {new Date(goal.completed_at).toLocaleTimeString('en-US', { 
-                                    hour: 'numeric', 
-                                    minute: '2-digit' 
-                                  })}
+                                  {(() => {
+                                    try {
+                                      const completedDate = new Date(goal.completed_at);
+                                      if (isNaN(completedDate.getTime())) {
+                                        return 'Invalid time';
+                                      }
+                                      return completedDate.toLocaleTimeString('en-US', { 
+                                        hour: 'numeric', 
+                                        minute: '2-digit' 
+                                      });
+                                    } catch (error) {
+                                      console.error('Error formatting time for goal:', goal.id, error);
+                                      return 'Unknown time';
+                                    }
+                                  })()}
                                 </span>
                               </div>
                             </div>

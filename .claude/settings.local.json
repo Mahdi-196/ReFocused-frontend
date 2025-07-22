@@ -5,7 +5,10 @@
       "mcp__ide__executeCode",
       "Bash(rm:*)",
       "Bash(grep:*)",
-      "Bash(yarn start)"
+      "Bash(yarn start)",
+      "Bash(yarn dev)",
+      "Bash(yarn tsc:*)",
+      "Bash(yarn lint:*)"
     ],
     "deny": []
   }

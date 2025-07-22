@@ -261,5 +261,12 @@ export const authService = {
         : 'Failed to clear activity data.';
       throw new Error(errorMessage);
     }
+  },
+
+  /**
+   * Clear user profile cache
+   */
+  clearUserCache() {
+    cacheService.delete(CacheKeys.USER_PROFILE());
   }
 }; 
