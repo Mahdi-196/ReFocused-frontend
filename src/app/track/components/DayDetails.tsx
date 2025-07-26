@@ -3,6 +3,7 @@ import { UserHabit, DailyCalendarEntry } from "../types";
 import MoodDisplay from "./MoodDisplay";
 import HabitsDisplay from "./HabitsDisplay";
 import GoalsActivityDisplay from "./GoalsActivityDisplay";
+import GratitudesDisplay from "./GratitudesDisplay";
 import { useTime } from "@/contexts/TimeContext";
 
 interface DayDetailsProps {
@@ -53,9 +54,13 @@ export default function DayDetails({
   const today = getCurrentDate();
   const isToday = selectedDate === today;
   const isFuture = selectedDate > today;
+  
 
-  // Show motivational message for today
-  if (isToday) {
+
+
+
+  // Show motivational message for today ONLY if there's no calendar data
+  if (isToday && !calendarData) {
     return (
       <div className="p-6">
         <div className="text-center py-8">
@@ -101,7 +106,7 @@ export default function DayDetails({
           </div>
 
           <p className="text-xs text-gray-400 mt-4">
-            Check back tomorrow to see today's progress!
+            Start tracking to see your progress here!
           </p>
         </div>
       </div>
@@ -163,6 +168,17 @@ export default function DayDetails({
 
   const habitsForDate = getHabitsForDate(selectedDate);
   const goalActivities = calendarData.goalActivities || [];
+  const gratitudes = calendarData.gratitudes || [];
+
+  console.log('📋 [DAY DETAILS] Rendering data for date:', {
+    selectedDate,
+    hasData: {
+      mood: !!calendarData.moodEntry,
+      habits: habitsForDate.length,
+      goals: goalActivities.length,
+      gratitudes: gratitudes.length
+    }
+  });
 
   return (
     <div className="p-6">
@@ -186,6 +202,9 @@ export default function DayDetails({
 
         {/* Goals Activity Section */}
         <GoalsActivityDisplay goalActivities={goalActivities} />
+
+        {/* Gratitudes Section */}
+        <GratitudesDisplay gratitudes={gratitudes} />
       </div>
     </div>
   );

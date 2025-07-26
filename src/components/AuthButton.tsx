@@ -25,6 +25,25 @@ const AuthButton = () => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
       
       if (token && token !== 'dummy-auth-token') {
+        // Validate token format before proceeding
+        try {
+          const validation = authService.isAuthenticated();
+          if (!validation) {
+            // Token was invalid and cleared by authService
+            setIsLoggedIn(false);
+            setUserAvatar(null);
+            setUserName('');
+            setIsLoading(false);
+            return;
+          }
+        } catch (tokenError) {
+          console.error('Token validation failed in AuthButton:', tokenError);
+          setIsLoggedIn(false);
+          setUserAvatar(null);
+          setUserName('');
+          setIsLoading(false);
+          return;
+        }
         setIsLoggedIn(true);
         
         // First try to get cached user data or localStorage data
@@ -44,9 +63,18 @@ const AuthButton = () => {
         
         if (userData) {
           console.log('👤 Using cached/stored user data in AuthButton');
-          // Prioritize profile_picture over avatar field
-          const avatarUrl = userData.profile_picture || userData.avatar || 
-            `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
+          // Prioritize profile_picture over avatar field, with fallback to generated avatar
+          const profilePicture = userData.profile_picture || userData.avatar;
+          const fallbackAvatar = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
+          const avatarUrl = profilePicture || fallbackAvatar;
+          
+          console.log('👤 AuthButton avatar selection:', {
+            profile_picture: userData.profile_picture,
+            avatar: userData.avatar,
+            fallbackAvatar,
+            finalAvatarUrl: avatarUrl,
+            userName: userData.name || userData.email
+          });
           
           // Preload the avatar image to ensure it's cached
           if (avatarUrl) {
@@ -54,6 +82,14 @@ const AuthButton = () => {
             img.src = avatarUrl;
             img.onload = () => {
               console.log('👤 Avatar preloaded and cached:', avatarUrl);
+            };
+            img.onerror = () => {
+              console.error('👤 Avatar failed to load:', avatarUrl);
+              // If profile picture fails, try fallback
+              if (profilePicture && avatarUrl === profilePicture) {
+                console.log('👤 Using fallback avatar due to load error');
+                setUserAvatar(fallbackAvatar);
+              }
             };
           }
           
@@ -65,8 +101,17 @@ const AuthButton = () => {
             const freshUserData = await authService.getCurrentUser();
             
             // Set avatar from user data or generate one
-            const avatarUrl = freshUserData.profile_picture || freshUserData.avatar || 
-              `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(freshUserData.name || freshUserData.email)}&backgroundColor=transparent`;
+            const profilePicture = freshUserData.profile_picture || freshUserData.avatar;
+            const fallbackAvatar = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(freshUserData.name || freshUserData.email)}&backgroundColor=transparent`;
+            const avatarUrl = profilePicture || fallbackAvatar;
+            
+            console.log('👤 AuthButton fresh API avatar selection:', {
+              profile_picture: freshUserData.profile_picture,
+              avatar: freshUserData.avatar,
+              fallbackAvatar,
+              finalAvatarUrl: avatarUrl
+            });
+            
             setUserAvatar(avatarUrl);
             setUserName(freshUserData.name || freshUserData.email || 'User');
           } catch (error) {
@@ -102,17 +147,34 @@ const AuthButton = () => {
         try {
           const userData = e.newValue ? JSON.parse(e.newValue) : null;
           if (userData) {
-            // Prioritize profile_picture over avatar field
-            const avatarUrl = userData.profile_picture || userData.avatar;
-            if (avatarUrl) {
-              // Preload the updated avatar
-              const img = new Image();
-              img.src = avatarUrl;
-              img.onload = () => {
-                console.log('👤 Updated avatar preloaded and cached:', avatarUrl);
-              };
-              setUserAvatar(avatarUrl);
-            }
+            // Prioritize profile_picture over avatar field, with fallback to generated avatar
+            const profilePicture = userData.profile_picture || userData.avatar;
+            const fallbackAvatar = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
+            const avatarUrl = profilePicture || fallbackAvatar;
+            
+            console.log('👤 AuthButton storage change avatar selection:', {
+              profile_picture: userData.profile_picture,
+              avatar: userData.avatar,
+              fallbackAvatar,
+              finalAvatarUrl: avatarUrl
+            });
+            
+            // Preload the updated avatar
+            const img = new Image();
+            img.src = avatarUrl;
+            img.onload = () => {
+              console.log('👤 Updated avatar preloaded and cached:', avatarUrl);
+            };
+            img.onerror = () => {
+              console.error('👤 Updated avatar failed to load:', avatarUrl);
+              // If profile picture fails, try fallback
+              if (profilePicture && avatarUrl === profilePicture) {
+                console.log('👤 Using fallback avatar for storage update due to load error');
+                setUserAvatar(fallbackAvatar);
+              }
+            };
+            
+            setUserAvatar(avatarUrl);
             setUserName(userData.name || userData.email || 'User');
           }
         } catch (error) {
@@ -166,6 +228,7 @@ const AuthButton = () => {
       <div className="relative">
         {isLoggedIn ? (
           <button 
+            type="button"
             onClick={() => router.push('/profile')}
             className="w-10 h-10 rounded-full border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center overflow-hidden"
             title={`Go to Profile - ${userName}`}
@@ -175,7 +238,26 @@ const AuthButton = () => {
                 src={userAvatar} 
                 alt={`${userName}'s avatar`}
                 className="w-full h-full object-cover"
-                onError={() => setUserAvatar(null)} // Fallback to icon if image fails
+                onError={() => {
+                  console.error('👤 Avatar image failed to load in render:', userAvatar);
+                  // Try to generate a fallback avatar if this is a profile picture
+                  const userData = localStorage.getItem('REF_USER');
+                  if (userData) {
+                    try {
+                      const parsedUser = JSON.parse(userData);
+                      const fallbackAvatar = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(parsedUser.name || parsedUser.email)}&backgroundColor=transparent`;
+                      if (userAvatar !== fallbackAvatar) {
+                        console.log('👤 Switching to fallback avatar:', fallbackAvatar);
+                        setUserAvatar(fallbackAvatar);
+                        return;
+                      }
+                    } catch (parseError) {
+                      console.error('Failed to parse user data for fallback:', parseError);
+                    }
+                  }
+                  // If all else fails, remove avatar to show icon
+                  setUserAvatar(null);
+                }}
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-r from-[#2e7fd8] to-[#35bfc0] hover:from-[#3590e0] hover:to-[#30b0b1] flex items-center justify-center">
@@ -185,6 +267,7 @@ const AuthButton = () => {
           </button>
         ) : (
           <button
+            type="button"
             onClick={openAuthModal}
             className="px-4 py-2 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-medium rounded-lg hover:shadow-[0_0_15px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 text-sm"
           >

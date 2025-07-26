@@ -7,6 +7,7 @@ import { authService } from '@/api/services/authService';
 import { timeService } from '@/services/timeService';
 import { authDebugUtils } from '@/utils/authDebug';
 import { tokenRefreshManager } from '@/utils/tokenRefresh';
+import { tokenValidator } from '@/utils/tokenValidator';
 import logger from '@/utils/logger';
 
 interface User {
@@ -16,6 +17,7 @@ interface User {
   username?: string;
   createdAt: string;
   avatar?: string;
+  profile_picture?: string;
 }
 
 interface AuthContextType {
@@ -58,7 +60,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
       const token = localStorage.getItem('REF_TOKEN');
-      const isTokenValid = token && token !== 'dummy-auth-token' && token.trim() !== '';
+      let isTokenValid = token && token !== 'dummy-auth-token' && token.trim() !== '';
+      
+      // If we have a token, validate its format before proceeding
+      if (isTokenValid && token) {
+        const validation = tokenValidator.validateJWT(token);
+        if (!validation.isValid) {
+          console.warn('🔑 AuthContext: Invalid token detected, clearing:', validation.error);
+          authService.logout();
+          isTokenValid = false;
+        }
+      }
       
       if (isTokenValid) {
         // Initialize auth headers

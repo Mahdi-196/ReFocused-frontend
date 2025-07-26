@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { incrementTasksDone } from "@/services/statisticsService";
 
 // Define Task type locally or import from a shared types file
@@ -27,12 +27,13 @@ const TaskList: React.FC<TaskListProps> = ({
   handleDeleteTask,
   setTasks,
 }) => {
+  const apiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   return (
     <div className="mt-6">
       <div className="flex items-center gap-2 mb-3">
         <span className="font-medium text-gray-300">Today's Tasks</span>
       </div>
-      <div className="w-full bg-gray-700/30 border border-gray-600/50 rounded-lg p-4">
+      <div className="w-full bg-gray-600/50 border border-gray-500/50 rounded-lg p-4">
         {/* Fixed height container to prevent layout shifts - shows minimum 3 tasks worth of space */}
         <div className="min-h-[120px] mb-3">
           <ul className="space-y-2">
@@ -54,15 +55,23 @@ const TaskList: React.FC<TaskListProps> = ({
                       
                       // Track task completion when checking off (not unchecking)
                       if (!wasCompleted) {
-                        try {
-                          incrementTasksDone();
-                          console.log('✅ [TASK LIST] Task completion tracked for:', task.text);
-                        } catch (error) {
-                          console.error('Failed to track task completion:', error);
+                        // Clear any existing timeout
+                        if (apiTimeoutRef.current) {
+                          clearTimeout(apiTimeoutRef.current);
                         }
+                        
+                        // Set new timeout to delay API call by 1 second
+                        apiTimeoutRef.current = setTimeout(() => {
+                          try {
+                            incrementTasksDone();
+                            console.log('✅ [TASK LIST] Task completion tracked for:', task.text);
+                          } catch (error) {
+                            console.error('Failed to track task completion:', error);
+                          }
+                        }, 1000);
                       }
                     }}
-                    className="flex-shrink-0 rounded border-gray-500 text-blue-500 focus:ring-blue-500 bg-gray-600"
+                    className="appearance-none flex-shrink-0 w-5 h-5 rounded border-2 border-gray-500 text-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-700 checked:bg-blue-500 checked:border-blue-500 hover:border-gray-400 transition-colors cursor-pointer"
                   />
                   <span className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-200'}`}>
                     {task.text}

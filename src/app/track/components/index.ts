@@ -5,4 +5,5 @@ export { default as CalendarCell } from './CalendarCell';
 export { default as DayDetails } from './DayDetails';
 export { default as MoodDisplay } from './MoodDisplay';
 export { default as HabitsDisplay } from './HabitsDisplay';
-export { default as GoalsActivityDisplay } from './GoalsActivityDisplay'; 
+export { default as GoalsActivityDisplay } from './GoalsActivityDisplay';
+export { default as GratitudesDisplay } from './GratitudesDisplay'; 

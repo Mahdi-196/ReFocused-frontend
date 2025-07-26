@@ -47,6 +47,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       setError(null);
       
       const { startDate, endDate } = getMonthDateRange();
+      console.log('📊 [CALENDAR HOOK] Loading calendar for month:', { startDate, endDate, currentMonth: currentMonth.toISOString().split('T')[0] });
       
       // Load calendar entries from REAL services (not mock API)
       const entries = await getCalendarEntries(startDate, endDate);
@@ -55,8 +56,12 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       const entriesMap: { [key: string]: DailyCalendarEntry } = {};
       entries.forEach(entry => {
         entriesMap[entry.date] = entry;
+        if (entry.gratitudes && entry.gratitudes.length > 0) {
+          console.log('🙏 [CALENDAR HOOK] Found gratitudes for date:', entry.date, entry.gratitudes);
+        }
       });
       
+      console.log('📊 [CALENDAR HOOK] Loaded entries count:', entries.length);
       setCalendarEntries(entriesMap);
       
     } catch (err) {
@@ -226,14 +231,10 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
     loadCalendarData();
   };
 
-  // Load data when month changes or habits change
+  // Load data when month changes only
   useEffect(() => {
-    // Force clear cache on initial load to ensure fresh data
-    if (Object.keys(calendarEntries).length === 0) {
-      clearCalendarCache();
-    }
     loadCalendarData();
-  }, [loadCalendarData]);
+  }, [currentMonth]); // Only depend on currentMonth to prevent loops
 
   // Listen for goal updates and refresh calendar
   useEffect(() => {

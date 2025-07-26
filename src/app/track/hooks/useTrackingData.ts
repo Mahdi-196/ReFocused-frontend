@@ -115,7 +115,7 @@ export function useTrackingData(currentMonth: Date) {
       const entriesMap = await getDailyEntries(monthString);
       setDailyEntries(entriesMap);
 
-      // Load mood entries for current month
+      // Calculate date range for mood entries
       const currentYear = new Date(todayString).getFullYear();
       const currentMonthNum = new Date(todayString).getMonth();
       const firstDay = new Date(currentYear, currentMonthNum, 1);
@@ -131,8 +131,7 @@ export function useTrackingData(currentMonth: Date) {
       });
       setMoodEntries(moodMap);
 
-      // Load habit completions for the last 30 days (not just today)
-      // This provides historical context for proper streak calculation and display
+      // Load habit completions for the last 30 days
       const completionMap = await loadHabitCompletions();
       setHabitCompletions(completionMap);
       
@@ -150,7 +149,7 @@ export function useTrackingData(currentMonth: Date) {
     } finally {
       setLoading(false);
     }
-  }, [todayString, monthString, loadHabitCompletions, getHabitsWithCorrectStreaks]);
+  }, [todayString, monthString]); // Remove function dependencies to prevent infinite loops
 
   /**
    * Clear all user data when user logs out
@@ -164,10 +163,10 @@ export function useTrackingData(currentMonth: Date) {
     setError(null);
   }, []);
 
-  // Load data when dependencies change
+  // Load data when month changes
   useEffect(() => {
     loadUserData();
-  }, [loadUserData]);
+  }, [todayString, monthString]); // Direct dependencies instead of callback
 
   // Handle authentication changes
   useEffect(() => {

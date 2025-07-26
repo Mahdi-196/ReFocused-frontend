@@ -6,6 +6,7 @@ import { timeService } from './timeService';
 import { getHabits, getHabitCompletions } from './habitsService';
 import { getMoodEntries } from './moodService';
 import { GoalsService } from './goalsService';
+import { getGratitudeEntries } from '@/api/services/gratitudeService';
 
 // Cache configuration
 const CALENDAR_CACHE_PREFIX = 'calendar_real';
@@ -90,24 +91,65 @@ export async function getCalendarEntries(startDate: string, endDate: string): Pr
     // Check cache first
     const cached = cacheService.get<DailyCalendarEntry[]>(cacheKey);
     if (cached) {
+      console.log('📦 [CALENDAR] Using cached calendar entries for range:', { 
+        startDate, 
+        endDate, 
+        cacheKey,
+        entriesCount: cached.length 
+      });
       return cached;
     }
 
-    // Fetch all required data in parallel
-    const [habits, habitCompletions, moodEntries, goalData] = await Promise.all([
-      getHabits().catch(err => {
-        return [];
-      }),
-      getHabitCompletions(startDate, endDate).catch(err => {
-        return [];
-      }),
-      getMoodEntries(startDate, endDate).catch(err => {
-        return [];
-      }),
-      fetchGoalsForDateRange(startDate, endDate) // Use enhanced goal fetching
+    console.log('🔄 [CALENDAR] Fetching fresh calendar data for range:', { 
+      startDate, 
+      endDate,
+      monthYear: startDate.slice(0, 7),
+      daysInRange: Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
+    });
+
+    // Check authentication before making API calls
+    const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
+    console.log('🔐 [CALENDAR] Auth check:', {
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 10)}...` : 'none'
+    });
+
+    // Fetch all required data in parallel with individual error handling
+    const [habits, habitCompletions, moodEntries, goalData, gratitudeResponse] = await Promise.allSettled([
+      getHabits(),
+      getHabitCompletions(startDate, endDate),
+      getMoodEntries(startDate, endDate),
+      fetchGoalsForDateRange(startDate, endDate),
+      getGratitudeEntries({ start_date: startDate, end_date: endDate, limit: 1000 })
     ]);
 
-    const { goals: allGoals, dailyProgress } = goalData;
+    // Extract successful results or use fallbacks
+    const successfulHabits = habits.status === 'fulfilled' ? habits.value : [];
+    const successfulCompletions = habitCompletions.status === 'fulfilled' ? habitCompletions.value : [];
+    const successfulMoodEntries = moodEntries.status === 'fulfilled' ? moodEntries.value : [];
+    const successfulGoalData = goalData.status === 'fulfilled' ? goalData.value : { goals: [], dailyProgress: [] };
+    const successfulGratitudes = gratitudeResponse.status === 'fulfilled' 
+      ? gratitudeResponse.value 
+      : { gratitude_entries: [], total: 0, page: 1, size: 0, has_next: false, has_prev: false };
+
+    // Log any failures for debugging
+    if (habits.status === 'rejected') {
+      console.warn('⚠️ [CALENDAR] Failed to fetch habits:', habits.reason);
+    }
+    if (habitCompletions.status === 'rejected') {
+      console.warn('⚠️ [CALENDAR] Failed to fetch habit completions:', habitCompletions.reason);
+    }
+    if (moodEntries.status === 'rejected') {
+      console.warn('⚠️ [CALENDAR] Failed to fetch mood entries:', moodEntries.reason);
+    }
+    if (goalData.status === 'rejected') {
+      console.warn('⚠️ [CALENDAR] Failed to fetch goal data:', goalData.reason);
+    }
+    if (gratitudeResponse.status === 'rejected') {
+      console.warn('⚠️ [CALENDAR] Failed to fetch gratitude entries:', gratitudeResponse.reason);
+    }
+
+    const { goals: allGoals, dailyProgress } = successfulGoalData;
 
     // Create a map to store calendar entries by date
     const entriesMap: { [key: string]: DailyCalendarEntry } = {};
@@ -120,6 +162,7 @@ export async function getCalendarEntries(startDate: string, endDate: string): Pr
           userId: 1, // Default user ID
           habitCompletions: [],
           goalActivities: [],
+          gratitudes: [],
           isLocked: isPastDate(date)
         };
       }
@@ -127,9 +170,9 @@ export async function getCalendarEntries(startDate: string, endDate: string): Pr
     };
 
     // Process habit completions
-    habitCompletions.forEach(completion => {
+    successfulCompletions.forEach(completion => {
       const entry = ensureCalendarEntry(completion.date);
-      const habit = habits.find(h => h.id === completion.habitId);
+      const habit = successfulHabits.find(h => h.id === completion.habitId);
       
       if (habit) {
         const existingCompletion = entry.habitCompletions.find(hc => hc.habitId === completion.habitId);
@@ -145,33 +188,8 @@ export async function getCalendarEntries(startDate: string, endDate: string): Pr
       }
     });
 
-    // Add all current habits to dates that don't have completions (showing them as not completed)
-    const allDates = new Set<string>();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    // Generate date range using backend time as reference
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      allDates.add(d.toISOString().split('T')[0]);
-    }
-    
-    allDates.forEach(date => {
-      habits.forEach(habit => {
-        const entry = ensureCalendarEntry(date);
-        const existingCompletion = entry.habitCompletions.find(hc => hc.habitId === habit.id);
-        if (!existingCompletion) {
-          entry.habitCompletions.push({
-            habitId: habit.id,
-            habitName: habit.name,
-            completed: false,
-            wasActiveOnDate: habit.isActive !== false
-          });
-        }
-      });
-    });
-
-    // Process mood entries
-    moodEntries.forEach(mood => {
+    // Process mood entries with safe property access
+    successfulMoodEntries.forEach(mood => {
       const entry = ensureCalendarEntry(mood.date);
       entry.moodEntry = {
         happiness: mood.happiness || 0,
@@ -180,162 +198,64 @@ export async function getCalendarEntries(startDate: string, endDate: string): Pr
       };
     });
 
-    // Process goal activities with improved day-specific filtering
-    let goalActivitiesAdded = 0;
-    
-    // Helper function to ensure goal activity is unique per day
-    const addGoalActivity = (date: string, activity: any, goalId: number) => {
-      const entry = ensureCalendarEntry(date);
-      entry.goalActivities = entry.goalActivities || [];
-      
-      // Check if we already have this type of activity for this goal on this date
-      const existingActivity = entry.goalActivities.find(a => 
-        a.goalId === goalId && a.activityType === activity.activityType
-      );
-      
-      if (!existingActivity) {
-        entry.goalActivities.push(activity);
-        goalActivitiesAdded++;
+    // Process gratitude entries
+    successfulGratitudes.gratitude_entries?.forEach(gratitude => {
+      const entry = ensureCalendarEntry(gratitude.date);
+      if (!entry.gratitudes) {
+        entry.gratitudes = [];
       }
-    };
-    
-    // Process client-side daily progress data
-    dailyProgress.forEach(progress => {
-      
-      // Find the corresponding goal
-      const goal = allGoals.find(g => g.id === progress.goalId);
-      if (goal) {
-        // Try to get previous value from localStorage or use 0 as default
-        let previousValue = 0;
-        try {
-          const stored = localStorage.getItem('goal_previous_values');
-          if (stored) {
-            const previousValues = JSON.parse(stored);
-            previousValue = previousValues[progress.goalId] || 0;
-          }
-        } catch (error) {
-          // console.warn('Could not get previous value from localStorage:', error);
-        }
-        
-        addGoalActivity(progress.date, {
-          goalId: progress.goalId,
-          goalName: goal.name,
-          activityType: progress.progressType === 'complete' ? 'completed' : 'progress_update',
-          activityTime: new Date(progress.timestamp),
-          progressValue: progress.progressValue,
-          goalType: goal.goal_type,
-          targetValue: goal.target_value,
-          previousValue: previousValue,
-          notes: progress.notes || 'Progress updated'
-        }, progress.goalId);
-      }
+      entry.gratitudes.push({
+        id: gratitude.id,
+        text: gratitude.text,
+        date: gratitude.date,
+        createdAt: gratitude.created_at ? new Date(gratitude.created_at) : undefined
+      });
     });
 
-    // Process goal activities from backend with previous value tracking
-    allGoals.forEach(goal => {
-      
-      // Process goal creation
-      if (goal.created_at) {
-        const createdDate = goal.created_at.split('T')[0];
-        if (createdDate >= startDate && createdDate <= endDate) {
-          const activity = {
-            goalId: goal.id,
-            goalName: goal.name,
-            activityType: 'created',
-            activityTime: new Date(goal.created_at),
-            notes: `Created new ${goal.goal_type} goal`
-          };
-          addGoalActivity(createdDate, activity, goal.id);
-        }
+    // Process goal activities
+    dailyProgress.forEach(progress => {
+      const entry = ensureCalendarEntry(progress.date);
+      if (!entry.goalActivities) {
+        entry.goalActivities = [];
       }
       
-      // Process goal completion
-      if (goal.completed_at) {
-        const completedDate = goal.completed_at.split('T')[0];
-        if (completedDate >= startDate && completedDate <= endDate) {
-          addGoalActivity(completedDate, {
-            goalId: goal.id,
-            goalName: goal.name,
-            activityType: 'completed',
-            activityTime: new Date(goal.completed_at),
-            notes: `Completed ${goal.goal_type} goal`
-          }, goal.id);
-        }
-      }
-      
-      // Enhanced progress tracking logic with proper percentage calculation
-      const hasProgress = goal.current_value > 0;
-      const isCompleted = Boolean(goal.is_completed) || (goal.completed_at !== null);
-      const progressPercentage = goal.progress_percentage ?? 0;
-      
-      if (hasProgress && !isCompleted) {
-        
-        // For progress tracking, we need to be smarter about when to show activity
-        // Strategy: Show progress on updated_at date if it's different from created_at
-        const createdDate = goal.created_at ? goal.created_at.split('T')[0] : null;
-        const updatedDate = goal.updated_at ? goal.updated_at.split('T')[0] : null;
-        
-        // Case 1: Progress was made on a different day than creation
-        if (updatedDate && createdDate && updatedDate !== createdDate) {
-          
-          if (updatedDate >= startDate && updatedDate <= endDate) {
-            // Try to get previous value from localStorage or use a smarter default
-            let previousValue = 0;
-            try {
-              const stored = localStorage.getItem('goal_previous_values');
-              if (stored) {
-                const previousValues = JSON.parse(stored);
-                previousValue = previousValues[goal.id] || 0;
-              }
-            } catch (error) {
-              // console.warn('Could not get previous value from localStorage:', error);
-            }
-            
-            // If we don't have a stored previous value, try to estimate it
-            // For newly created goals, assume they started at 0
-            // For existing goals, we'll show current progress without change indication
-            const isNewGoal = createdDate === updatedDate;
-            const shouldShowChange = !isNewGoal && previousValue > 0;
-            
-            const activity = {
-              goalId: goal.id,
-              goalName: goal.name,
-              activityType: 'progress_update',
-              activityTime: goal.updated_at ? new Date(goal.updated_at) : new Date(),
-              progressValue: goal.current_value,
-              goalType: goal.goal_type,
-              targetValue: goal.target_value,
-              previousValue: previousValue,
-              notes: shouldShowChange 
-                ? (goal.current_value > previousValue 
-                    ? `You gained ${Math.round(goal.current_value - previousValue)}% progress`
-                    : `You lost ${Math.round(previousValue - goal.current_value)}% progress`)
-                : goal.goal_type === 'percentage' 
-                ? `Progress updated to ${Math.round(goal.current_value)}%`
-                : goal.goal_type === 'counter'
-                ? `Progress: ${goal.current_value}/${goal.target_value} (${Math.round(progressPercentage)}%)`
-                : goal.goal_type === 'checklist'
-                ? `Progress: ${Math.round(progressPercentage)}%`
-                : 'Progress updated'
-            };
-            addGoalActivity(updatedDate, activity, goal.id);
-          }
-        }
+      const goal = allGoals.find(g => g.id === progress.goalId);
+      if (goal) {
+        entry.goalActivities.push({
+          goalId: progress.goalId,
+          goalName: goal.name,
+          activityType: 'progress_update',
+          progressValue: progress.currentValue,
+          goalType: goal.type,
+          targetValue: goal.targetValue,
+          activityTime: new Date(progress.date + 'T12:00:00')
+        });
       }
     });
 
     // Convert map to array
-    const entries = Object.values(entriesMap);
+    const result = Object.values(entriesMap);
     
-    // Count entries with goal activities
-    const entriesWithGoals = entries.filter(entry => entry.goalActivities && entry.goalActivities.length > 0);
+    console.log('📊 [CALENDAR] Successfully processed calendar entries:', {
+      totalEntries: result.length,
+      entriesWithMood: result.filter(e => e.moodEntry).length,
+      entriesWithHabits: result.filter(e => e.habitCompletions.length > 0).length,
+      entriesWithGratitudes: result.filter(e => e.gratitudes && e.gratitudes.length > 0).length,
+      entriesWithGoals: result.filter(e => e.goalActivities && e.goalActivities.length > 0).length
+    });
+
+    // Cache the result if we have any successful data
+    if (result.length > 0) {
+      cacheService.set(cacheKey, result, CALENDAR_CACHE_TTL);
+    }
+
+    return result;
     
-    // Cache the results
-    cacheService.set(cacheKey, entries, CALENDAR_CACHE_TTL);
-    
-    return entries;
   } catch (error) {
-    cacheService.invalidate(cacheKey);
+    console.error('❌ [CALENDAR] Critical error fetching calendar entries:', error);
+    
+    // Return empty array on complete failure
+    // The calling code will handle this gracefully
     return [];
   }
 }
@@ -383,7 +303,7 @@ export async function getCalendarEntryForDate(date: string): Promise<DailyCalend
     }
 
     // Fetch all required data in parallel with date-specific goal fetching
-    const [habits, habitCompletions, moodEntries, dayGoals] = await Promise.all([
+    const [habits, habitCompletions, moodEntries, dayGoals, gratitudeResponse] = await Promise.all([
       getHabits().catch(err => {
         return [];
       }),
@@ -395,6 +315,10 @@ export async function getCalendarEntryForDate(date: string): Promise<DailyCalend
       }),
       goalsService.getGoalsForDate(date).catch(err => {
         return [];
+      }),
+      getGratitudeEntries({ start_date: date, end_date: date, limit: 100 }).catch(err => {
+        console.error('Failed to fetch gratitude entries for date:', date, err);
+        return { gratitude_entries: [], total: 0, page: 1, size: 0, has_next: false, has_prev: false };
       })
     ]);
 
@@ -443,6 +367,22 @@ export async function getCalendarEntryForDate(date: string): Promise<DailyCalend
         stress: moodEntry.stress || 0
       };
     }
+
+    // Process gratitude entries
+    const gratitudeEntries = gratitudeResponse.gratitude_entries || [];
+    console.log('🙏 [CALENDAR-SINGLE] Processing gratitude entries for date:', date, {
+      count: gratitudeEntries.length,
+      entries: gratitudeEntries
+    });
+    
+    entry.gratitudes = gratitudeEntries.map(gratitude => ({
+      id: gratitude.id,
+      text: gratitude.text,
+      date: gratitude.date,
+      createdAt: new Date(gratitude.created_at)
+    }));
+    
+    console.log('📅 [CALENDAR-SINGLE] Final gratitudes for date:', date, entry.gratitudes);
 
     // Process goal activities for this specific date
     dayGoals.forEach(goal => {
@@ -580,6 +520,7 @@ export async function hasCalendarEntry(date: string): Promise<boolean> {
   return (
     (entry.habitCompletions?.length ?? 0) > 0 ||
     (!!entry.moodEntry) ||
-    (entry.goalActivities?.length ?? 0) > 0
+    (entry.goalActivities?.length ?? 0) > 0 ||
+    (entry.gratitudes?.length ?? 0) > 0
   );
 } 

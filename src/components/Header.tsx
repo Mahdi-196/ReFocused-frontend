@@ -59,35 +59,37 @@ const Header = () => {
               className="hidden md:flex items-center space-x-2"
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" />
-              <motion.span 
-                className="text-xl font-bold cursor-pointer relative group inline-block"
-                whileHover={{ 
-                  scale: 1.05,
-                  filter: "drop-shadow(0 0 15px rgba(66,185,229,0.5))"
-                }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 300, 
-                  damping: 20 
-                }}
-              >
+              <Link href="/ai">
                 <motion.span 
-                  className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="text-xl font-bold cursor-pointer relative group inline-block"
+                  whileHover={{ 
+                    scale: 1.05,
+                    filter: "drop-shadow(0 0 15px rgba(66,185,229,0.5))"
+                  }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 300, 
+                    damping: 20 
+                  }}
                 >
-                  ReFocused
+                  <motion.span 
+                    className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    ReFocused
+                  </motion.span>
+                  <motion.span 
+                    className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
+                    initial={{ opacity: 0, y: 5 }}
+                    whileHover={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    ReFocused AI
+                  </motion.span>
                 </motion.span>
-                <motion.span 
-                  className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
-                  initial={{ opacity: 0, y: 5 }}
-                  whileHover={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                >
-                  ReFocused-Ai
-                </motion.span>
-              </motion.span>
+              </Link>
             </motion.div>
           </div>
 
@@ -98,35 +100,37 @@ const Header = () => {
               className="md:hidden flex items-center space-x-2"
             >
               <img src="/favicon.svg" alt="Brain Logo" className="w-8 h-8" />
-              <motion.span 
-                className="text-lg font-bold cursor-pointer relative group inline-block"
-                whileHover={{ 
-                  scale: 1.05,
-                  filter: "drop-shadow(0 0 15px rgba(66,185,229,0.5))"
-                }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 300, 
-                  damping: 20 
-                }}
-              >
+              <Link href="/ai">
                 <motion.span 
-                  className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="text-lg font-bold cursor-pointer relative group inline-block"
+                  whileHover={{ 
+                    scale: 1.05,
+                    filter: "drop-shadow(0 0 15px rgba(66,185,229,0.5))"
+                  }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 300, 
+                    damping: 20 
+                  }}
                 >
-                  ReFocused
+                  <motion.span 
+                    className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    ReFocused
+                  </motion.span>
+                  <motion.span 
+                    className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
+                    initial={{ opacity: 0, y: 5 }}
+                    whileHover={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    ReFocused AI
+                  </motion.span>
                 </motion.span>
-                <motion.span 
-                  className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
-                  initial={{ opacity: 0, y: 5 }}
-                  whileHover={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                >
-                  ReFocused-Ai
-                </motion.span>
-              </motion.span>
+              </Link>
             </motion.div>
 
             {/* Desktop Navigation - Centered */}

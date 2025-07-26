@@ -8,7 +8,9 @@
       "Bash(yarn start)",
       "Bash(yarn dev)",
       "Bash(yarn tsc:*)",
-      "Bash(yarn lint:*)"
+      "Bash(yarn lint:*)",
+      "Bash(pkill:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }

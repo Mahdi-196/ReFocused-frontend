@@ -75,12 +75,21 @@ export interface DailyGoalActivity {
   notes?: string;
 }
 
+export interface Gratitude {
+  id: number;
+  text: string;
+  date: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface DailyCalendarEntry {
   id?: number;
   date: string; // ISO date string (YYYY-MM-DD)
   userId: number;
   habitCompletions: DailyHabitCompletion[];
   goalActivities?: DailyGoalActivity[]; // Goal changes that happened on this day
+  gratitudes?: Gratitude[]; // Gratitudes recorded on this day
   moodEntry?: {
     happiness: number;
     focus: number; // Changed from satisfaction to focus for consistency

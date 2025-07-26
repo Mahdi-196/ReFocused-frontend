@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { User, Settings, LogOut, MessageSquare, X, Star, Camera, Volume2, VolumeX, Bell, Wind } from 'lucide-react';
+import { GiVote } from "react-icons/gi";
 import PageTransition from '@/components/PageTransition';
 import AvatarSelector from '@/components/AvatarSelector';
 import { useSettings } from '@/hooks/useSettings';
@@ -47,7 +48,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false);
-  const [currentAvatar, setCurrentAvatar] = useState('https://api.dicebear.com/7.x/personas/svg?seed=John-Doe&backgroundColor=transparent');
+  const [currentAvatar, setCurrentAvatar] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(true);
   const [feedbackData, setFeedbackData] = useState<FeedbackData>({
     rating: 0,
@@ -55,6 +56,10 @@ const Profile = () => {
     message: '',
     contact: ''
   });
+  // Voting section state
+  const [showVotingOptions, setShowVotingOptions] = useState(false);
+  const [selectedVotingOption, setSelectedVotingOption] = useState<string | null>(null);
+  const [customVote, setCustomVote] = useState("");
   // Removed unused state: appSettingsActiveSection
   
   // User data state
@@ -64,6 +69,11 @@ const Profile = () => {
   const [error, setError] = useState<string | null>(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [showAvatarSuccess, setShowAvatarSuccess] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(true);
+  const [avatarLoadTimeout, setAvatarLoadTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Avatar cache to store loaded images
+  const avatarCache = useRef<Map<string, HTMLImageElement>>(new Map());
   
   // Data management state
   
@@ -74,6 +84,25 @@ const Profile = () => {
   
   // Settings hook
   const { settings, updateSettings } = useSettings();
+
+  // Function to preload and cache avatar
+  const preloadAvatar = (url: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      // Check if already cached
+      if (avatarCache.current.has(url)) {
+        resolve();
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        avatarCache.current.set(url, img);
+        resolve();
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  };
   
   // Add authentication check for this page
   const [isAuthenticatedUser, setIsAuthenticatedUser] = useState(false);
@@ -81,9 +110,34 @@ const Profile = () => {
   // Update current avatar when user data changes
   useEffect(() => {
     if (userData?.profile_picture || userData?.avatar) {
-      setCurrentAvatar(userData.profile_picture || userData.avatar || currentAvatar);
+      const newAvatar = userData.profile_picture || userData.avatar;
+      if (newAvatar && newAvatar !== currentAvatar) {
+        setAvatarLoading(true);
+        
+        // Try to load from cache first, then preload if not cached
+        preloadAvatar(newAvatar)
+          .then(() => {
+            setCurrentAvatar(newAvatar);
+            setAvatarLoading(false);
+            setAvatarLoadTimeout(prev => {
+              if (prev) clearTimeout(prev);
+              return null;
+            });
+          })
+          .catch(() => {
+            // If preload fails, still set the avatar and let the img onError handle it
+            setCurrentAvatar(newAvatar);
+            
+            // Fallback timeout to hide spinner after 5 seconds
+            const timeout = setTimeout(() => setAvatarLoading(false), 5000);
+            setAvatarLoadTimeout(prev => {
+              if (prev) clearTimeout(prev);
+              return timeout;
+            });
+          });
+      }
     }
-  }, [userData?.profile_picture, userData?.avatar, currentAvatar, userData]);
+  }, [userData?.profile_picture, userData?.avatar, currentAvatar]);
   
   useEffect(() => {
     const checkPageAuth = () => {
@@ -102,6 +156,15 @@ const Profile = () => {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (avatarLoadTimeout) {
+        clearTimeout(avatarLoadTimeout);
+      }
+    };
+  }, [avatarLoadTimeout]);
 
   const loadUserData = async () => {
     try {
@@ -122,7 +185,28 @@ const Profile = () => {
       // Set avatar from user data (prioritize profile_picture over avatar) or generate one
       const avatarUrl = userData.profile_picture || userData.avatar ||
         `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(userData.name || userData.email)}&backgroundColor=transparent`;
-      setCurrentAvatar(avatarUrl);
+      
+      // Preload and cache the avatar
+      preloadAvatar(avatarUrl)
+        .then(() => {
+          setCurrentAvatar(avatarUrl);
+          setAvatarLoading(false);
+          setAvatarLoadTimeout(prev => {
+            if (prev) clearTimeout(prev);
+            return null;
+          });
+        })
+        .catch(() => {
+          // If preload fails, still set the avatar and let the img onError handle it
+          setCurrentAvatar(avatarUrl);
+          
+          // Fallback timeout to hide spinner after 5 seconds
+          const timeout = setTimeout(() => setAvatarLoading(false), 5000);
+          setAvatarLoadTimeout(prev => {
+            if (prev) clearTimeout(prev);
+            return timeout;
+          });
+        });
       
       // Load user statistics
       try {
@@ -162,8 +246,30 @@ const Profile = () => {
   const handleAvatarSelect = async (avatarUrl: string) => {
     setAvatarSaving(true);
     try {
-      // Update local state immediately for better UX
-      setCurrentAvatar(avatarUrl);
+      // Update local state with caching
+      setAvatarLoading(true);
+      
+      // Preload and cache the new avatar
+      preloadAvatar(avatarUrl)
+        .then(() => {
+          setCurrentAvatar(avatarUrl);
+          setAvatarLoading(false);
+          setAvatarLoadTimeout(prev => {
+            if (prev) clearTimeout(prev);
+            return null;
+          });
+        })
+        .catch(() => {
+          // If preload fails, still set the avatar
+          setCurrentAvatar(avatarUrl);
+          
+          // Fallback timeout to hide spinner after 5 seconds
+          const timeout = setTimeout(() => setAvatarLoading(false), 5000);
+          setAvatarLoadTimeout(prev => {
+            if (prev) clearTimeout(prev);
+            return timeout;
+          });
+        });
 
       // Initialize auth headers
       initializeAuth();
@@ -571,12 +677,34 @@ const Profile = () => {
                         className="relative group cursor-pointer"
                         onClick={() => !avatarSaving && setIsAvatarSelectorOpen(true)}
                       >
-                        <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 group-hover:border-blue-500/50 transition-colors">
-                          <img 
-                            src={currentAvatar} 
-                            alt="Profile Avatar" 
-                            className="w-full h-full object-cover"
-                          />
+                        <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 group-hover:border-blue-500/50 transition-colors relative">
+                          {(avatarLoading || !currentAvatar) && (
+                            <div className="absolute inset-0 bg-gray-700/50 flex items-center justify-center z-10">
+                              <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          )}
+                          {currentAvatar && (
+                            <img 
+                              key={currentAvatar}
+                              src={currentAvatar} 
+                              alt="Profile Avatar" 
+                              className={`w-full h-full object-cover transition-opacity duration-300 ${avatarLoading ? 'opacity-0' : 'opacity-100'}`}
+                              onLoad={() => {
+                                setAvatarLoadTimeout(prev => {
+                                  if (prev) clearTimeout(prev);
+                                  return null;
+                                });
+                                setAvatarLoading(false);
+                              }}
+                              onError={() => {
+                                setAvatarLoadTimeout(prev => {
+                                  if (prev) clearTimeout(prev);
+                                  return null;
+                                });
+                                setAvatarLoading(false);
+                              }}
+                            />
+                          )}
                         </div>
                         {avatarSaving ? (
                           <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
@@ -696,6 +824,8 @@ const Profile = () => {
               </div>
             </div>
 
+
+
             <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
               <h3 className="text-xl font-semibold text-white mb-4">Email Subscription</h3>
               <div className="space-y-6">
@@ -770,6 +900,56 @@ const Profile = () => {
       case 'app-settings':
         return renderAppSettings();
 
+      case 'voting':
+        return (
+          <div className="space-y-8">
+            <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-blue-700/50 rounded-xl p-6">
+              <h3 className="text-xl font-semibold text-blue-300 mb-4">Feature Voting</h3>
+              <p className="text-gray-400 text-sm mb-6">Vote on upcoming features or suggest your own!</p>
+              
+              <div className="flex flex-col gap-3 mb-6">
+                {[
+                  "Develop the AI (add previous chat history, increase token context, and enhance AI capabilities)",
+                  "Collaboration (work with other users, shared notebooks, and real-time co-editing)",
+                  "Personalized Customization (custom colors, themes, app features, and personalization options)"
+                ].map((option) => (
+                  <label key={option} className="flex items-start gap-3 cursor-pointer p-3 rounded-lg hover:bg-gray-700/30 transition-colors">
+                    <input
+                      type="radio"
+                      name="votingOption"
+                      value={option}
+                      checked={selectedVotingOption === option}
+                      onChange={() => setSelectedVotingOption(option)}
+                      className="mt-1 flex-shrink-0 appearance-none w-4 h-4 border-2 border-gray-500 rounded-full checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                    />
+                    <span className="text-sm text-gray-200 leading-relaxed">{option}</span>
+                  </label>
+                ))}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">Your Own Suggestion</label>
+                <textarea
+                  className="w-full px-4 py-3 rounded-lg bg-gray-700/50 border border-gray-600/50 text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Send your own suggestion (max 500 chars)"
+                  maxLength={500}
+                  value={customVote}
+                  onChange={e => setCustomVote(e.target.value)}
+                  rows={4}
+                />
+                <div className="text-xs text-gray-400 text-right">{customVote.length}/500</div>
+              </div>
+              
+              <button
+                type="button"
+                className="mt-6 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              >
+                Submit Vote
+              </button>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-8 text-center">
@@ -808,12 +988,34 @@ const Profile = () => {
             <div className="lg:col-span-1">
               <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 sticky top-8">
                 <div className="text-center mb-6 pb-6 border-b border-gray-700/50">
-                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 mx-auto mb-3">
-                    <img 
-                      src={currentAvatar} 
-                      alt="Profile Avatar" 
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 mx-auto mb-3 relative">
+                    {(avatarLoading || !currentAvatar) && (
+                      <div className="absolute inset-0 bg-gray-700/50 flex items-center justify-center z-10">
+                        <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                    {currentAvatar && (
+                      <img 
+                        key={currentAvatar}
+                        src={currentAvatar} 
+                        alt="Profile Avatar" 
+                        className={`w-full h-full object-cover transition-opacity duration-300 ${avatarLoading ? 'opacity-0' : 'opacity-100'}`}
+                        onLoad={() => {
+                          setAvatarLoadTimeout(prev => {
+                            if (prev) clearTimeout(prev);
+                            return null;
+                          });
+                          setAvatarLoading(false);
+                        }}
+                        onError={() => {
+                          setAvatarLoadTimeout(prev => {
+                            if (prev) clearTimeout(prev);
+                            return null;
+                          });
+                          setAvatarLoading(false);
+                        }}
+                      />
+                    )}
                   </div>
                   {loading ? (
                     <div className="animate-pulse space-y-2">
@@ -849,13 +1051,32 @@ const Profile = () => {
                   
                   <button
                     type="button"
+                    onClick={() => setActiveTab('voting')}
+                    className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left border-t border-gray-700/50 mt-4 pt-4 ${
+                      activeTab === 'voting'
+                        ? 'bg-blue-500/20 border border-blue-500/30'
+                        : 'hover:bg-gray-700/50'
+                    }`}
+                    style={{
+                      color: '#8EC5FF'
+                    }}
+                  >
+                    <GiVote size={18} style={{ color: '#8EC5FF' }} />
+                    <span className="text-sm font-medium">Feature Voting</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setIsFeedbackModalOpen(true)}
-                    className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-gray-300 hover:text-white hover:bg-gray-700/50 border-t border-gray-700/50 mt-4 pt-4"
+                    className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-gray-300 hover:text-white hover:bg-gray-700/50"
                   >
                     <MessageSquare size={18} />
                     <span className="text-sm font-medium">Give Feedback</span>
                   </button>
-                  
+
+                  {/* Divider before logout */}
+                  <div className="border-t border-gray-700/50 my-2 w-full" />
+
                   <button 
                     type="button"
                     onClick={handleLogout}
