@@ -173,13 +173,14 @@ export const authService = {
     // Validate the token
     const validation = tokenValidator.validateJWT(token);
 
-    // If token is expired, clear it automatically
-    if (validation.isExpired) {
+    // If token is invalid (malformed or expired), clear it automatically
+    if (!validation.isValid) {
+      console.warn('🔑 Invalid token detected, clearing auth data:', validation.error);
       this.logout();
       return false;
     }
     
-    return validation.isValid;
+    return true;
   },
 
   /**

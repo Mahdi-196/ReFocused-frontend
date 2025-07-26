@@ -121,6 +121,27 @@ export const tokenValidator = {
   },
 
   /**
+   * Clean up invalid tokens from localStorage
+   */
+  cleanupInvalidTokens(): void {
+    if (typeof window === 'undefined') return;
+    
+    const token = localStorage.getItem('REF_TOKEN');
+    if (!token) return;
+    
+    const validation = this.validateJWT(token);
+    if (!validation.isValid) {
+      console.warn('🔧 Cleaning up invalid token:', validation.error);
+      localStorage.removeItem('REF_TOKEN');
+      localStorage.removeItem('REF_USER');
+      localStorage.removeItem('REF_REFRESH_TOKEN');
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new Event('userLoggedOut'));
+    }
+  },
+
+  /**
    * Run comprehensive token diagnostics
    */
   runTokenDiagnostics(): void {
@@ -165,9 +186,15 @@ export const tokenValidator = {
   }
 };
 
-// Auto-run token diagnostics on import in development
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+// Auto-run token cleanup and diagnostics on import
+if (typeof window !== 'undefined') {
   setTimeout(() => {
-    tokenValidator.runTokenDiagnostics();
-  }, 1500);
+    // Always clean up invalid tokens
+    tokenValidator.cleanupInvalidTokens();
+    
+    // Run diagnostics in development
+    if (process.env.NODE_ENV === 'development') {
+      tokenValidator.runTokenDiagnostics();
+    }
+  }, 1000);
 }

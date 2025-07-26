@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import journalService from "@/api/services/journalService";
 import type { GratitudeEntry, JournalApiError } from "../types";
+import { useConsistentDate } from "@/hooks/useConsistentDate";
 
 /**
  * Custom hook for managing gratitude entries with backend integration
@@ -9,6 +10,7 @@ export function useGratitude() {
   const [gratitudes, setGratitudes] = useState<GratitudeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { currentDate, isReady } = useConsistentDate();
 
   // Load gratitudes from backend
   const loadGratitudes = async () => {
@@ -31,7 +33,36 @@ export function useGratitude() {
 
   // Initial load
   useEffect(() => {
+    if (isReady) {
+      loadGratitudes();
+    }
+  }, [isReady]);
+
+  // Listen for day changes (resets at 12:00 like other components)
+  useEffect(() => {
+    if (!isReady) return;
+
+    // Reload gratitudes when the date changes (24-hour reset)
     loadGratitudes();
+  }, [currentDate, isReady]);
+
+  // Also listen for the dayChanged event directly from timeService
+  useEffect(() => {
+    const handleDayChange = () => {
+      console.log('🔄 [GRATITUDE] Day changed, reloading gratitudes...');
+      loadGratitudes();
+    };
+
+    // Listen for custom dayChanged event
+    if (typeof window !== 'undefined') {
+      window.addEventListener('dayChanged', handleDayChange);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('dayChanged', handleDayChange);
+      }
+    };
   }, []);
 
   // Add new gratitude
@@ -45,7 +76,17 @@ export function useGratitude() {
     }
 
     try {
+      console.log('🎯 [HOOK] About to call journalService.createGratitude:', {
+        text: text.trim(),
+        date,
+        textLength: text.trim().length,
+        serviceExists: !!journalService.createGratitude,
+        serviceMethods: Object.getOwnPropertyNames(Object.getPrototypeOf(journalService))
+      });
+      
       const newGratitude = await journalService.createGratitude(text.trim(), date);
+      
+      console.log('✅ [HOOK] journalService.createGratitude succeeded:', newGratitude);
       setGratitudes(prev => [newGratitude, ...prev]);
       return true;
     } catch (err) {

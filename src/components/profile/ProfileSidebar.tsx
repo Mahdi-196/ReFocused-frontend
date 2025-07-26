@@ -20,6 +20,7 @@ interface ProfileSidebarProps {
   currentAvatar: string;
   activeTab: string;
   loading: boolean;
+  avatarLoading?: boolean;
   onTabChange: (tab: string) => void;
   onFeedbackClick: () => void;
   onLogout: () => void;
@@ -36,6 +37,7 @@ export const ProfileSidebar = ({
   currentAvatar,
   activeTab,
   loading,
+  avatarLoading = false,
   onTabChange,
   onFeedbackClick,
   onLogout
@@ -43,11 +45,16 @@ export const ProfileSidebar = ({
   return (
     <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 sticky top-8">
       <div className="text-center mb-6 pb-6 border-b border-gray-700/50">
-        <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 mx-auto mb-3">
+        <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 mx-auto mb-3 relative">
+          {avatarLoading && (
+            <div className="absolute inset-0 bg-gray-700/50 flex items-center justify-center z-10">
+              <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
           <img 
             src={currentAvatar} 
             alt="Profile Avatar" 
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-300 ${avatarLoading ? 'opacity-0' : 'opacity-100'}`}
           />
         </div>
         {loading ? (

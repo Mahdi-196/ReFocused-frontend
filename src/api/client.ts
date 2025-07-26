@@ -93,6 +93,19 @@ client.interceptors.request.use(
       }
     }
     
+    // Debug logging for gratitude requests
+    if (config.url?.includes('/journal/gratitude') && config.method === 'post') {
+      console.log('🌐 [CLIENT] Gratitude POST request:', {
+        url: config.url,
+        method: config.method,
+        data: config.data,
+        headers: {
+          'Authorization': config.headers?.Authorization ? 'Bearer [TOKEN]' : 'MISSING',
+          'Content-Type': config.headers?.['Content-Type']
+        }
+      });
+    }
+    
     return config;
   },
   (error) => {

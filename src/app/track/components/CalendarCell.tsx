@@ -30,22 +30,21 @@ export default function CalendarCell({
     return ((happiness + focus + invertedStress) / 3) * 2;
   };
 
-  // Debug logging for all dates with data (development only)
-      if (calendarEntry && process.env.NEXT_PUBLIC_APP_ENV === 'development') {
-    console.log(`📅 CalendarCell(${dateStr}):`, {
-      date,
-      completedHabits: calendarEntry.habitCompletions?.filter(hc => hc.completed).length || 0,
-      totalHabits: calendarEntry.habitCompletions?.length || 0,
-      hasMood: !!calendarEntry.moodEntry,
-      hasGoals: calendarEntry.goalActivities?.length || 0,
-      moodScore: calendarEntry.moodEntry ? 
-        calculateMoodScore(calendarEntry.moodEntry.happiness, calendarEntry.moodEntry.focus, calendarEntry.moodEntry.stress) : 
-        null
+  // Debug logging for dates with gratitudes only
+  if (calendarEntry?.gratitudes && calendarEntry.gratitudes.length > 0) {
+    console.log(`🚨 GRATITUDE FOUND! CalendarCell(${dateStr}) HAS GRATITUDES:`, {
+      gratitudesCount: calendarEntry.gratitudes.length,
+      gratitudes: calendarEntry.gratitudes
     });
   }
 
   const getDayClass = () => {
-    // Check for calendar entry with mood data
+    const hasGratitudes = calendarEntry?.gratitudes && calendarEntry.gratitudes.length > 0;
+    const hasGoals = calendarEntry?.goalActivities && calendarEntry.goalActivities.length > 0;
+    const hasHabits = calendarEntry?.habitCompletions.some((hc) => hc.completed);
+    const hasMood = !!calendarEntry?.moodEntry;
+
+    // Check for calendar entry with mood data (highest priority)
     if (calendarEntry?.moodEntry) {
       const { happiness, focus, stress } = calendarEntry.moodEntry;
       const moodScore = calculateMoodScore(happiness, focus, stress);
@@ -54,13 +53,19 @@ export default function CalendarCell({
       return "mood-poor";
     }
 
-    // Check if there's goal activity on this day
-    if (calendarEntry?.goalActivities && calendarEntry.goalActivities.length > 0) {
+    // Check if there are gratitudes on this day (second priority)
+    if (hasGratitudes) {
+      console.log(`✅ [CalendarCell] ${dateStr} selected "has-gratitudes" with ${calendarEntry.gratitudes.length} gratitudes`);
+      return "has-gratitudes";
+    }
+
+    // Check if there's goal activity on this day (third priority)
+    if (hasGoals) {
       return "has-goal-activity";
     }
 
-    // Check if there's habit activity on this day
-    if (calendarEntry?.habitCompletions.some((hc) => hc.completed)) {
+    // Check if there's habit activity on this day (lowest priority)
+    if (hasHabits) {
       return "has-activity";
     }
 
@@ -103,6 +108,14 @@ export default function CalendarCell({
           boxShadow:
             "0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
           border: "1px solid #ef4444",
+        };
+      case "has-gratitudes":
+        return {
+          background:
+            "linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)",
+          boxShadow:
+            "0 4px 12px rgba(236, 72, 153, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+          border: "1px solid #ec4899",
         };
       case "has-goal-activity":
         return {
@@ -148,8 +161,21 @@ export default function CalendarCell({
         }}
       />
 
-      {/* Date number - only element kept */}
+      {/* Date number */}
       <span className="relative z-10 font-medium">{date}</span>
+      
+      {/* Gratitude indicator */}
+      {calendarEntry?.gratitudes && calendarEntry.gratitudes.length > 0 && (
+        <div className="absolute top-0.5 right-0.5 z-20">
+          <svg
+            className="w-2.5 h-2.5 text-pink-200"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        </div>
+      )}
     </div>
   );
 } 

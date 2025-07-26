@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Activity, Brain, Info } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import PageTransition from '@/components/PageTransition';
 import BreathworkExercises from '@/components/BreathworkExercises';
 import MeditationTimer from '@/components/MeditationTimer';
@@ -38,6 +39,7 @@ const WEEKLY_THEMES = [
 type RelaxMode = 'breathing' | 'meditation';
 
 export default function RelaxPage() {
+  const router = useRouter();
   const [currentThemeIndex, setCurrentThemeIndex] = useState(0);
   const [activeMode, setActiveMode] = useState<RelaxMode>('breathing');
   const [showMeditationGuide, setShowMeditationGuide] = useState(false);
@@ -90,6 +92,12 @@ export default function RelaxPage() {
   const handleMeditationComplete = () => {
     // Future: Implement completion tracking
     // Could track meditation sessions, update streaks, etc.
+  };
+
+  const handleAIPrompt = (message: string) => {
+    // Navigate to AI page with the message as a URL parameter
+    const encodedMessage = encodeURIComponent(message);
+    router.push(`/ai?message=${encodedMessage}`);
   };
 
   return (
@@ -317,7 +325,10 @@ export default function RelaxPage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Book Recommendations */}
-            <div className="group bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-700/50 rounded-xl p-4 hover:border-blue-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer">
+            <div 
+              onClick={() => handleAIPrompt("Recommend 3 books about mindfulness, meditation, or personal growth that would help me develop a better meditation practice and reduce daily stress.")}
+              className="group bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-700/50 rounded-xl p-4 hover:border-blue-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
                   <Brain className="w-5 h-5 text-blue-400" />
@@ -329,8 +340,11 @@ export default function RelaxPage() {
               </p>
             </div>
 
-            {/* Mindfulness Quotes */}
-            <div className="group bg-gradient-to-br from-purple-900/40 to-violet-900/40 border border-purple-700/50 rounded-xl p-4 hover:border-purple-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer">
+            {/* Daily Affirmations */}
+            <div 
+              onClick={() => handleAIPrompt("Create 5 personalized daily affirmations that will help me stay calm, focused, and positive throughout my day, especially during stressful moments.")}
+              className="group bg-gradient-to-br from-purple-900/40 to-violet-900/40 border border-purple-700/50 rounded-xl p-4 hover:border-purple-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
                   <Activity className="w-5 h-5 text-purple-400" />
@@ -343,7 +357,10 @@ export default function RelaxPage() {
             </div>
 
             {/* Meditation Guidance */}
-            <div className="group bg-gradient-to-br from-green-900/40 to-emerald-900/40 border border-green-700/50 rounded-xl p-4 hover:border-green-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer">
+            <div 
+              onClick={() => handleAIPrompt("Guide me through a personalized 10-minute meditation session based on my current stress level and what I'm hoping to achieve from today's practice.")}
+              className="group bg-gradient-to-br from-green-900/40 to-emerald-900/40 border border-green-700/50 rounded-xl p-4 hover:border-green-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
                   <Activity className="w-5 h-5 text-green-400" />
@@ -356,7 +373,10 @@ export default function RelaxPage() {
             </div>
 
             {/* Stress Relief Tips */}
-            <div className="group bg-gradient-to-br from-orange-900/40 to-red-900/40 border border-orange-700/50 rounded-xl p-4 hover:border-orange-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer">
+            <div 
+              onClick={() => handleAIPrompt("Suggest 5 quick stress relief techniques I can use during work breaks, including breathing exercises and mindfulness practices under 5 minutes.")}
+              className="group bg-gradient-to-br from-orange-900/40 to-red-900/40 border border-orange-700/50 rounded-xl p-4 hover:border-orange-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
                   <Brain className="w-5 h-5 text-orange-400" />

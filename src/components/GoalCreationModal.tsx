@@ -177,13 +177,13 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       }`}
                       onClick={() => !isSubmitting && handleGoalTypeChange('checklist')}
                     >
-                      <div className="flex items-center">
+                      <div className="flex items-start gap-3">
                         <input
                           type="radio"
                           value="checklist"
                           checked={goalType === 'checklist'}
                           onChange={() => handleGoalTypeChange('checklist')}
-                          className="mr-3 accent-blue-500"
+                          className="mt-1 flex-shrink-0 appearance-none w-4 h-4 border-2 border-gray-500 rounded-full checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
                           disabled={isSubmitting}
                         />
                                                   <div>
@@ -205,13 +205,13 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       }`}
                       onClick={() => !isSubmitting && handleGoalTypeChange('counter')}
                     >
-                      <div className="flex items-center">
+                      <div className="flex items-start gap-3">
                         <input
                           type="radio"
                           value="counter"
                           checked={goalType === 'counter'}
                           onChange={() => handleGoalTypeChange('counter')}
-                          className="mr-3 accent-blue-500"
+                          className="mt-1 flex-shrink-0 appearance-none w-4 h-4 border-2 border-gray-500 rounded-full checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
                           disabled={isSubmitting}
                         />
                                                   <div>
@@ -233,13 +233,13 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       }`}
                       onClick={() => !isSubmitting && handleGoalTypeChange('percentage')}
                     >
-                      <div className="flex items-center">
+                      <div className="flex items-start gap-3">
                         <input
                           type="radio"
                           value="percentage"
                           checked={goalType === 'percentage'}
                           onChange={() => handleGoalTypeChange('percentage')}
-                          className="mr-3 accent-blue-500"
+                          className="mt-1 flex-shrink-0 appearance-none w-4 h-4 border-2 border-gray-500 rounded-full checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
                           disabled={isSubmitting}
                         />
                                                   <div>

@@ -15,6 +15,7 @@ interface ProfileSectionProps {
   loading: boolean;
   error: string | null;
   avatarSaving: boolean;
+  avatarLoading?: boolean;
   showAvatarSuccess: boolean;
   onAvatarClick: () => void;
   onChangeAvatar: () => void;
@@ -26,6 +27,7 @@ export const ProfileSection = ({
   loading,
   error,
   avatarSaving,
+  avatarLoading = false,
   showAvatarSuccess,
   onAvatarClick,
   onChangeAvatar
@@ -51,11 +53,16 @@ export const ProfileSection = ({
                   className="relative group cursor-pointer"
                   onClick={onAvatarClick}
                 >
-                  <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 group-hover:border-blue-500/50 transition-colors">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-700/50 border-2 border-gray-600/50 group-hover:border-blue-500/50 transition-colors relative">
+                    {avatarLoading && (
+                      <div className="absolute inset-0 bg-gray-700/50 flex items-center justify-center z-10">
+                        <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
                     <img 
                       src={currentAvatar} 
                       alt="Profile Avatar" 
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${avatarLoading ? 'opacity-0' : 'opacity-100'}`}
                     />
                   </div>
                   {avatarSaving ? (

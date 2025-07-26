@@ -1,42 +1,74 @@
 import React, { useState, useRef, useMemo, useCallback } from "react";
 import { UserHabit, DailyCalendarEntry } from "../types";
 import type { MoodEntry } from "@/services/moodService";
-import { useCalendarData } from "../hooks/useCalendarData";
 import { useCurrentDate } from "@/contexts/TimeContext";
 import { TbXboxX } from "react-icons/tb";
 import CalendarHeader from "./CalendarHeader";
 import CalendarGrid from "./CalendarGrid";
 import DayDetails from "./DayDetails";
-import { goalsService } from "@/services/goalsService";
 
 interface CalendarViewProps {
   currentMonth: Date;
   setCurrentMonth: (date: Date) => void;
   habits: UserHabit[];
+  calendarEntries: { [key: string]: DailyCalendarEntry };
+  loading: boolean;
+  error: string | null;
+  onToggleHabit: (dateStr: string, habitId: string, completed: boolean) => void;
+  isHabitCompleted: (habitId: number, date?: string) => boolean;
 }
 
 export default function CalendarView({
   currentMonth,
   setCurrentMonth,
   habits,
+  calendarEntries,
+  loading,
+  error,
+  onToggleHabit,
+  isHabitCompleted,
 }: CalendarViewProps) {
   const currentDate = useCurrentDate();
   const [selectedDate, setSelectedDate] = useState<string | null>(currentDate);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  const {
-    calendarEntries,
-    loading,
-    error,
-    toggleHabitCompletion,
-    saveMoodData,
-    getCalendarEntryForDate,
-    isDateReadOnly,
-    getHabitCompletionForDate,
-    getHabitsForDate,
-    refreshCalendarData,
-  } = useCalendarData(currentMonth, habits);
+  // Helper functions moved from hook
+  const getCalendarEntryForDate = (date: string): DailyCalendarEntry | null => {
+    return calendarEntries[date] || null;
+  };
+
+  const isDateReadOnly = (date: string): boolean => {
+    const today = currentDate;
+    return date < today;
+  };
+
+  const getHabitsForDate = (date: string): Array<{ habit: UserHabit; completed: boolean; wasActive: boolean }> => {
+    const entry = calendarEntries[date];
+    if (!entry) {
+      return habits.map(habit => ({
+        habit,
+        completed: false,
+        wasActive: habit.isActive !== false
+      }));
+    }
+
+    return entry.habitCompletions.map(hc => {
+      const currentHabit = habits.find(h => h.id === hc.habitId);
+      return {
+        habit: currentHabit || {
+          id: hc.habitId,
+          name: hc.habitName,
+          streak: 0,
+          isFavorite: false,
+          createdAt: new Date(),
+          isActive: hc.wasActiveOnDate
+        },
+        completed: hc.completed,
+        wasActive: hc.wasActiveOnDate
+      };
+    });
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX);
@@ -146,38 +178,40 @@ export default function CalendarView({
         
 
         
-        <div className="flex">
-          {/* Calendar Grid Section */}
+        <div className="flex flex-col lg:flex-row">
+          {/* Calendar Section */}
           <div className="flex-1" ref={calendarRef}>
             <CalendarHeader
               currentMonth={currentMonth}
               setCurrentMonth={setCurrentMonth}
             />
-            <CalendarGrid
-              currentMonth={currentMonth}
-              selectedDate={selectedDate}
-              calendarEntries={Object.values(calendarEntries)}
-              onDateClick={setSelectedDate}
-              isDateReadOnly={isDateReadOnly}
-              getCalendarEntryForDate={getCalendarEntryForDate}
-              touchStart={touchStart}
-              setTouchStart={setTouchStart}
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-            />
-          </div>
-
-          {/* Day Details Section */}
-          <div className="w-80 border-l border-gray-600">
-            <DayDetails
-              selectedDate={selectedDate}
-              calendarData={selectedDate ? getCalendarEntryForDate(selectedDate) : null}
-              isDateReadOnly={isDateReadOnly}
-              getHabitsForDate={getHabitsForDate}
-              onToggleHabit={async (dateStr: string, habitId: string, completed: boolean) => {
-                await toggleHabitCompletion(dateStr, parseInt(habitId), completed);
-              }}
-            />
+            <div className="flex flex-col lg:grid lg:grid-cols-[70%_30%] gap-0 lg:items-start">
+              <div>
+                <CalendarGrid
+                  currentMonth={currentMonth}
+                  selectedDate={selectedDate}
+                  calendarEntries={Object.values(calendarEntries)}
+                  onDateClick={setSelectedDate}
+                  isDateReadOnly={isDateReadOnly}
+                  getCalendarEntryForDate={getCalendarEntryForDate}
+                  touchStart={touchStart}
+                  setTouchStart={setTouchStart}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                />
+              </div>
+              
+              {/* Day Details Section - Responsive */}
+              <div className="border-t lg:border-t-0 lg:border-l border-gray-600 overflow-y-auto custom-scrollbar max-h-[400px] lg:max-h-[580px]">
+                <DayDetails
+                  selectedDate={selectedDate}
+                  calendarData={selectedDate ? getCalendarEntryForDate(selectedDate) : null}
+                  isDateReadOnly={isDateReadOnly}
+                  getHabitsForDate={getHabitsForDate}
+                  onToggleHabit={onToggleHabit}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

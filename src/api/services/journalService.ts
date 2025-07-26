@@ -1,5 +1,7 @@
 import client, { collectionTokens } from '../client';
 import { JOURNAL } from '../endpoints';
+import { timeService } from '@/services/timeService';
+import { clearCalendarCache } from '@/services/calendarService';
 import type {
   Collection,
   Entry,
@@ -309,7 +311,14 @@ class JournalService {
   // Gratitude Operations
   async getGratitudes(): Promise<GratitudeEntry[]> {
     try {
-      const response = await client.get<PaginatedGratitudeResponse>(JOURNAL.GRATITUDE);
+      // Get current date from time service to filter gratitudes for today only
+      const currentDate = timeService.getCurrentDate();
+      console.log('📅 [GRATITUDE] Fetching gratitudes for current date:', currentDate);
+      
+      // Fetch gratitudes filtered by current date
+      const response = await client.get<PaginatedGratitudeResponse>(
+        `${JOURNAL.GRATITUDE}?start_date=${currentDate}&end_date=${currentDate}&limit=10`
+      );
       
       // Handle paginated gratitude response
       const responseData = response.data;
@@ -334,15 +343,75 @@ class JournalService {
   }
 
   async createGratitude(text: string, date?: string): Promise<GratitudeEntry> {
+    console.log('🚀 [GRATITUDE] createGratitude called with:', { text, date, textLength: text?.length });
+    
+    // Validate text input (backend requirement)
+    if (!text || text.trim().length === 0) {
+      console.error('❌ [GRATITUDE] Empty text validation failed');
+      throw new Error('Gratitude text cannot be empty');
+    }
+    
+    if (text.trim().length > 500) {
+      throw new Error('Gratitude text cannot exceed 500 characters');
+    }
+    
+    // Use provided date or default to current date from time service
+    const currentDate = timeService.getCurrentDate();
+    
+    // Fallback to local date if time service isn't ready
+    let finalDate = date || currentDate;
+    if (finalDate === 'LOADING_DATE' || finalDate === 'LOADING_DATETIME') {
+      finalDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      console.warn('⚠️ [GRATITUDE] Time service not ready, using local date:', finalDate);
+    }
+
     try {
-      const data: CreateGratitudeRequest = { text };
-      if (date) {
-        data.date = date;
+      // Backend expects only text field, not date
+      const data: CreateGratitudeRequest = { text: text.trim() };
+      
+      // Check auth status before making request
+      const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
+      const isAuthenticated = !!token && token !== 'dummy-auth-token';
+      
+      console.log('📅 [GRATITUDE] Creating gratitude:', {
+        text: data.text,
+        date: data.date,
+        timeServiceReady: timeService.isReady(),
+        currentDateFromService: currentDate,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        isAuthenticated: isAuthenticated,
+        endpoint: JOURNAL.GRATITUDE
+      });
+
+      // Quick auth check before making request  
+      if (!isAuthenticated) {
+        console.error('❌ [GRATITUDE] Authentication failed - no valid token');
+        throw new Error('Authentication required: Please log in to create gratitudes');
       }
+
+      console.log('🌐 [GRATITUDE] About to make POST request:', {
+        url: JOURNAL.GRATITUDE,
+        data: data,
+        hasToken: !!token
+      });
       
       const response = await client.post<GratitudeResponse>(JOURNAL.GRATITUDE, data);
+      
+      console.log('✅ [GRATITUDE] Request successful:', response.status);
+      
+      // Clear calendar cache so gratitudes appear in calendar immediately
+      clearCalendarCache();
+      console.log('🗑️ [GRATITUDE] Cleared calendar cache after creating gratitude');
+      
       return this.mapGratitudeEntryResponse(response.data);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ [GRATITUDE] Create gratitude failed:', {
+        error: error.message,
+        status: error.status,
+        response: error.response?.data,
+        requestData: { text, date, finalDate: finalDate }
+      });
       throw this.handleError(error, 'Failed to create gratitude');
     }
   }
@@ -351,6 +420,11 @@ class JournalService {
     try {
       const data: UpdateGratitudeRequest = { text };
       const response = await client.put<GratitudeResponse>(JOURNAL.GRATITUDE_DETAIL(id), data);
+      
+      // Clear calendar cache so updated gratitudes appear in calendar immediately
+      clearCalendarCache();
+      console.log('🗑️ [GRATITUDE] Cleared calendar cache after updating gratitude');
+      
       return this.mapGratitudeEntryResponse(response.data);
     } catch (error) {
       throw this.handleError(error, 'Failed to update gratitude');
@@ -360,6 +434,10 @@ class JournalService {
   async deleteGratitude(id: string): Promise<void> {
     try {
       await client.delete(JOURNAL.GRATITUDE_DETAIL(id));
+      
+      // Clear calendar cache so deleted gratitudes are removed from calendar immediately
+      clearCalendarCache();
+      console.log('🗑️ [GRATITUDE] Cleared calendar cache after deleting gratitude');
     } catch (error) {
       throw this.handleError(error, 'Failed to delete gratitude');
     }
