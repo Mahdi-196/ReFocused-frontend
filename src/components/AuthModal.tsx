@@ -252,22 +252,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                   initial={false}
                   animate={{ height: activeTab === 'register' ? 'auto' : 0, opacity: activeTab === 'register' ? 1 : 0 }}
                   transition={{ duration: 0.2, ease: "easeInOut" }}
-                  style={{ overflow: 'hidden' }}
+                  style={{ overflow: activeTab === 'register' ? 'visible' : 'hidden' }}
                 >
                   {activeTab === 'register' && (
                     <div className="pb-4">
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-300 mb-2 relative z-30">
                         Full Name
                       </label>
-                      <div className="relative">
-                        <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                      <div className="relative z-10">
+                        <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-20" size={18} />
                         <input
                           type="text"
                           name="name"
                           value={formData.name}
                           onChange={handleInputChange}
                           autoComplete="name"
-                          className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                          className="w-full pl-10 pr-16 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200 relative z-10"
+                          style={{ backgroundImage: 'none' }}
                           placeholder="Enter your full name"
                           required
                         />
@@ -288,7 +289,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                       value={formData.email}
                       onChange={handleInputChange}
                       autoComplete="email"
-                      className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                      className="w-full pl-10 pr-16 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                      style={{ backgroundImage: 'none' }}
                       placeholder="Enter your email"
                       required
                     />
@@ -307,7 +309,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                       value={formData.password}
                       onChange={handleInputChange}
                       autoComplete={activeTab === 'login' ? 'current-password' : 'new-password'}
-                      className="w-full pl-10 pr-12 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                      className="w-full pl-10 pr-16 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                      style={{ backgroundImage: 'none' }}
                       placeholder="Enter your password"
                       required
                     />

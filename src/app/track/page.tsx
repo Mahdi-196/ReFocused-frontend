@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import NumberMood from '@/components/NumberMood';
 import PageTransition from '@/components/PageTransition';
 import AuthGuard from '@/components/AuthGuard';
@@ -14,16 +14,15 @@ import CacheControls from './components/CacheControls';
 
 // Import hooks
 import { useTrackingData } from './hooks/useTrackingData';
+import { useCalendarData } from './hooks/useCalendarData';
 import { useCurrentDate, useTime } from '@/contexts/TimeContext';
-import { getCalendarEntries } from '@/services/calendarService';
 
 /**
- * Production Tracking Dashboard
- * Timezone-aware habit and mood tracking
+ * Optimized Production Tracking Dashboard
+ * Eliminates duplicate API calls and improves performance
  */
 export default function TrackPage() {
   const currentDate = useCurrentDate();
-  const { getCurrentDate } = useTime();
   const [currentMonth, setCurrentMonth] = useState(() => {
     return new Date(currentDate + 'T00:00:00');
   });
@@ -61,25 +60,43 @@ export default function TrackPage() {
       token,
       user: user ? JSON.parse(user) : null
     });
-    
-    console.log('🔐 [TRACK PAGE] Auth status:', {
-      isAuthenticated,
-      hasToken: !!token,
-      hasUser: !!user,
-      tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
-      userInfo: user ? JSON.parse(user) : null
-    });
   }, []);
+
+  // Track if user manually changed month to avoid auto-updates
+  const [userChangedMonth, setUserChangedMonth] = useState(false);
+
+  // Wrapped setCurrentMonth that tracks manual changes
+  const handleMonthChange = (newMonth: Date) => {
+    console.log('📅 [TRACK PAGE] User manually changed month to:', newMonth.toISOString().slice(0, 7));
+    setCurrentMonth(newMonth);
+    setUserChangedMonth(true);
+    
+    // Reset after 5 seconds to allow auto-update again
+    setTimeout(() => {
+      setUserChangedMonth(false);
+    }, 5000);
+  };
 
   // Update currentMonth when currentDate changes (timezone-aware)
   useEffect(() => {
+    // Don't update if time service is not ready
+    if (currentDate === 'LOADING_DATE') {
+      return;
+    }
+    
+    // Don't auto-update if user manually navigated to a different month
+    if (userChangedMonth) {
+      return;
+    }
+    
     const newMonth = new Date(currentDate + 'T00:00:00');
     
     // Only update if the month actually changed to avoid unnecessary re-renders
     if (currentMonth.toISOString().slice(0, 7) !== newMonth.toISOString().slice(0, 7)) {
+      console.log('📅 [TRACK PAGE] Updating calendar month from', currentMonth.toISOString().slice(0, 7), 'to', newMonth.toISOString().slice(0, 7));
       setCurrentMonth(newMonth);
     }
-  }, [currentDate]); // Remove currentMonth from dependency to prevent infinite loop
+  }, [currentDate, currentMonth, userChangedMonth]);
 
   // Use tracking data hook
   const {
@@ -94,184 +111,39 @@ export default function TrackPage() {
     toggleHabitCompletion,
     isHabitCompleted,
     calculateStats,
-    refreshCache,
-    getCacheStats
+    refreshCache
   } = useTrackingData(currentMonth);
 
-  // Load calendar data with gratitudes and goal activities
-  const [calendarEntries, setCalendarEntries] = useState<{ [key: string]: any }>({});
-  const [calendarLoading, setCalendarLoading] = useState(true);
-  const [calendarError, setCalendarError] = useState<string | null>(null);
+  // Use calendar hook to avoid duplicate API calls
+  const {
+    calendarEntries,
+    loading: calendarLoading,
+    error: calendarError,
+    toggleHabitCompletion: toggleCalendarHabit
+  } = useCalendarData(currentMonth, habits);
 
-     // Load calendar data when month changes
-   useEffect(() => {
-     const loadCalendarData = async () => {
-       try {
-         setCalendarLoading(true);
-         setCalendarError(null);
-         
-         // Use time service current date to determine the correct month
-         const timeServiceDate = getCurrentDate ? getCurrentDate() : currentDate;
-         const baseDate = new Date(timeServiceDate + 'T00:00:00');
-         
-         // Calculate the month we want to display (could be currentMonth or the month from time service)
-         const targetDate = currentMonth || baseDate;
-         const year = targetDate.getFullYear();
-         const month = targetDate.getMonth();
-         const firstDay = new Date(year, month, 1);
-         const lastDay = new Date(year, month + 1, 0);
-         
-         const startDate = firstDay.toISOString().split('T')[0];
-         const endDate = lastDay.toISOString().split('T')[0];
-         
-         console.log('📅 [CALENDAR] Date calculation:', {
-           timeServiceDate,
-           currentDate,
-           currentMonth: currentMonth.toISOString(),
-           calculatedRange: { startDate, endDate },
-           year,
-           month: month + 1 // +1 for display (0-based to 1-based)
-         });
-         
-         try {
-           // Clear any cached data for this month to force fresh fetch
-           console.log('🧹 [CALENDAR] Clearing cache for date range:', { startDate, endDate });
-           
-           // Force cache clear by calling refreshCache first
-           refreshCache();
-           
-           // Try to load from calendar service first
-           const entries = await getCalendarEntries(startDate, endDate);
-           
-           // Convert to map for easy lookup
-           const entriesMap: { [key: string]: any } = {};
-           entries.forEach(entry => {
-             entriesMap[entry.date] = entry;
-           });
-           
-           console.log('📊 [TRACK PAGE] Calendar entries loaded:', {
-             totalEntries: entries.length,
-             entriesMap: Object.keys(entriesMap),
-             entriesForDebug: Object.keys(entriesMap).slice(0, 5), // First 5 dates
-             sampleEntry: Object.values(entriesMap)[0],
-             dateRange: `${startDate} to ${endDate}`,
-             expectedMonth: `${year}-${String(month + 1).padStart(2, '0')}`,
-             dataActuallyLoaded: entries.length > 0 ? 'YES' : 'NO'
-           });
-           
-           setCalendarEntries(entriesMap);
-           
-           // Update backend health status
-           setBackendHealth({
-             status: 'healthy',
-             lastCheck: new Date(),
-             issues: []
-           });
-           
-         } catch (calendarError) {
-           console.warn('Calendar service failed, falling back to tracking data:', calendarError);
-           
-           // Analyze the error to provide better messaging
-           const errorMessage = calendarError instanceof Error ? calendarError.message : String(calendarError);
-           const issues: string[] = [];
-           
-           if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
-             issues.push('Backend database connectivity issues');
-           }
-           if (errorMessage.includes('day_rating')) {
-             issues.push('Mood data format compatibility issue');
-           }
-           if (errorMessage.includes('Failed to fetch')) {
-             issues.push('Network connectivity problems');
-           }
-           if (issues.length === 0) {
-             issues.push('Unknown backend error');
-           }
-           
-           setBackendHealth({
-             status: 'degraded',
-             lastCheck: new Date(),
-             issues
-           });
-           
-           // Fallback: Create calendar entries from existing tracking data
-           console.log('⚠️ [TRACK PAGE] Using fallback data. Available data:', {
-             dailyEntriesKeys: Object.keys(dailyEntries),
-             moodEntriesKeys: Object.keys(moodEntries),
-             habitsCount: habits.length,
-             calendarError: errorMessage
-           });
-           
-           const fallbackEntries: { [key: string]: any } = {};
-           
-           // Use daily entries from useTrackingData
-           Object.keys(dailyEntries).forEach(date => {
-             const dailyEntry = dailyEntries[date];
-             const moodEntry = moodEntries[date];
-             
-             fallbackEntries[date] = {
-               date,
-               userId: 1,
-               habitCompletions: dailyEntry.habitCompletions?.map(hc => ({
-                 habitId: hc.habitId,
-                 habitName: habits.find(h => h.id === hc.habitId)?.name || 'Unknown Habit',
-                 completed: hc.completed,
-                 wasActiveOnDate: true
-               })) || [],
-               moodEntry: moodEntry ? {
-                 happiness: moodEntry.happiness || 0,
-                 focus: moodEntry.focus || 0,
-                 stress: moodEntry.stress || 0
-               } : undefined,
-               gratitudes: [], // Empty in fallback
-               goalActivities: [] // Empty in fallback
-             };
-           });
-
-           // Add mood-only entries
-           Object.keys(moodEntries).forEach(date => {
-             if (!fallbackEntries[date]) {
-               const moodEntry = moodEntries[date];
-               fallbackEntries[date] = {
-                 date,
-                 userId: 1,
-                 habitCompletions: [],
-                 moodEntry: {
-                   happiness: moodEntry.happiness || 0,
-                   focus: moodEntry.focus || 0,
-                   stress: moodEntry.stress || 0
-                 },
-                 gratitudes: [],
-                 goalActivities: []
-               };
-             }
-           });
-           
-           setCalendarEntries(fallbackEntries);
-           setCalendarError('Some calendar features may be limited due to backend issues.');
-         }
-       } catch (err) {
-         console.error('Complete calendar loading failure:', err);
-         setBackendHealth({
-           status: 'error',
-           lastCheck: new Date(),
-           issues: ['Complete system failure - please refresh']
-         });
-         setCalendarError('Calendar data temporarily unavailable. Please refresh to try again.');
-         setCalendarEntries({});
-       } finally {
-         setCalendarLoading(false);
-       }
-     };
-
-     loadCalendarData();
-   }, [currentMonth]); // Only depend on currentMonth to prevent infinite loops
+  // Update backend health based on calendar loading state
+  useEffect(() => {
+    if (calendarError) {
+      setBackendHealth({
+        status: 'degraded',
+        lastCheck: new Date(),
+        issues: ['Calendar data loading issues']
+      });
+    } else if (!calendarLoading && !calendarError) {
+      setBackendHealth({
+        status: 'healthy',
+        lastCheck: new Date(),
+        issues: []
+      });
+    }
+  }, [calendarLoading, calendarError]);
 
   // Calculate statistics
   const stats = calculateStats();
 
-  // Loading state
-  if (loading) {
+  // Loading state - wait for time service and data
+  if (loading || currentDate === 'LOADING_DATE') {
     return (
       <AuthGuard>
         <PageTransition>
@@ -286,8 +158,8 @@ export default function TrackPage() {
       <PageTransition>
         <SkeletonDemo
           skeleton={<TrackPageSkeleton />}
-          delay={100} // Minimal delay for smooth transition
-          enabled={false} // Disable forced demo mode
+          delay={100}
+          enabled={false}
         >
           <div 
             className="min-h-screen py-8"
@@ -321,25 +193,15 @@ export default function TrackPage() {
                     <div className="flex-1">
                       <p className="text-orange-200 font-medium">Authentication Required</p>
                       <p className="text-orange-300 text-sm mt-1">
-                        Please log in to view your tracking data. The app requires authentication to load personal data.
+                        Please log in to view your tracking data.
                       </p>
                       <div className="mt-3 flex gap-2">
                         <button
+                          type="button"
                           onClick={() => window.location.href = '/'}
                           className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded transition-colors"
                         >
                           Go to Login
-                        </button>
-                        <button
-                          onClick={() => {
-                            // For development/testing: set a mock token
-                            localStorage.setItem('REF_TOKEN', 'dev-test-token-' + Date.now());
-                            localStorage.setItem('REF_USER', JSON.stringify({ id: 1, email: 'test@example.com' }));
-                            window.location.reload();
-                          }}
-                          className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
-                        >
-                          Dev: Mock Login
                         </button>
                       </div>
                     </div>
@@ -368,39 +230,6 @@ export default function TrackPage() {
                         </p>
                       )}
                       
-                      {/* Backend Health Details */}
-                      {backendHealth.status === 'degraded' && backendHealth.issues.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-yellow-300 text-sm font-medium">
-                            🔧 Known Issues:
-                          </p>
-                          <ul className="text-yellow-200 text-sm space-y-1">
-                            {backendHealth.issues.map((issue, index) => (
-                              <li key={index} className="flex items-center gap-2">
-                                <span className="w-1 h-1 bg-yellow-400 rounded-full"></span>
-                                {issue}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      {backendHealth.status === 'degraded' && (
-                        <div className="mt-2 p-2 bg-yellow-800/30 rounded text-yellow-200 text-sm">
-                          <p className="font-medium">📱 What's Working:</p>
-                          <ul className="mt-1 space-y-0.5">
-                            <li>• Mood tracking and habits</li>
-                            <li>• Calendar view and navigation</li>
-                            <li>• Statistics and progress</li>
-                          </ul>
-                          <p className="mt-1 font-medium">⚠️ Limited Features:</p>
-                          <ul className="mt-1 space-y-0.5">
-                            <li>• Gratitude entries</li>
-                            <li>• Some goal activity history</li>
-                          </ul>
-                        </div>
-                      )}
-                      
                       {backendHealth.lastCheck && (
                         <p className="text-gray-400 text-xs mt-2">
                           Last checked: {backendHealth.lastCheck.toLocaleTimeString()}
@@ -408,9 +237,9 @@ export default function TrackPage() {
                       )}
                     </div>
                     <button
+                      type="button"
                       onClick={() => {
                         refreshCache();
-                        // Trigger calendar data reload
                         setCurrentMonth(new Date(currentMonth));
                       }}
                       className={`ml-auto px-3 py-1 text-white text-sm rounded transition-colors ${
@@ -447,13 +276,13 @@ export default function TrackPage() {
               {/* Calendar Section */}
               <CalendarView
                 currentMonth={currentMonth}
-                setCurrentMonth={setCurrentMonth}
+                setCurrentMonth={handleMonthChange}
                 habits={habits}
                 calendarEntries={calendarEntries}
                 loading={calendarLoading}
                 error={calendarError}
                 onToggleHabit={async (dateStr: string, habitId: string, completed: boolean) => {
-                  await toggleHabitCompletion(parseInt(habitId), dateStr, completed);
+                  await toggleCalendarHabit(dateStr, parseInt(habitId), completed);
                 }}
                 isHabitCompleted={isHabitCompleted}
               />
@@ -463,4 +292,4 @@ export default function TrackPage() {
       </PageTransition>
     </AuthGuard>
   );
-} 
+}

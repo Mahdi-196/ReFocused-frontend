@@ -404,6 +404,13 @@ class JournalService {
       clearCalendarCache();
       console.log('🗑️ [GRATITUDE] Cleared calendar cache after creating gratitude');
       
+      // Dispatch event to notify calendar of gratitude change
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gratitudeCreated', { 
+          detail: { date: finalDate, gratitude: response.data } 
+        }));
+      }
+      
       return this.mapGratitudeEntryResponse(response.data);
     } catch (error: any) {
       console.error('❌ [GRATITUDE] Create gratitude failed:', {
@@ -425,6 +432,13 @@ class JournalService {
       clearCalendarCache();
       console.log('🗑️ [GRATITUDE] Cleared calendar cache after updating gratitude');
       
+      // Dispatch event to notify calendar of gratitude update
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gratitudeUpdated', { 
+          detail: { id, gratitude: response.data } 
+        }));
+      }
+      
       return this.mapGratitudeEntryResponse(response.data);
     } catch (error) {
       throw this.handleError(error, 'Failed to update gratitude');
@@ -438,6 +452,13 @@ class JournalService {
       // Clear calendar cache so deleted gratitudes are removed from calendar immediately
       clearCalendarCache();
       console.log('🗑️ [GRATITUDE] Cleared calendar cache after deleting gratitude');
+      
+      // Dispatch event to notify calendar of gratitude deletion
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gratitudeDeleted', { 
+          detail: { id } 
+        }));
+      }
     } catch (error) {
       throw this.handleError(error, 'Failed to delete gratitude');
     }

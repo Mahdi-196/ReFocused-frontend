@@ -14,6 +14,14 @@ export interface DailyEntry {
     habitId: number;
     completed: boolean;
   }[];
+  gratitudes?: {
+    id: number;
+    text: string;
+    date: string;
+    user_id: number;
+    created_at: string;
+    createdAt: string;
+  }[];
   notes?: string;
   focusTime?: number;
   tasks?: number;

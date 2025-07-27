@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from '@/components/icons';
-import { FaBrain, FaRobot } from 'react-icons/fa';
+import { FaBrain, FaRobot, FaMouse } from 'react-icons/fa';
 import { HiBeaker, HiUser, HiAcademicCap, HiSparkles } from 'react-icons/hi2';
 import AuthModal from '@/components/AuthModal';
 import { getStudySets } from '@/services/studyService';
@@ -15,15 +15,6 @@ import ProductivityScore from './homeComponents/ProductivityScore';
 import WordOfTheDay from './homeComponents/WordOfTheDay';
 import MindFuel from './homeComponents/MindFuel';
 
-// Type for orb configuration
-type Orb = {
-  top: string;
-  left: string;
-  width: string;
-  height: string;
-  duration: number;
-  delay: number;
-};
 
 // Type for task management
 type Task = {
@@ -43,10 +34,12 @@ export default function HomePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [completedTasksCount, setCompletedTasksCount] = useState(0);
 
-  // State for orbs
-  const [orbs, setOrbs] = useState<Orb[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  
+  // Mouse scroll animation state
+  const [showMouseScroll, setShowMouseScroll] = useState(true);
+  
   
   // Cache testing state
   const [cacheTestResult, setCacheTestResult] = useState<string>('');
@@ -56,22 +49,22 @@ export default function HomePage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
-  // Generate orbs after component mounts
+
+  // Handle scroll to hide/show mouse scroll animation
   useEffect(() => {
     if (!isMounted) return;
-    
-    const generatedOrbs = Array.from({ length: 15 }).map(() => ({
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      width: `${Math.random() * 100 + 20}px`,
-      height: `${Math.random() * 100 + 20}px`,
-      duration: Math.random() * 10 + 10,
-      delay: Math.random() * 5,
-    }));
-    
-    setOrbs(generatedOrbs);
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      // Hide mouse scroll animation when user starts scrolling
+      setShowMouseScroll(scrollY < 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [isMounted]);
+
+  
 
   // Cache testing functions
   const testStudySetsCache = async () => {
@@ -160,26 +153,66 @@ Is authenticated: ${authService.isAuthenticated()}`);
     <div className="overflow-hidden">
       {/* Hero Section */}
       <section id="top" className="relative min-h-[85vh] flex items-center justify-center py-16 px-4 bg-[#10182B] overflow-hidden">
-        {/* Radial gradient background */}
+        {/* Base gradient background */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#10182B] via-[#10182B] to-[#0c1324]"></div>
         
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            {orbs.map((orb, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full bg-blue-400"
-                style={{
-                  top: orb.top,
-                  left: orb.left,
-                  width: orb.width,
-                  height: orb.height,
-                  opacity: 0.2,
-                }}
-              />
-            ))}
-          </div>
+        {/* Floating dots background */}
+        <div className="absolute inset-0 overflow-hidden opacity-70">
+          {/* App color floating dots with varied animations */}
+          <div className="absolute w-3 h-3 bg-[#42b9e5]/60 rounded-full float-1" style={{ top: '20%', left: '15%' }}></div>
+          <div className="absolute w-2 h-2 bg-[#4f83ed]/70 rounded-full float-2" style={{ top: '35%', left: '80%' }}></div>
+          <div className="absolute w-2.5 h-2.5 bg-[#4f83ed]/65 rounded-full float-4" style={{ top: '75%', left: '70%' }}></div>
+          <div className="absolute w-2 h-2 bg-[#4f83ed]/70 rounded-full float-3" style={{ top: '18%', left: '75%' }}></div>
+          <div className="absolute w-1 h-1 bg-[#42b9e5]/80 rounded-full float-4" style={{ top: '85%', left: '20%' }}></div>
+          <div className="absolute w-1 h-1 bg-[#4f83ed]/85 rounded-full float-4" style={{ top: '90%', left: '75%' }}></div>
+          <div className="absolute w-5 h-5 bg-[#42b9e5]/45 rounded-full float-2" style={{ top: '80%', left: '40%' }}></div>
+          <div className="absolute w-2.5 h-2.5 bg-[#42b9e5]/65 rounded-full float-1" style={{ top: '12%', left: '35%' }}></div>
+          <div className="absolute w-2 h-2 bg-[#42b9e5]/70 rounded-full float-3" style={{ top: '25%', left: '65%' }}></div>
+          <div className="absolute w-1.5 h-1.5 bg-[#42b9e5]/75 rounded-full float-5" style={{ top: '40%', left: '10%' }}></div>
+          <div className="absolute w-2 h-2 bg-[#4f83ed]/60 rounded-full float-1" style={{ top: '50%', left: '5%' }}></div>
+          <div className="absolute w-1.5 h-1.5 bg-[#42b9e5]/70 rounded-full float-3" style={{ top: '65%', left: '8%' }}></div>
+          <div className="absolute w-2.5 h-2.5 bg-[#4f83ed]/55 rounded-full float-2" style={{ top: '22%', left: '90%' }}></div>
+          <div className="absolute w-1 h-1 bg-[#42b9e5]/80 rounded-full float-4" style={{ top: '42%', left: '92%' }}></div>
+          <div className="absolute w-1.5 h-1.5 bg-[#4f83ed]/65 rounded-full float-5" style={{ top: '62%', left: '88%' }}></div>
         </div>
+
+        {/* Global CSS for animations */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes moveFloat1 {
+              0%, 100% { transform: translate(0px, 0px) scale(1); }
+              25% { transform: translate(15px, -10px) scale(1.05); }
+              50% { transform: translate(-8px, -18px) scale(0.95); }
+              75% { transform: translate(-12px, 5px) scale(1.02); }
+            }
+            @keyframes moveFloat2 {
+              0%, 100% { transform: translate(0px, 0px) scale(1); }
+              33% { transform: translate(-12px, 15px) scale(0.98); }
+              66% { transform: translate(18px, -8px) scale(1.03); }
+            }
+            @keyframes moveFloat3 {
+              0%, 100% { transform: translate(0px, 0px) scale(1); }
+              20% { transform: translate(10px, -12px) scale(1.02); }
+              40% { transform: translate(-14px, -8px) scale(0.97); }
+              60% { transform: translate(-6px, 16px) scale(1.04); }
+              80% { transform: translate(8px, 6px) scale(0.99); }
+            }
+            @keyframes moveFloat4 {
+              0%, 100% { transform: translate(0px, 0px) scale(1); }
+              50% { transform: translate(-10px, -15px) scale(1.06); }
+            }
+            @keyframes moveFloat5 {
+              0%, 100% { transform: translate(0px, 0px) scale(1); }
+              30% { transform: translate(12px, -6px) scale(0.96); }
+              70% { transform: translate(-8px, 10px) scale(1.03); }
+            }
+            .float-1 { animation: moveFloat1 12s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite !important; }
+            .float-2 { animation: moveFloat2 16s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite !important; }
+            .float-3 { animation: moveFloat3 20s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite !important; }
+            .float-4 { animation: moveFloat4 14s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite !important; }
+            .float-5 { animation: moveFloat5 18s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite !important; }
+          `
+        }} />
 
         <div className="container mx-auto text-center relative z-10 py-8 px-4">
           <div className="mb-6">
@@ -207,7 +240,7 @@ Is authenticated: ${authService.isAuthenticated()}`);
           {/* Features highlights */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-10">
             <div className="p-4 flex items-start">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4">
+              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4 shadow-[0_0_10px_rgba(66,185,229,0.2)]">
                 <FaBrain className="w-6 h-6 text-[#42b9e5]" />
               </div>
               <div className="text-left">
@@ -243,8 +276,18 @@ Is authenticated: ${authService.isAuthenticated()}`);
             </Link>
           </div>
 
+          {/* Mouse Scroll Animation */}
+          <div className={`flex flex-col items-center mt-20 transition-opacity duration-700 ease-out ${
+            showMouseScroll && isMounted ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}>
+            <p className="text-slate-400 text-sm mb-4 animate-pulse">Scroll down to explore</p>
+            <div className="animate-bounce">
+              <FaMouse className="w-8 h-8 text-[#42b9e5] opacity-70" />
+            </div>
+          </div>
+
           {/* Cache Testing Section - Development Only */}
-                        {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+          {/* {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
             <div className="bg-gradient-to-br from-gray-800/20 to-gray-900/20 backdrop-blur-sm border border-gray-600/30 rounded-xl p-6 max-w-2xl mx-auto">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
                 <HiBeaker className="w-5 h-5 mr-2 text-purple-400" />
@@ -294,7 +337,7 @@ Is authenticated: ${authService.isAuthenticated()}`);
                 Open browser console to see detailed cache logs (<HiUser className="inline w-3 h-3 mx-1" /> for auth, <HiAcademicCap className="inline w-3 h-3 mx-1" /> for study sets)
               </p>
             </div>
-          )}
+          )} */}
         </div>
       </section>
 

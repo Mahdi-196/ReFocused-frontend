@@ -55,7 +55,7 @@ export default function CalendarCell({
 
     // Check if there are gratitudes on this day (second priority)
     if (hasGratitudes) {
-      console.log(`✅ [CalendarCell] ${dateStr} selected "has-gratitudes" with ${calendarEntry.gratitudes.length} gratitudes`);
+      console.log(`✅ [CalendarCell] ${dateStr} selected "has-gratitudes" with ${calendarEntry.gratitudes?.length || 0} gratitudes`);
       return "has-gratitudes";
     }
 
@@ -112,10 +112,10 @@ export default function CalendarCell({
       case "has-gratitudes":
         return {
           background:
-            "linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)",
+            "linear-gradient(135deg, #ff1b8d 0%, #e91e63 50%, #c2185b 100%)",
           boxShadow:
-            "0 4px 12px rgba(236, 72, 153, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
-          border: "1px solid #ec4899",
+            "0 4px 12px rgba(255, 27, 141, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
+          border: "2px solid #ff1b8d",
         };
       case "has-goal-activity":
         return {
@@ -168,7 +168,7 @@ export default function CalendarCell({
       {calendarEntry?.gratitudes && calendarEntry.gratitudes.length > 0 && (
         <div className="absolute top-0.5 right-0.5 z-20">
           <svg
-            className="w-2.5 h-2.5 text-pink-200"
+            className="w-3 h-3 text-white drop-shadow-lg"
             fill="currentColor"
             viewBox="0 0 24 24"
           >
