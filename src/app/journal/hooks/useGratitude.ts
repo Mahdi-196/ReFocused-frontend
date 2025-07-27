@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import journalService from "@/api/services/journalService";
 import type { GratitudeEntry, JournalApiError } from "../types";
 import { useConsistentDate } from "@/hooks/useConsistentDate";
@@ -11,12 +11,25 @@ export function useGratitude() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { currentDate, isReady } = useConsistentDate();
+  const loadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load gratitudes from backend
+  // Load gratitudes from backend with authentication and debouncing
   const loadGratitudes = async () => {
     try {
+      // Check authentication before making request
+      const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
+      if (!token || token === 'dummy-auth-token') {
+        console.log('🔐 [GRATITUDE HOOK] No valid auth token, skipping load');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
+      
+      // Small delay to ensure auth is ready after date changes
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
       const data = await journalService.getGratitudes();
       setGratitudes(data);
     } catch (err) {
@@ -31,10 +44,21 @@ export function useGratitude() {
     }
   };
 
+  // Debounced load function to prevent rapid successive calls
+  const debouncedLoadGratitudes = () => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+    }
+    
+    loadTimeoutRef.current = setTimeout(() => {
+      loadGratitudes();
+    }, 200);
+  };
+
   // Initial load
   useEffect(() => {
     if (isReady) {
-      loadGratitudes();
+      debouncedLoadGratitudes();
     }
   }, [isReady]);
 
@@ -42,15 +66,15 @@ export function useGratitude() {
   useEffect(() => {
     if (!isReady) return;
 
-    // Reload gratitudes when the date changes (24-hour reset)
-    loadGratitudes();
+    // Use debounced load when date changes to prevent race conditions
+    debouncedLoadGratitudes();
   }, [currentDate, isReady]);
 
   // Also listen for the dayChanged event directly from timeService
   useEffect(() => {
     const handleDayChange = () => {
       console.log('🔄 [GRATITUDE] Day changed, reloading gratitudes...');
-      loadGratitudes();
+      debouncedLoadGratitudes();
     };
 
     // Listen for custom dayChanged event
@@ -61,6 +85,15 @@ export function useGratitude() {
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('dayChanged', handleDayChange);
+      }
+    };
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
       }
     };
   }, []);
@@ -129,7 +162,7 @@ export function useGratitude() {
 
   // Refresh gratitudes from backend
   const refreshGratitudes = () => {
-    loadGratitudes();
+    debouncedLoadGratitudes();
   };
 
   // Clear error

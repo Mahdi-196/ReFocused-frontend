@@ -10,7 +10,12 @@
       "Bash(yarn tsc:*)",
       "Bash(yarn lint:*)",
       "Bash(pkill:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(mv:*)",
+      "Bash(find:*)",
+      "Bash(curl:*)",
+      "Bash(yarn build:*)",
+      "Bash(lsof:*)"
     ],
     "deny": []
   }

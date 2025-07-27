@@ -97,26 +97,11 @@ export default function GratitudesDisplay({ gratitudes }: GratitudesDisplayProps
                   <span className="text-gray-400">...</span>
                 )}
               </p>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-400">
-                  Gratitude #{index + 1}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {gratitude.text.length}/125
-                </span>
-              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {filteredGratitudes.length === 3 && (
-        <div className="mt-3 text-center">
-          <span className="text-xs text-gray-400">
-            Maximum 3 gratitudes reached
-          </span>
-        </div>
-      )}
     </div>
   );
 }

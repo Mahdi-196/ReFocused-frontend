@@ -423,7 +423,19 @@ export class GoalsService {
       
       // Get client-side progress data for the date range
       const allProgress = getDailyProgress();
-      const relevantProgress = allProgress.filter(p => p.date >= startDate && p.date <= endDate);
+      let relevantProgress = allProgress.filter(p => p.date >= startDate && p.date <= endDate);
+      
+      // Only use real progress data from localStorage - no fallback data
+      
+      console.log('🎯 [GOALS_SERVICE] Daily progress analysis:', {
+        startDate,
+        endDate,
+        allProgressEntries: allProgress.length,
+        relevantProgressEntries: relevantProgress.length,
+        allProgress: allProgress,
+        relevantProgress: relevantProgress,
+        goalsWithProgress: allGoals.filter(g => g.current_value > 0).length
+      });
       
       logger.info('Successfully fetched goals with daily progress', {
         startDate,

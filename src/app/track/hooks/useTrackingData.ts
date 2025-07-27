@@ -163,8 +163,12 @@ export function useTrackingData(currentMonth: Date) {
     setError(null);
   }, []);
 
-  // Load data when month changes
+  // Load data when month changes - wait for time service to be ready
   useEffect(() => {
+    // Don't load if time service is not ready or returning placeholder dates
+    if (todayString === 'LOADING_DATE' || monthString === 'LOADING') {
+      return;
+    }
     loadUserData();
   }, [todayString, monthString]); // Direct dependencies instead of callback
 

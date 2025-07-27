@@ -1,18 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DailyCalendarEntry, UserHabit } from '../types';
-import { 
-  getCalendarEntries, 
-  getCalendarEntry, 
-  toggleHabitInCalendar,
-  hasCalendarEntry,
-  clearCalendarCache 
-} from '@/services/calendarService';
+import { getDailyEntries, clearDashboardCache } from '@/services/dashboardService';
+import { getHabits } from '@/services/habitsService';
 import { saveMoodRating } from '@/services/moodService';
 import { markHabitCompletion } from '@/services/habitsService';
 import { useCurrentDate, useTime } from '@/contexts/TimeContext';
 
 // Store previous progress values from goal update events
 const goalPreviousValues: Record<number, number> = {};
+
+// Helper function to get current date
+function getCurrentDate(): string {
+  try {
+    return new Date().toISOString().split('T')[0];
+  } catch (error) {
+    return new Date().toISOString().split('T')[0];
+  }
+}
 
 /**
  * Enhanced Calendar Data Hook
@@ -39,7 +43,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   }, [currentMonth]);
 
   /**
-   * Load calendar entries for current month using REAL data
+   * Load calendar entries for current month using dashboard data
    */
   const loadCalendarData = useCallback(async () => {
     try {
@@ -47,24 +51,110 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       setError(null);
       
       const { startDate, endDate } = getMonthDateRange();
-      console.log('📊 [CALENDAR HOOK] Loading calendar for month:', { startDate, endDate, currentMonth: currentMonth.toISOString().split('T')[0] });
+      const monthStr = currentMonth.toISOString().slice(0, 7); // YYYY-MM format
       
-      // Load calendar entries from REAL services (not mock API)
-      const entries = await getCalendarEntries(startDate, endDate);
-      
-      // Convert to map for easy lookup
-      const entriesMap: { [key: string]: DailyCalendarEntry } = {};
-      entries.forEach(entry => {
-        entriesMap[entry.date] = entry;
-        if (entry.gratitudes && entry.gratitudes.length > 0) {
-          console.log('🙏 [CALENDAR HOOK] Found gratitudes for date:', entry.date, entry.gratitudes);
-        }
+      console.log('📊 [CALENDAR HOOK] Loading dashboard data for month:', { 
+        monthStr, 
+        startDate, 
+        endDate, 
+        currentMonth: currentMonth.toISOString().split('T')[0] 
       });
       
-      console.log('📊 [CALENDAR HOOK] Loaded entries count:', entries.length);
+      // Load dashboard entries (includes mood, habits, gratitudes)
+      const [dashboardEntries, habits] = await Promise.all([
+        getDailyEntries(monthStr),
+        getHabits()
+      ]);
+      
+      console.log('📊 [CALENDAR HOOK] Dashboard data received:', { 
+        entriesCount: Object.keys(dashboardEntries).length,
+        habitsCount: habits.length,
+        sampleEntry: Object.keys(dashboardEntries)[0] ? dashboardEntries[Object.keys(dashboardEntries)[0]] : null
+      });
+      
+      // Convert dashboard entries to calendar format
+      const entriesMap: { [key: string]: DailyCalendarEntry } = {};
+      
+      // Process each date in range
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      
+      for (let date = new Date(startDateObj); date <= endDateObj; date.setDate(date.getDate() + 1)) {
+        const dateStr = date.toISOString().split('T')[0];
+        const dashboardEntry = dashboardEntries[dateStr];
+        
+        // Create calendar entry
+        const calendarEntry: DailyCalendarEntry = {
+          date: dateStr,
+          userId: 1,
+          habitCompletions: [],
+          goalActivities: [],
+          gratitudes: [],
+          isLocked: dateStr < getCurrentDate()
+        };
+        
+        // Process dashboard data if it exists
+        if (dashboardEntry) {
+          console.log(`📊 [CALENDAR HOOK] Processing ${dateStr}:`, {
+            hasGratitudes: !!dashboardEntry.gratitudes?.length,
+            gratitudeCount: dashboardEntry.gratitudes?.length || 0,
+            hasHabits: !!dashboardEntry.habitCompletions?.length,
+            hasMood: !!(dashboardEntry.happiness || dashboardEntry.focus || dashboardEntry.stress)
+          });
+          
+          // Add mood data
+          if (dashboardEntry.happiness || dashboardEntry.focus || dashboardEntry.stress) {
+            calendarEntry.moodEntry = {
+              happiness: dashboardEntry.happiness || 0,
+              focus: dashboardEntry.focus || 0,
+              stress: dashboardEntry.stress || 0
+            };
+          }
+          
+          // Add habit completions
+          if (dashboardEntry.habitCompletions) {
+            dashboardEntry.habitCompletions.forEach(completion => {
+              const habit = habits.find(h => h.id === completion.habitId);
+              if (habit) {
+                calendarEntry.habitCompletions.push({
+                  habitId: completion.habitId,
+                  habitName: habit.name,
+                  completed: completion.completed,
+                  completedAt: completion.completed ? new Date() : undefined,
+                  wasActiveOnDate: habit.isActive !== false
+                });
+              }
+            });
+          }
+          
+          // Add gratitudes (KEY FIX!)
+          if (dashboardEntry.gratitudes) {
+            console.log(`🙏 [CALENDAR HOOK] Adding ${dashboardEntry.gratitudes.length} gratitudes for ${dateStr}`);
+            dashboardEntry.gratitudes.forEach(gratitude => {
+              calendarEntry.gratitudes.push({
+                id: gratitude.id,
+                text: gratitude.text,
+                date: gratitude.date,
+                createdAt: gratitude.created_at ? new Date(gratitude.created_at) : undefined
+              });
+            });
+          }
+        }
+        
+        entriesMap[dateStr] = calendarEntry;
+      }
+      
+      console.log('📊 [CALENDAR HOOK] Calendar entries created:', {
+        totalEntries: Object.keys(entriesMap).length,
+        entriesWithGratitudes: Object.values(entriesMap).filter(e => e.gratitudes.length > 0).length,
+        entriesWithMood: Object.values(entriesMap).filter(e => e.moodEntry).length,
+        entriesWithHabits: Object.values(entriesMap).filter(e => e.habitCompletions.length > 0).length
+      });
+      
       setCalendarEntries(entriesMap);
       
     } catch (err) {
+      console.error('❌ [CALENDAR HOOK] Failed to load calendar data:', err);
       setError('Failed to load calendar data. Please refresh to try again.');
     } finally {
       setLoading(false);
@@ -110,7 +200,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       await markHabitCompletion(habitId, date, completed);
       
       // Clear cache and reload to get fresh data
-      clearCalendarCache();
+      clearDashboardCache();
       await loadCalendarData();
       
       return { success: true };
@@ -154,7 +244,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       await saveMoodRating(ratings);
       
       // Clear cache and reload to get fresh data
-      clearCalendarCache();
+      clearDashboardCache();
       await loadCalendarData();
       
       return { success: true };
@@ -224,17 +314,21 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   };
 
   /**
-   * Refresh calendar data - now uses REAL data
+   * Refresh calendar data - now uses dashboard data
    */
   const refreshCalendarData = () => {
-    clearCalendarCache();
+    clearDashboardCache();
     loadCalendarData();
   };
 
-  // Load data when month changes only
+  // Load data when month changes only - wait for time service to be ready  
   useEffect(() => {
+    // Don't load if time service is not ready
+    if (currentDate === 'LOADING_DATE') {
+      return;
+    }
     loadCalendarData();
-  }, [currentMonth]); // Only depend on currentMonth to prevent loops
+  }, [currentMonth, currentDate]); // Also depend on currentDate to ensure sync
 
   // Listen for goal updates and refresh calendar
   useEffect(() => {
@@ -246,26 +340,39 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       }
       
       // Clear cache and reload to get fresh goal data
-      clearCalendarCache();
+      clearDashboardCache();
       loadCalendarData();
     };
 
     const handleGoalCreation = (event: CustomEvent) => {
       // Clear cache and reload to get fresh goal data
-      clearCalendarCache();
+      clearDashboardCache();
       loadCalendarData();
     };
 
-    // Listen for goal progress updates and creation
+    const handleGratitudeChange = (event: CustomEvent) => {
+      console.log('🙏 [CALENDAR] Gratitude changed, refreshing calendar data');
+      // Clear cache and reload to get fresh gratitude data
+      clearDashboardCache();
+      loadCalendarData();
+    };
+
+    // Listen for goal and gratitude updates
     if (typeof window !== 'undefined') {
       window.addEventListener('goalProgressUpdated', handleGoalUpdate as EventListener);
       window.addEventListener('goalCreated', handleGoalCreation as EventListener);
+      window.addEventListener('gratitudeCreated', handleGratitudeChange as EventListener);
+      window.addEventListener('gratitudeUpdated', handleGratitudeChange as EventListener);
+      window.addEventListener('gratitudeDeleted', handleGratitudeChange as EventListener);
     }
 
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('goalProgressUpdated', handleGoalUpdate as EventListener);
         window.removeEventListener('goalCreated', handleGoalCreation as EventListener);
+        window.removeEventListener('gratitudeCreated', handleGratitudeChange as EventListener);
+        window.removeEventListener('gratitudeUpdated', handleGratitudeChange as EventListener);
+        window.removeEventListener('gratitudeDeleted', handleGratitudeChange as EventListener);
       }
     };
   }, [loadCalendarData]);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { saveMoodRating, getTodaysMood } from '@/services/moodService';
+import { useCurrentDate } from '@/contexts/TimeContext';
 
 interface MoodRating {
   happiness: number | null;
@@ -10,6 +11,7 @@ interface MoodRating {
 }
 
 export default function NumberMood() {
+  const currentDate = useCurrentDate();
   const [moodRatings, setMoodRatings] = useState<MoodRating>({
     happiness: null,
     focus: null,
@@ -22,10 +24,14 @@ export default function NumberMood() {
   
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load existing mood data on mount
+  // Load existing mood data when time service is ready
   useEffect(() => {
+    // Don't load if time service is not ready
+    if (currentDate === 'LOADING_DATE') {
+      return;
+    }
     loadTodaysMood();
-  }, []);
+  }, [currentDate]); // Depend on currentDate to reload when time changes
 
   // Listen for mood data cleared event
   useEffect(() => {
