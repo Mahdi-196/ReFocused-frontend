@@ -15,7 +15,8 @@
       "Bash(find:*)",
       "Bash(curl:*)",
       "Bash(yarn build:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

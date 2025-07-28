@@ -1,5 +1,5 @@
 export type GoalType = 'percentage' | 'counter' | 'checklist';
-export type GoalDuration = '2_week' | 'long_term';
+export type GoalDuration = '2_week' | 'long_term' | 'two_week'; // Backend uses 'two_week'
 export type GoalStatus = 'active' | 'completed_recent' | 'completed_historical' | 'expired';
 
 export interface Goal {
@@ -136,7 +136,8 @@ export function getGoalProgressText(goal: Goal): string {
 // Helper function to get user-friendly duration labels
 export function getDurationDisplayName(duration: GoalDuration): string {
   switch (duration) {
-    case '2_week': {
+    case '2_week':
+    case 'two_week': {
       return '2-Week Sprint';
     }
     case 'long_term': {
@@ -150,7 +151,7 @@ export function getDurationDisplayName(duration: GoalDuration): string {
 
 // Helper function to check if goal is expired (for 2-week goals)
 export function isGoalExpired(goal: Goal): boolean {
-  if (goal.duration !== '2_week' || !goal.expires_at) {
+  if ((goal.duration !== '2_week' && goal.duration !== 'two_week') || !goal.expires_at) {
     return false;
   }
   
@@ -167,7 +168,7 @@ export function isGoalExpired(goal: Goal): boolean {
 
 // Helper function to get expiration display text
 export function getExpirationText(goal: Goal): string | null {
-  if (goal.duration !== '2_week' || !goal.expires_at) {
+  if ((goal.duration !== '2_week' && goal.duration !== 'two_week') || !goal.expires_at) {
     return null;
   }
   
@@ -265,7 +266,42 @@ export function getGoalStatus(goal: Goal): GoalStatus {
 // Helper function to check if goal should be visible in main view
 export function isGoalVisibleInMainView(goal: Goal): boolean {
   const status = getGoalStatus(goal);
-  return status === 'active' || status === 'completed_recent';
+  
+  console.log('🎯 [GOAL_VISIBILITY] Checking goal:', {
+    id: goal.id,
+    name: goal.name,
+    duration: goal.duration,
+    is_completed: goal.is_completed,
+    completed_at: goal.completed_at,
+    status,
+    expires_at: goal.expires_at
+  });
+  
+  // Completed goals: only show for 24 hours regardless of duration
+  if (goal.is_completed) {
+    const visible = status === 'completed_recent';
+    console.log('✅ [GOAL_VISIBILITY] Completed goal visibility:', visible, '(status:', status, ')');
+    return visible;
+  }
+  
+  // Active goals: show based on duration
+  if (status === 'active') {
+    // 2-week goals: hide if expired (after 2 weeks)
+    if (goal.duration === '2_week' || goal.duration === 'two_week') {
+      const expired = isGoalExpired(goal);
+      const visible = !expired;
+      console.log('📅 [GOAL_VISIBILITY] 2-week goal visibility:', visible, '(expired:', expired, ')');
+      return visible;
+    }
+    // Long-term goals: always show (never expire)
+    if (goal.duration === 'long_term') {
+      console.log('♾️ [GOAL_VISIBILITY] Long-term goal visibility: true');
+      return true;
+    }
+  }
+  
+  console.log('❌ [GOAL_VISIBILITY] Goal not visible (status:', status, ')');
+  return false;
 }
 
 // Helper function to format completion time

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DailyCalendarEntry, UserHabit } from '../types';
 import { getDailyEntries, clearDashboardCache } from '@/services/dashboardService';
+import { goalsService } from '@/services/goalsService';
 import { getHabits } from '@/services/habitsService';
 import { saveMoodRating } from '@/services/moodService';
 import { markHabitCompletion } from '@/services/habitsService';
@@ -8,15 +9,6 @@ import { useCurrentDate, useTime } from '@/contexts/TimeContext';
 
 // Store previous progress values from goal update events
 const goalPreviousValues: Record<number, number> = {};
-
-// Helper function to get current date
-function getCurrentDate(): string {
-  try {
-    return new Date().toISOString().split('T')[0];
-  } catch (error) {
-    return new Date().toISOString().split('T')[0];
-  }
-}
 
 /**
  * Enhanced Calendar Data Hook
@@ -27,7 +19,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const currentDate = useCurrentDate();
-  const { getCurrentDate } = useTime();
+  const { getCurrentDate: getTimeServiceDate } = useTime();
 
   // Get date range for current month
   const getMonthDateRange = useCallback(() => {
@@ -43,7 +35,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   }, [currentMonth]);
 
   /**
-   * Load calendar entries for current month using dashboard data
+   * Load calendar entries for current month using dashboard + goals integration
    */
   const loadCalendarData = useCallback(async () => {
     try {
@@ -53,26 +45,32 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       const { startDate, endDate } = getMonthDateRange();
       const monthStr = currentMonth.toISOString().slice(0, 7); // YYYY-MM format
       
-      console.log('📊 [CALENDAR HOOK] Loading dashboard data for month:', { 
+      console.log('📊 [CALENDAR HOOK] Loading dashboard + goals data for month:', { 
         monthStr, 
         startDate, 
         endDate, 
         currentMonth: currentMonth.toISOString().split('T')[0] 
       });
       
-      // Load dashboard entries (includes mood, habits, gratitudes)
-      const [dashboardEntries, habits] = await Promise.all([
+      // Load dashboard entries and goal activities in parallel
+      const [dashboardEntries, habits, goalsWithProgress] = await Promise.all([
         getDailyEntries(monthStr),
-        getHabits()
+        getHabits(),
+        goalsService.getGoalsWithDailyProgress(startDate, endDate).catch(err => {
+          console.warn('Failed to load goal activities:', err);
+          return { goals: [], dailyProgress: [] };
+        })
       ]);
       
-      console.log('📊 [CALENDAR HOOK] Dashboard data received:', { 
-        entriesCount: Object.keys(dashboardEntries).length,
+      console.log('📊 [CALENDAR HOOK] Data received:', { 
+        dashboardEntriesCount: Object.keys(dashboardEntries).length,
         habitsCount: habits.length,
-        sampleEntry: Object.keys(dashboardEntries)[0] ? dashboardEntries[Object.keys(dashboardEntries)[0]] : null
+        goalsCount: goalsWithProgress.goals.length,
+        dailyProgressCount: goalsWithProgress.dailyProgress.length,
+        sampleDashboardEntry: Object.keys(dashboardEntries)[0] ? dashboardEntries[Object.keys(dashboardEntries)[0]] : null
       });
       
-      // Convert dashboard entries to calendar format
+      // Convert dashboard entries to calendar format with goal activities
       const entriesMap: { [key: string]: DailyCalendarEntry } = {};
       
       // Process each date in range
@@ -83,14 +81,39 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
         const dateStr = date.toISOString().split('T')[0];
         const dashboardEntry = dashboardEntries[dateStr];
         
+        // Get goal activities for this date
+        const dailyGoalProgress = goalsWithProgress.dailyProgress.filter(p => p.date === dateStr);
+        const goalActivities = dailyGoalProgress.map(progress => {
+          const goal = goalsWithProgress.goals.find(g => g.id === progress.goalId);
+          
+          // Map progress types to display types
+          let activityType: 'created' | 'completed' | 'progress_update';
+          if (progress.progressType === 'complete') {
+            activityType = 'completed';
+          } else {
+            activityType = 'progress_update';
+          }
+          
+          return {
+            goalId: progress.goalId,
+            goalName: goal?.name || 'Unknown Goal',
+            activityType: activityType,
+            activityTime: new Date(progress.timestamp),
+            progressValue: progress.progressValue,
+            goalType: goal?.goal_type || 'percentage',
+            targetValue: goal?.target_value || 100,
+            notes: progress.notes
+          };
+        });
+        
         // Create calendar entry
         const calendarEntry: DailyCalendarEntry = {
           date: dateStr,
           userId: 1,
           habitCompletions: [],
-          goalActivities: [],
+          goalActivities: goalActivities,
           gratitudes: [],
-          isLocked: dateStr < getCurrentDate()
+          isLocked: dateStr < currentDate
         };
         
         // Process dashboard data if it exists
@@ -99,7 +122,8 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
             hasGratitudes: !!dashboardEntry.gratitudes?.length,
             gratitudeCount: dashboardEntry.gratitudes?.length || 0,
             hasHabits: !!dashboardEntry.habitCompletions?.length,
-            hasMood: !!(dashboardEntry.happiness || dashboardEntry.focus || dashboardEntry.stress)
+            hasMood: !!(dashboardEntry.happiness || dashboardEntry.focus || dashboardEntry.stress),
+            goalActivitiesCount: goalActivities.length
           });
           
           // Add mood data
@@ -127,7 +151,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
             });
           }
           
-          // Add gratitudes (KEY FIX!)
+          // Add gratitudes
           if (dashboardEntry.gratitudes) {
             console.log(`🙏 [CALENDAR HOOK] Adding ${dashboardEntry.gratitudes.length} gratitudes for ${dateStr}`);
             dashboardEntry.gratitudes.forEach(gratitude => {
@@ -144,11 +168,12 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
         entriesMap[dateStr] = calendarEntry;
       }
       
-      console.log('📊 [CALENDAR HOOK] Calendar entries created:', {
+      console.log('📊 [CALENDAR HOOK] Final calendar entries:', {
         totalEntries: Object.keys(entriesMap).length,
-        entriesWithGratitudes: Object.values(entriesMap).filter(e => (e.gratitudes ?? []).length > 0).length,
-        entriesWithMood: Object.values(entriesMap).filter(e => e.moodEntry).length,
-        entriesWithHabits: Object.values(entriesMap).filter(e => e.habitCompletions.length > 0).length
+        entriesWithGoals: Object.values(entriesMap).filter(e => e.goalActivities?.length > 0).length,
+        entriesWithHabits: Object.values(entriesMap).filter(e => e.habitCompletions?.length > 0).length,
+        entriesWithMood: Object.values(entriesMap).filter(e => !!e.moodEntry).length,
+        entriesWithGratitudes: Object.values(entriesMap).filter(e => e.gratitudes?.length > 0).length
       });
       
       setCalendarEntries(entriesMap);
@@ -159,7 +184,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
     } finally {
       setLoading(false);
     }
-  }, [getMonthDateRange, currentMonth]);
+  }, [getMonthDateRange, currentMonth, currentDate]);
 
   /**
    * Toggle habit completion for a specific date using REAL habit service
@@ -171,8 +196,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       // Check if it's a past date
-      const today = getCurrentDate();
-      if (date < today) {
+      if (date < currentDate) {
         return { success: false, error: 'Cannot modify habit completions for past dates.' };
       }
 
@@ -266,8 +290,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
    * Check if date is read-only (past date)
    */
   const isDateReadOnly = (date: string): boolean => {
-    const today = getCurrentDate();
-    return date < today;
+    return date < currentDate;
   };
 
   /**
@@ -314,7 +337,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
   };
 
   /**
-   * Refresh calendar data - now uses dashboard data
+   * Refresh calendar data - uses dashboard + goals integration
    */
   const refreshCalendarData = () => {
     clearDashboardCache();
@@ -328,7 +351,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       return;
     }
     loadCalendarData();
-  }, [currentMonth, currentDate]); // Also depend on currentDate to ensure sync
+  }, [loadCalendarData, currentMonth, currentDate]); // Also depend on currentDate to ensure sync
 
   // Listen for goal updates and refresh calendar
   useEffect(() => {
