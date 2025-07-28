@@ -39,11 +39,22 @@ export default function CalendarCell({
   }
 
   const getDayClass = () => {
-    const hasGratitudes = calendarEntry?.gratitudes && calendarEntry.gratitudes.length > 0;
     const hasGoals = calendarEntry?.goalActivities && calendarEntry.goalActivities.length > 0;
     const hasHabits = calendarEntry?.habitCompletions.some((hc) => hc.completed);
+    const hasGratitudes = calendarEntry?.gratitudes && calendarEntry.gratitudes.length > 0;
     const hasMood = !!calendarEntry?.moodEntry;
 
+    // Debug logging for goals
+    if (calendarEntry?.goalActivities) {
+      console.log(`🎯 GOALS DEBUG CalendarCell(${dateStr}) goalActivities:`, {
+        goalActivitiesLength: calendarEntry.goalActivities.length,
+        goalActivities: calendarEntry.goalActivities,
+        hasGoals
+      });
+    }
+
+    // Priority order: Mood > Goals > Habits > Gratitudes
+    
     // Check for calendar entry with mood data (highest priority)
     if (calendarEntry?.moodEntry) {
       const { happiness, focus, stress } = calendarEntry.moodEntry;
@@ -53,20 +64,20 @@ export default function CalendarCell({
       return "mood-poor";
     }
 
-    // Check if there are gratitudes on this day (second priority)
-    if (hasGratitudes) {
-      console.log(`✅ [CalendarCell] ${dateStr} selected "has-gratitudes" with ${calendarEntry.gratitudes?.length || 0} gratitudes`);
-      return "has-gratitudes";
-    }
-
-    // Check if there's goal activity on this day (third priority)
+    // Check if there's goal activity on this day (second priority)
     if (hasGoals) {
       return "has-goal-activity";
     }
 
-    // Check if there's habit activity on this day (lowest priority)
+    // Check if there's habit activity on this day (third priority)
     if (hasHabits) {
       return "has-activity";
+    }
+
+    // Check if there are gratitudes on this day (lowest priority)
+    if (hasGratitudes) {
+      console.log(`✅ [CalendarCell] ${dateStr} selected "has-gratitudes" with ${calendarEntry.gratitudes?.length || 0} gratitudes`);
+      return "has-gratitudes";
     }
 
     return "";

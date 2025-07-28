@@ -91,7 +91,7 @@ export default function GratitudesDisplay({ gratitudes }: GratitudesDisplayProps
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm leading-relaxed">
+              <p className="text-white text-sm leading-relaxed break-words whitespace-pre-wrap">
                 {gratitude.text.slice(0, 125)}
                 {gratitude.text.length > 125 && (
                   <span className="text-gray-400">...</span>

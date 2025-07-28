@@ -23,6 +23,10 @@ const globalGoalProgressHistory: Record<number, number> = {};
 export default function GoalsActivityDisplay({
   goalActivities,
 }: GoalsActivityDisplayProps) {
+  console.log('🎯 [GOALS DISPLAY] Received goal activities:', {
+    count: goalActivities.length,
+    activities: goalActivities
+  });
   // Calculate the correct percentage based on goal type
   const calculateProgressPercentage = (activity: GoalActivity): number => {
     if (!activity.progressValue && activity.progressValue !== 0) {
@@ -134,30 +138,50 @@ export default function GoalsActivityDisplay({
 
   // Enhanced filtering that properly handles progress updates
   const filteredActivities = goalActivities.filter(activity => {
+    console.log('🎯 [GOALS FILTER] Checking activity:', {
+      activityType: activity.activityType,
+      progressValue: activity.progressValue,
+      goalName: activity.goalName
+    });
+    
     if (activity.activityType === 'created') {
-      return false; // Don't show created goals as per original logic
+      console.log('🎯 [GOALS FILTER] Showing created goal');
+      return true; // TEMPORARILY show created goals for debugging
     }
     
     if (activity.activityType === 'completed') {
+      console.log('🎯 [GOALS FILTER] Showing completed goal');
       return true; // Always show completed goals
     }
     
     if (activity.activityType === 'progress_update') {
       // Show progress updates that have meaningful progress
       const hasProgress = activity.progressValue !== undefined && activity.progressValue !== null;
+      console.log('🎯 [GOALS FILTER] Progress update check:', { hasProgress, progressValue: activity.progressValue });
+      
       if (!hasProgress) {
-        return false;
+        console.log('🎯 [GOALS FILTER] No progress value, showing anyway for debugging');
+        return true; // TEMPORARILY show even without progress for debugging
       }
       
       // Show if there's any progress (since this is daily activity)
       const progressPercentage = calculateProgressPercentage(activity);
-      return progressPercentage > 0;
+      console.log('🎯 [GOALS FILTER] Progress percentage:', progressPercentage);
+      return progressPercentage >= 0; // Show any progress including 0
     }
     
-    return false;
+    console.log('🎯 [GOALS FILTER] Unknown activity type, showing for debugging');
+    return true; // TEMPORARILY show all for debugging
+  });
+
+  console.log('🎯 [GOALS DISPLAY] After filtering:', {
+    originalCount: goalActivities.length,
+    filteredCount: filteredActivities.length,
+    filteredActivities: filteredActivities
   });
 
   if (filteredActivities.length === 0) {
+    console.log('🎯 [GOALS DISPLAY] No filtered activities, returning null');
     return null; // Don't show goals section if no activities
   }
 
@@ -210,7 +234,7 @@ export default function GoalsActivityDisplay({
 
   const getActivityDescription = (activity: GoalActivity) => {
     if (activity.activityType === "completed") {
-      return "Goal completed successfully!";
+      return "";
     } else if (activity.activityType === "progress_update") {
       // Handle case where we don't have progressValue
       if (!activity.progressValue && activity.progressValue !== 0) {
@@ -249,7 +273,7 @@ export default function GoalsActivityDisplay({
       
       return `You ${direction} ${roundedChange}% progress`;
     }
-    return "Goal activity";
+    return "";
   };
 
   const getProgressBarColor = (activity: GoalActivity) => {
@@ -278,7 +302,7 @@ export default function GoalsActivityDisplay({
             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        Goals Activity
+        Goals
       </div>
 
       <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">

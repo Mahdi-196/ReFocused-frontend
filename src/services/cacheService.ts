@@ -362,5 +362,144 @@ export const CacheInvalidation = {
     // Also clear the main cache storage if needed
     // Note: This is aggressive but ensures clean state
     cacheService.clear();
+  },
+
+  // Clear absolutely everything - for dev tools
+  clearAllCaches: () => {
+    console.log('🗑️🔧 [DEV TOOLS] Clearing ALL caches and storage...');
+    
+    // Clear in-memory cache
+    cacheService.clear();
+    
+    // Clear localStorage patterns we know about
+    if (typeof window !== 'undefined') {
+      const keysToRemove: string[] = [];
+      
+      // Find all localStorage keys that look like cache keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          // Common cache patterns
+          if (key.includes('REF_') || 
+              key.includes('cache') || 
+              key.includes('goal_') ||
+              key.includes('habit_') ||
+              key.includes('mood_') ||
+              key.includes('calendar_') ||
+              key.includes('streak_') ||
+              key.includes('study_') ||
+              key.includes('journal_')) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+      
+      // Remove identified cache keys
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log('🗑️ Removed localStorage key:', key);
+      });
+      
+      console.log(`✅ Cleared ${keysToRemove.length} localStorage cache entries`);
+    }
+    
+    // Also clear any service-specific caches
+    try {
+      // Import and call specific cache clearing functions
+      import('./calendarService').then(module => {
+        if (module.clearCalendarCache) {
+          module.clearCalendarCache();
+          console.log('✅ Calendar cache cleared');
+        }
+      }).catch(() => {});
+      
+      // Clear goal-related localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('goal_daily_progress');
+        localStorage.removeItem('goal_previous_values');
+        console.log('✅ Goal progress storage cleared');
+      }
+      
+    } catch (error) {
+      console.warn('⚠️ Some service caches could not be cleared:', error);
+    }
+    
+    console.log('🎉 All caches cleared! Refresh page for clean state.');
+    return 'All caches cleared successfully!';
   }
-}; 
+};
+
+// Expose cache utilities to global window object for dev tools access
+// Must be defined after CacheInvalidation object to avoid hoisting issues
+if (typeof window !== 'undefined') {
+  // Create a global dev tools object
+  if (!(window as any).devTools) {
+    (window as any).devTools = {};
+  }
+  
+  // Add cache utilities to dev tools
+  (window as any).devTools.cache = {
+    // Clear all caches - main function for dev tools
+    clearAll: CacheInvalidation.clearAllCaches,
+    
+    // Clear specific cache types
+    clearUser: CacheInvalidation.clearUserCache,
+    clearCalendar: () => {
+      cacheService.invalidateByPattern('calendar');
+      console.log('✅ Calendar cache cleared');
+    },
+    clearGoals: () => {
+      cacheService.invalidateByPattern('goal');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('goal_daily_progress');
+        localStorage.removeItem('goal_previous_values');
+      }
+      console.log('✅ Goals cache cleared');
+    },
+    clearMood: () => {
+      cacheService.invalidateByPattern('mood');
+      console.log('✅ Mood cache cleared');
+    },
+    clearHabits: () => {
+      cacheService.invalidateByPattern('habit');
+      console.log('✅ Habits cache cleared');
+    },
+    
+    // Utility functions
+    stats: () => cacheService.getStats(),
+    list: () => {
+      const stats = cacheService.getStats();
+      console.table(stats.entries);
+      return stats;
+    },
+    
+    // Help message
+    help: () => {
+      console.log(`
+🔧 Cache Dev Tools Help:
+
+Main Functions:
+• devTools.cache.clearAll()     - Clear ALL caches and localStorage
+• devTools.cache.clearUser()    - Clear user-specific caches
+• devTools.cache.stats()        - Show cache statistics
+• devTools.cache.list()         - List all cache entries
+
+Specific Cache Types:
+• devTools.cache.clearCalendar() - Clear calendar cache
+• devTools.cache.clearGoals()    - Clear goals cache
+• devTools.cache.clearMood()     - Clear mood cache  
+• devTools.cache.clearHabits()   - Clear habits cache
+
+Usage: Open dev tools console and type any of the above commands.
+Most useful: devTools.cache.clearAll() to reset everything.
+      `);
+    }
+  };
+  
+  // Show welcome message in console
+  console.log(`
+🔧 ReFocused Dev Tools Loaded!
+💡 Type 'devTools.cache.help()' in console for cache utilities
+🗑️ Quick clear all: devTools.cache.clearAll()
+  `);
+} 

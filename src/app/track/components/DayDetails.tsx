@@ -177,34 +177,71 @@ export default function DayDetails({
       habits: habitsForDate.length,
       goals: goalActivities.length,
       gratitudes: gratitudes.length
-    }
+    },
+    goalActivitiesData: goalActivities,
+    fullCalendarData: calendarData
   });
+
+  // Check what data we have to determine display order
+  const hasGoals = goalActivities.length > 0;
+  const hasHabits = habitsForDate.length > 0;
+  const hasGratitudes = gratitudes.length > 0;
+  const hasMood = !!calendarData.moodEntry;
+
+  // Priority order: Mood > Goals > Habits > Gratitudes
+  const componentsToRender = [];
+
+  // Always add mood if it exists (highest priority)
+  if (hasMood) {
+    componentsToRender.push(
+      <MoodDisplay key="mood" moodEntry={calendarData.moodEntry ? {
+        ...calendarData.moodEntry,
+        date: selectedDate,
+        happiness: calendarData.moodEntry.happiness || 0,
+        focus: calendarData.moodEntry.focus || 0,
+        stress: calendarData.moodEntry.stress || 0
+      } : null} />
+    );
+  }
+
+  // Add goals if they exist
+  if (hasGoals) {
+    componentsToRender.push(
+      <GoalsActivityDisplay key="goals" goalActivities={goalActivities} />
+    );
+  }
+
+  // Add habits if they exist
+  if (hasHabits) {
+    componentsToRender.push(
+      <HabitsDisplay
+        key="habits"
+        habitsForDate={habitsForDate}
+        selectedDate={selectedDate}
+        isDateReadOnly={isDateReadOnly}
+        onToggleHabit={onToggleHabit}
+      />
+    );
+  }
+
+  // Add gratitudes if they exist
+  if (hasGratitudes) {
+    componentsToRender.push(
+      <GratitudesDisplay key="gratitudes" gratitudes={gratitudes} />
+    );
+  }
+
+  // If no data exists at all, show empty mood display as fallback
+  if (componentsToRender.length === 0) {
+    componentsToRender.push(
+      <MoodDisplay key="mood" moodEntry={null} />
+    );
+  }
 
   return (
     <div className="p-6">
       <div className="space-y-6">
-        {/* Mood Data */}
-        <MoodDisplay moodEntry={calendarData.moodEntry ? {
-          ...calendarData.moodEntry,
-          date: selectedDate,
-          happiness: calendarData.moodEntry.happiness || 0,
-          focus: calendarData.moodEntry.focus || 0,
-          stress: calendarData.moodEntry.stress || 0
-        } : null} />
-
-        {/* Habits Section */}
-        <HabitsDisplay
-          habitsForDate={habitsForDate}
-          selectedDate={selectedDate}
-          isDateReadOnly={isDateReadOnly}
-          onToggleHabit={onToggleHabit}
-        />
-
-        {/* Goals Activity Section */}
-        <GoalsActivityDisplay goalActivities={goalActivities} />
-
-        {/* Gratitudes Section */}
-        <GratitudesDisplay gratitudes={gratitudes} />
+        {componentsToRender}
       </div>
     </div>
   );

@@ -190,23 +190,49 @@ export class GoalsService {
   }
 
   /**
-   * Fetch active goals and recently completed goals (within 24 hours)
+   * Fetch active goals and recently completed goals
+   * Backend tests show we should get ALL goals and filter on frontend
    */
   async getActiveAndRecentGoals(duration?: GoalDuration): Promise<Goal[]> {
+    // Based on backend tests: get ALL goals without date filtering
+    // Let frontend handle all visibility logic
     const params: GoalsListParams = {
       include_completed: true,
-      completed_within_hours: 24, // Include goals completed within 24 hours
-      include_expired: false
+      // Remove time restrictions - get all completed goals
+      // Remove expired restrictions - get all goals
     };
     
     if (duration) {
       params.duration = duration;
     }
     
+    console.log('🔄 [GOALS_SERVICE] getActiveAndRecentGoals params:', params);
+    
     const allGoals = await this.getAllGoals(params);
     
-    // Filter on frontend as additional safety
-    return allGoals.filter(goal => isGoalVisibleInMainView(goal));
+    console.log('📊 [GOALS_SERVICE] Raw goals from backend:', allGoals.length);
+    
+    // Frontend filtering now properly handles:
+    // - 2-week goals: visible until expired (after 2 weeks)
+    // - Long-term goals: visible forever
+    // - Completed goals: visible for 24 hours only
+    const filteredGoals = allGoals.filter(goal => {
+      const isVisible = isGoalVisibleInMainView(goal);
+      console.log('🔍 [GOALS_SERVICE] Goal visibility check:', {
+        id: goal.id,
+        name: goal.name,
+        duration: goal.duration,
+        is_completed: goal.is_completed,
+        completed_at: goal.completed_at,
+        expires_at: goal.expires_at,
+        isVisible
+      });
+      return isVisible;
+    });
+    
+    console.log('✅ [GOALS_SERVICE] Filtered goals:', filteredGoals.length);
+    
+    return filteredGoals;
   }
 
   /**
@@ -385,6 +411,15 @@ export class GoalsService {
       const today = new Date();
       const daysDiff = Math.ceil((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
       
+      console.log('🎯 [GOALS_SERVICE] getGoalsWithDailyProgress called:', {
+        startDate,
+        endDate,
+        start: start.toISOString(),
+        today: today.toISOString(),
+        daysDiff,
+        willFetchHistory: true
+      });
+      
       // Fetch goals with extended time range
       const [currentGoals, historicalGoals] = await Promise.all([
         this.getAllGoals({
@@ -393,10 +428,11 @@ export class GoalsService {
           completed_within_hours: Math.max(24, daysDiff * 24)
         }),
         
-        daysDiff > 0 ? this.getGoalsHistory({
-          days_back: daysDiff + 7,
+        // Always fetch goals history for debugging - remove daysDiff check temporarily
+        this.getGoalsHistory({
+          days_back: Math.max(30, Math.abs(daysDiff) + 7), // Use absolute value and minimum 30 days
           limit: 100
-        }).then(response => response.goals).catch(() => []) : Promise.resolve([])
+        }).then(response => response.goals).catch(() => [])
       ]);
       
       // Combine goals

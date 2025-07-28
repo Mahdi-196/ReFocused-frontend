@@ -113,22 +113,46 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
   // Group goals by completion date with date validation
   const groupedHistory = history.reduce((groups, goal) => {
     try {
+      console.log('🔍 [GROUPING] Processing goal:', {
+        id: goal.id,
+        name: goal.name,
+        completed_at: goal.completed_at,
+        completed_at_type: typeof goal.completed_at
+      });
+      
+      // Handle null/undefined completed_at
+      if (!goal.completed_at) {
+        console.warn('🔍 [GROUPING] Goal has no completed_at:', goal.id, goal.name);
+        return groups;
+      }
+      
+      // Fix malformed ISO date string with both +00:00 and Z
+      let cleanedDateString = goal.completed_at;
+      if (cleanedDateString.includes('+00:00Z')) {
+        cleanedDateString = cleanedDateString.replace('+00:00Z', 'Z');
+        console.log('🔍 [GROUPING] Fixed malformed date:', goal.completed_at, '->', cleanedDateString);
+      }
+      
       // Validate and parse the date
-      const completedDate = new Date(goal.completed_at);
+      const completedDate = new Date(cleanedDateString);
       
       // Check if date is valid
       if (isNaN(completedDate.getTime())) {
-        console.warn('Invalid date found for goal:', goal.id, 'completed_at:', goal.completed_at);
+        console.warn('🔍 [GROUPING] Invalid date found for goal:', goal.id, 'completed_at:', goal.completed_at);
         return groups;
       }
       
       const dateString = completedDate.toDateString();
+      console.log('🔍 [GROUPING] Using date string:', dateString, 'for goal:', goal.id);
+      
       if (!groups[dateString]) {
         groups[dateString] = [];
       }
       groups[dateString].push(goal);
+      
+      console.log('🔍 [GROUPING] Added goal to group:', dateString, 'total in group:', groups[dateString].length);
     } catch (error) {
-      console.error('Error parsing date for goal:', goal.id, error);
+      console.error('🔍 [GROUPING] Error parsing date for goal:', goal.id, error);
     }
     return groups;
   }, {} as Record<string, GoalHistoryEntry[]>);
@@ -136,6 +160,11 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
   const sortedDates = Object.keys(groupedHistory).sort((a, b) => 
     new Date(b).getTime() - new Date(a).getTime()
   );
+  
+  console.log('🔍 [SORTING] Grouped history keys:', Object.keys(groupedHistory));
+  console.log('🔍 [SORTING] Sorted dates:', sortedDates);
+  console.log('🔍 [SORTING] Total groups:', Object.keys(groupedHistory).length);
+  console.log('🔍 [SORTING] History length:', history.length);
 
   const getGoalTypeIcon = (type: GoalType) => {
     switch (type) {
@@ -398,6 +427,22 @@ Check console for full details.`);
                 </div>
               )}
 
+              {!isLoading && !error && history.length > 0 && sortedDates.length === 0 && (
+                <div className="p-6">
+                  <div className="p-4 bg-yellow-600/20 border border-yellow-500/30 rounded-lg">
+                    <p className="text-yellow-300 text-sm mb-2">Debug: Goals found but not grouped properly</p>
+                    <pre className="text-xs text-yellow-200 bg-yellow-900/20 p-2 rounded overflow-auto max-h-32">
+                      {JSON.stringify({
+                        historyLength: history.length,
+                        sampleGoal: history[0],
+                        groupedHistoryKeys: Object.keys(groupedHistory),
+                        sortedDatesLength: sortedDates.length
+                      }, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
               {!isLoading && !error && sortedDates.length > 0 && (
                 <div className="p-6 space-y-6">
                   {sortedDates.map(date => (
@@ -408,6 +453,7 @@ Check console for full details.`);
                         <span className="text-sm font-medium text-gray-300 bg-gray-800/50 px-3 py-1 rounded-full">
                           {(() => {
                             try {
+                              // The date parameter here is already a dateString from toDateString(), so no need to fix format
                               const displayDate = new Date(date);
                               if (isNaN(displayDate.getTime())) {
                                 return 'Invalid Date';
@@ -438,7 +484,6 @@ Check console for full details.`);
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <span className="text-2xl">{getGoalTypeIcon(goal.goal_type)}</span>
                                 <div>
                                   <h4 className="font-medium text-white">{goal.name}</h4>
                                   <div className="flex items-center gap-2 mt-1">
@@ -453,13 +498,16 @@ Check console for full details.`);
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className={`text-xs px-2 py-1 rounded-full ${getCompletionBadgeColor(goal.completion_days)}`}>
-                                  {goal.completion_days} day{goal.completion_days !== 1 ? 's' : ''}
-                                </span>
                                 <span className="text-xs text-gray-400">
                                   {(() => {
                                     try {
-                                      const completedDate = new Date(goal.completed_at);
+                                      // Fix malformed ISO date string with both +00:00 and Z
+                                      let cleanedDateString = goal.completed_at;
+                                      if (cleanedDateString.includes('+00:00Z')) {
+                                        cleanedDateString = cleanedDateString.replace('+00:00Z', 'Z');
+                                      }
+                                      
+                                      const completedDate = new Date(cleanedDateString);
                                       if (isNaN(completedDate.getTime())) {
                                         return 'Invalid time';
                                       }
