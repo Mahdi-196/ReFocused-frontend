@@ -85,6 +85,13 @@ export const STATISTICS = {
   TASKS: '/statistics/tasks',
 };
 
+// Calendar endpoints
+export const CALENDAR = {
+  ENTRIES: '/calendar/entries',
+  ENTRY_BY_DATE: (date: string) => `/calendar/entries/${date}`,
+  SUMMARY: '/calendar/summary',
+};
+
 // Streak endpoints
 export const STREAK = {
   STATUS: '/streak/status',

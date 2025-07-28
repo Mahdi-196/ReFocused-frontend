@@ -131,7 +131,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
           if (dashboardEntry.gratitudes) {
             console.log(`🙏 [CALENDAR HOOK] Adding ${dashboardEntry.gratitudes.length} gratitudes for ${dateStr}`);
             dashboardEntry.gratitudes.forEach(gratitude => {
-              calendarEntry.gratitudes.push({
+              calendarEntry.gratitudes?.push({
                 id: gratitude.id,
                 text: gratitude.text,
                 date: gratitude.date,
@@ -146,7 +146,7 @@ export function useCalendarData(currentMonth: Date, habits: UserHabit[]) {
       
       console.log('📊 [CALENDAR HOOK] Calendar entries created:', {
         totalEntries: Object.keys(entriesMap).length,
-        entriesWithGratitudes: Object.values(entriesMap).filter(e => e.gratitudes.length > 0).length,
+        entriesWithGratitudes: Object.values(entriesMap).filter(e => (e.gratitudes ?? []).length > 0).length,
         entriesWithMood: Object.values(entriesMap).filter(e => e.moodEntry).length,
         entriesWithHabits: Object.values(entriesMap).filter(e => e.habitCompletions.length > 0).length
       });

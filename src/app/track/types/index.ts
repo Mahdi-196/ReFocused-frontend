@@ -88,8 +88,8 @@ export interface DailyCalendarEntry {
   date: string; // ISO date string (YYYY-MM-DD)
   userId: number;
   habitCompletions: DailyHabitCompletion[];
-  goalActivities?: DailyGoalActivity[]; // Goal changes that happened on this day
-  gratitudes?: Gratitude[]; // Gratitudes recorded on this day
+  goalActivities: DailyGoalActivity[]; // Goal changes that happened on this day (now required)
+  gratitudes: Gratitude[]; // Gratitudes recorded on this day (now required)
   moodEntry?: {
     happiness: number;
     focus: number; // Changed from satisfaction to focus for consistency
