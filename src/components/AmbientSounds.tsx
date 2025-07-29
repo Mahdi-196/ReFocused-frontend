@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, Trees, Waves, CloudRain, Zap, Wind, Bird, Droplets, Flame, Coffee, Music, Infinity as InfinityIcon } from 'lucide-react';
 import { addFocusTime, incrementSessions } from "@/services/statisticsService";
+import audioService from "@/services/audioService";
+import { useAudioSettings } from "@/hooks/useSettings";
 
 interface Sound {
   id: string;
@@ -97,6 +99,9 @@ const setToLocalStorage = (key: string, value: string): void => {
 };
 
 export default function AmbientSounds() {
+  // Audio settings
+  const { audioSettings } = useAudioSettings();
+  
   // State
   const [currentSound, setCurrentSound] = useState<Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -109,6 +114,16 @@ export default function AmbientSounds() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Sync volume settings with audio service
+  useEffect(() => {
+    if (isClient) {
+      audioService.setMasterVolume(audioSettings.masterVolume);
+      audioService.setAmbientVolume(audioSettings.ambientVolume);
+      // Use breathing volume for notifications as well
+      audioService.setNotificationVolume?.(audioSettings.breathingVolume);
+    }
+  }, [audioSettings.masterVolume, audioSettings.ambientVolume, audioSettings.breathingVolume, isClient]);
 
   // Complete session helper - Following exact same pattern as Pomodoro
   const completeSession = useCallback(async (): Promise<void> => {
@@ -131,6 +146,7 @@ export default function AmbientSounds() {
     }
 
     // Stop the sound and reset state
+    audioService.stopAmbientSound();
     setIsPlaying(false);
     setTimeLeft(null);
     localStorage.removeItem("ambientSoundsTargetTime");
@@ -144,8 +160,10 @@ export default function AmbientSounds() {
     try {
       // Load last used sound
       const lastSoundId = getFromLocalStorage('lastUsedAmbientSound');
+      let lastSound: Sound | null = null;
+      
       if (lastSoundId) {
-        const lastSound = AMBIENT_SOUNDS.find(sound => sound.id === lastSoundId);
+        lastSound = AMBIENT_SOUNDS.find(sound => sound.id === lastSoundId) || null;
         if (lastSound) {
           setCurrentSound(lastSound);
         } else {
@@ -160,7 +178,7 @@ export default function AmbientSounds() {
       const storedTargetTime = localStorage.getItem("ambientSoundsTargetTime");
       const storedDuration = localStorage.getItem("ambientSoundsDuration");
       
-      if (storedIsPlaying === "true" && storedTargetTime) {
+      if (storedIsPlaying === "true" && storedTargetTime && lastSound) {
         const targetTime = parseInt(storedTargetTime, 10);
         const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
         
@@ -170,6 +188,8 @@ export default function AmbientSounds() {
           if (storedDuration) {
             setDuration(parseInt(storedDuration, 10));
           }
+          // Resume audio playback if was playing
+          audioService.playAmbientSound(lastSound.id);
         } else {
           // Timer finished while away, handle session completion
           completeSession();
@@ -242,6 +262,7 @@ export default function AmbientSounds() {
         setShowDurationPicker(true);
       } else {
         // Stop current session
+        audioService.stopAmbientSound();
         setIsPlaying(false);
         setTimeLeft(null);
         localStorage.removeItem("ambientSoundsTargetTime");
@@ -254,8 +275,17 @@ export default function AmbientSounds() {
   };
 
   const startPlaying = (selectedDuration: number | null) => {
+    if (!currentSound) return;
+    
     setDuration(selectedDuration);
     setShowDurationPicker(false);
+    
+    // Start playing the actual audio
+    const success = audioService.playAmbientSound(currentSound.id);
+    if (!success) {
+      console.error('Failed to start audio playback');
+      return;
+    }
     
     if (selectedDuration) {
       // Start timed session - Following exact same pattern as Pomodoro
@@ -279,7 +309,8 @@ export default function AmbientSounds() {
     if (!isPlaying) {
       setShowDurationPicker(true);
     } else {
-      // Pause - Following exact same pattern as Pomodoro
+      // Stop audio and pause - Following exact same pattern as Pomodoro
+      audioService.stopAmbientSound();
       setIsPlaying(false);
       setTimeLeft(null);
       localStorage.removeItem("ambientSoundsTargetTime");
@@ -288,8 +319,9 @@ export default function AmbientSounds() {
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const totalSeconds = Math.floor(seconds);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
