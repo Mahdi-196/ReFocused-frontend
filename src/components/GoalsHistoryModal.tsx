@@ -224,7 +224,7 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
 
               {/* Statistics Cards */}
               {stats && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700/30">
                     <div className="flex items-center gap-2 mb-1">
                       <Target className="w-4 h-4 text-green-400" />
@@ -238,20 +238,6 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                       <span className="text-xs text-gray-400">Avg Days</span>
                     </div>
                     <span className="text-xl font-bold text-white">{stats.avg_completion_days.toFixed(1)}</span>
-                  </div>
-                  <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700/30">
-                    <div className="flex items-center gap-2 mb-1">
-                      <TrendingUp className="w-4 h-4 text-purple-400" />
-                      <span className="text-xs text-gray-400">Success Rate</span>
-                    </div>
-                    <span className="text-xl font-bold text-white">{stats.completion_rate.toFixed(0)}%</span>
-                  </div>
-                  <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700/30">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Filter className="w-4 h-4 text-yellow-400" />
-                      <span className="text-xs text-gray-400">Showing</span>
-                    </div>
-                    <span className="text-xl font-bold text-white">{history.length}</span>
                   </div>
                 </div>
               )}

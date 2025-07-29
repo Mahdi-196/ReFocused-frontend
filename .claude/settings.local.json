@@ -16,7 +16,8 @@
       "Bash(curl:*)",
       "Bash(yarn build:*)",
       "Bash(lsof:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

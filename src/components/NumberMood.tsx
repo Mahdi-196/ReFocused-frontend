@@ -257,7 +257,7 @@ export default function NumberMood() {
           style={{ background: "linear-gradient(135deg, #374151 0%, #2D3748 100%)" }}
         >
           <h3 className="text-lg font-medium mb-2 text-white">Happiness</h3>
-          <p className="text-gray-300 mb-4">How happy do you feel today?</p>
+          <p className="text-gray-300 mb-4">How happy are you feeling today?</p>
           <input 
             type="range" 
             className="w-full my-4" 
@@ -327,7 +327,7 @@ export default function NumberMood() {
           style={{ background: "linear-gradient(135deg, #374151 0%, #2D3748 100%)" }}
         >
           <h3 className="text-lg font-medium mb-2 text-white">Stress</h3>
-          <p className="text-gray-300 mb-4">How stressed do you feel today?</p>
+          <p className="text-gray-300 mb-4">How stressed are you feeling today?</p>
           <input 
             type="range" 
             className="w-full my-4" 

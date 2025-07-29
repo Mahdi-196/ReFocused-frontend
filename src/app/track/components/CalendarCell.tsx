@@ -39,45 +39,15 @@ export default function CalendarCell({
   }
 
   const getDayClass = () => {
-    const hasGoals = calendarEntry?.goalActivities && calendarEntry.goalActivities.length > 0;
-    const hasHabits = calendarEntry?.habitCompletions.some((hc) => hc.completed);
-    const hasGratitudes = calendarEntry?.gratitudes && calendarEntry.gratitudes.length > 0;
     const hasMood = !!calendarEntry?.moodEntry;
 
-    // Debug logging for goals
-    if (calendarEntry?.goalActivities) {
-      console.log(`🎯 GOALS DEBUG CalendarCell(${dateStr}) goalActivities:`, {
-        goalActivitiesLength: calendarEntry.goalActivities.length,
-        goalActivities: calendarEntry.goalActivities,
-        hasGoals
-      });
-    }
-
-    // Priority order: Mood > Goals > Habits > Gratitudes
-    
-    // Check for calendar entry with mood data (highest priority)
+    // Only show mood colors - nothing else
     if (calendarEntry?.moodEntry) {
       const { happiness, focus, stress } = calendarEntry.moodEntry;
       const moodScore = calculateMoodScore(happiness, focus, stress);
       if (moodScore >= 7) return "mood-good";
       if (moodScore >= 5) return "mood-neutral";
       return "mood-poor";
-    }
-
-    // Check if there's goal activity on this day (second priority)
-    if (hasGoals) {
-      return "has-goal-activity";
-    }
-
-    // Check if there's habit activity on this day (third priority)
-    if (hasHabits) {
-      return "has-activity";
-    }
-
-    // Check if there are gratitudes on this day (lowest priority)
-    if (hasGratitudes) {
-      console.log(`✅ [CalendarCell] ${dateStr} selected "has-gratitudes" with ${calendarEntry.gratitudes?.length || 0} gratitudes`);
-      return "has-gratitudes";
     }
 
     return "";
@@ -120,30 +90,6 @@ export default function CalendarCell({
             "0 4px 12px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
           border: "1px solid #ef4444",
         };
-      case "has-gratitudes":
-        return {
-          background:
-            "linear-gradient(135deg, #ff1b8d 0%, #e91e63 50%, #c2185b 100%)",
-          boxShadow:
-            "0 4px 12px rgba(255, 27, 141, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
-          border: "2px solid #ff1b8d",
-        };
-      case "has-goal-activity":
-        return {
-          background:
-            "linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)",
-          boxShadow:
-            "0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
-          border: "1px solid #f59e0b",
-        };
-      case "has-activity":
-        return {
-          background:
-            "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)",
-          boxShadow:
-            "0 4px 12px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
-          border: "1px solid #8b5cf6",
-        };
       default:
         return {
           background:
@@ -174,19 +120,6 @@ export default function CalendarCell({
 
       {/* Date number */}
       <span className="relative z-10 font-medium">{date}</span>
-      
-      {/* Gratitude indicator */}
-      {calendarEntry?.gratitudes && calendarEntry.gratitudes.length > 0 && (
-        <div className="absolute top-0.5 right-0.5 z-20">
-          <svg
-            className="w-3 h-3 text-white drop-shadow-lg"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-          </svg>
-        </div>
-      )}
     </div>
   );
 } 
