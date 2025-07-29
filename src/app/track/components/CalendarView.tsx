@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback } from "react";
+import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { UserHabit, DailyCalendarEntry } from "../types";
 import type { MoodEntry } from "@/services/moodService";
 import { useCurrentDate } from "@/contexts/TimeContext";
@@ -32,6 +32,13 @@ export default function CalendarView({
   const [selectedDate, setSelectedDate] = useState<string | null>(currentDate);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
+
+  // Update selectedDate when currentDate changes (to ensure today is selected)
+  useEffect(() => {
+    if (currentDate !== 'LOADING_DATE' && !selectedDate) {
+      setSelectedDate(currentDate);
+    }
+  }, [currentDate, selectedDate]);
 
   // Helper functions moved from hook
   const getCalendarEntryForDate = (date: string): DailyCalendarEntry | null => {

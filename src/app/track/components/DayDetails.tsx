@@ -4,7 +4,7 @@ import MoodDisplay from "./MoodDisplay";
 import HabitsDisplay from "./HabitsDisplay";
 import GoalsActivityDisplay from "./GoalsActivityDisplay";
 import GratitudesDisplay from "./GratitudesDisplay";
-import { useTime } from "@/contexts/TimeContext";
+import { useTime, useCurrentDate } from "@/contexts/TimeContext";
 
 interface DayDetailsProps {
   selectedDate: string | null;
@@ -25,7 +25,7 @@ export default function DayDetails({
   getHabitsForDate,
   onToggleHabit,
 }: DayDetailsProps) {
-  const { getCurrentDate } = useTime();
+  const currentDate = useCurrentDate();
   
   if (!selectedDate) {
     return (
@@ -51,16 +51,15 @@ export default function DayDetails({
   }
 
   // Check if selected date is today or future using the time service
-  const today = getCurrentDate();
-  const isToday = selectedDate === today;
-  const isFuture = selectedDate > today;
+  const isToday = selectedDate === currentDate;
+  const isFuture = selectedDate > currentDate;
   
 
 
 
 
-  // Show motivational message for today ONLY if there's no calendar data
-  if (isToday && !calendarData) {
+  // Show motivational message ONLY for today (no other data)
+  if (isToday) {
     return (
       <div className="p-6">
         <div className="text-center py-8">

@@ -71,10 +71,10 @@ export default function TrackPage() {
     setCurrentMonth(newMonth);
     setUserChangedMonth(true);
     
-    // Reset after 5 seconds to allow auto-update again
+    // Reset after 30 seconds to allow auto-update again (increased from 5s)
     setTimeout(() => {
       setUserChangedMonth(false);
-    }, 5000);
+    }, 30000);
   };
 
   // Update currentMonth when currentDate changes (timezone-aware)
