@@ -10,12 +10,17 @@ import {
   UserRoundCog,
 } from "lucide-react";
 import { addFocusTime, incrementSessions } from "@/services/statisticsService";
+import audioService from "@/services/audioService";
+import { useAudioSettings } from "@/hooks/useSettings";
 
 
 
 type TimerMode = "pomodoro" | "short" | "long";
 
 const Pomodoro: React.FC = () => {
+  // Audio settings
+  const { audioSettings } = useAudioSettings();
+  
   // === Timer Preferences ===
   const [pomodoroTime, setPomodoroTime] = useState<number>(25);
   const [shortBreakTime, setShortBreakTime] = useState<number>(5);
@@ -25,6 +30,7 @@ const Pomodoro: React.FC = () => {
   const [autoStartBreaks, setAutoStartBreaks] = useState<boolean>(false);
   const [autoStartPomodoros, setAutoStartPomodoros] = useState<boolean>(false);
   const [soundOn, setSoundOn] = useState<boolean>(false);
+  const [notificationSound, setNotificationSound] = useState<string>('gentle-chime');
   
   // === Temporary settings state (only applied when saved) ===
   const [tempPomodoroTime, setTempPomodoroTime] = useState<number>(25);
@@ -34,6 +40,7 @@ const Pomodoro: React.FC = () => {
   const [tempAutoStartBreaks, setTempAutoStartBreaks] = useState<boolean>(false);
   const [tempAutoStartPomodoros, setTempAutoStartPomodoros] = useState<boolean>(false);
   const [tempSoundOn, setTempSoundOn] = useState<boolean>(false);
+  const [tempNotificationSound, setTempNotificationSound] = useState<string>('gentle-chime');
 
   // === Timer Logic ===
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -48,6 +55,11 @@ const Pomodoro: React.FC = () => {
 
   // === COMPLETE SESSION HELPER - Defined immediately after state to avoid reference errors ===
   const completeSession = async (autoStart: boolean): Promise<void> => {
+    // Play notification sound if enabled
+    if (soundOn) {
+      audioService.playNotificationSound(notificationSound);
+    }
+
     if (mode === "pomodoro") {
       // Track completed focus session
       const completedTime = pomodoroTime; // Already in minutes, no conversion needed
@@ -89,6 +101,14 @@ const Pomodoro: React.FC = () => {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Sync volume settings with audio service
+  useEffect(() => {
+    if (isClient) {
+      audioService.setMasterVolume(audioSettings.masterVolume);
+      audioService.setNotificationVolume(audioSettings.breathingVolume);
+    }
+  }, [audioSettings.masterVolume, audioSettings.breathingVolume, isClient]);
 
   // === ASYNC LOAD PERSISTENT SETTINGS ===
   useEffect(() => {
@@ -138,6 +158,11 @@ const Pomodoro: React.FC = () => {
           const value = storedSoundOn === "true";
           setSoundOn(value);
           setTempSoundOn(value);
+        }
+        const storedNotificationSound = await Promise.resolve(localStorage.getItem("notificationSound"));
+        if (storedNotificationSound) {
+          setNotificationSound(storedNotificationSound);
+          setTempNotificationSound(storedNotificationSound);
         }
         // Load persistent timer state
         const storedMode = await Promise.resolve(localStorage.getItem("pomodoroMode"));
@@ -270,6 +295,7 @@ const Pomodoro: React.FC = () => {
     setAutoStartBreaks(tempAutoStartBreaks);
     setAutoStartPomodoros(tempAutoStartPomodoros);
     setSoundOn(tempSoundOn);
+    setNotificationSound(tempNotificationSound);
     
     // Save to localStorage
     if (isClient) {
@@ -281,6 +307,7 @@ const Pomodoro: React.FC = () => {
         localStorage.setItem("autoStartBreaks", tempAutoStartBreaks.toString());
         localStorage.setItem("autoStartPomodoros", tempAutoStartPomodoros.toString());
         localStorage.setItem("soundOn", tempSoundOn.toString());
+        localStorage.setItem("notificationSound", tempNotificationSound);
       } catch (error) {
         console.error("Failed to save pomodoro settings to localStorage:", error);
       }
@@ -585,7 +612,7 @@ const Pomodoro: React.FC = () => {
                 className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-gray-700"
               />
             </div>
-            <div className="flex items-center justify-between mb-6 text-gray-300">
+            <div className="flex items-center justify-between mb-4 text-gray-300">
               <span>Sound Notifications</span>
               <input
                 type="checkbox"
@@ -594,6 +621,36 @@ const Pomodoro: React.FC = () => {
                 className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-gray-700"
               />
             </div>
+            {/* Notification Sound Selection */}
+            {tempSoundOn && (
+              <div className="mb-6">
+                <label className="block font-semibold mb-2 text-gray-300">
+                  Notification Sound
+                </label>
+                <div className="space-y-2">
+                  {audioService.getAvailableNotificationSounds().map((sound) => (
+                    <label key={sound.id} className="flex items-center text-gray-300 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="notificationSound"
+                        value={sound.id}
+                        checked={tempNotificationSound === sound.id}
+                        onChange={() => setTempNotificationSound(sound.id)}
+                        className="form-radio h-4 w-4 text-blue-500 border-gray-600 bg-gray-700 mr-3"
+                      />
+                      <span className="flex-1">{sound.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => audioService.playNotificationSound(sound.id)}
+                        className="ml-2 px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 rounded transition-colors"
+                      >
+                        Test
+                      </button>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <button
               onClick={saveSettings}
               className="block w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"

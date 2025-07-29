@@ -17,7 +17,15 @@
       "Bash(yarn build:*)",
       "Bash(lsof:*)",
       "Bash(npx tsc:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mkdir:*)",
+      "WebFetch(domain:freesound.org)",
+      "WebFetch(domain:mixkit.co)",
+      "WebFetch(domain:pixabay.com)",
+      "Bash(timeout 10 yarn dev)",
+      "Bash(gtimeout:*)"
     ],
     "deny": []
   }

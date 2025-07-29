@@ -7,11 +7,12 @@ import { Volume2, VolumeX, Menu, X } from "lucide-react";
 
 import { useState } from "react";
 import AuthButton from './AuthButton';
+import { useGlobalAudio } from '@/contexts/AudioContext';
 
 const Header = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const { isGloballyMuted, toggleGlobalMute } = useGlobalAudio();
 
   const navItems = [
     { href: "/home", label: "Home" },
@@ -26,9 +27,7 @@ const Header = () => {
   };
 
   const toggleSound = () => {
-    setSoundEnabled(!soundEnabled);
-    // Here you would also implement the actual sound toggling logic
-    // For example, saving to localStorage or context
+    toggleGlobalMute();
   };
 
   return (
@@ -75,18 +74,18 @@ const Header = () => {
                   <motion.span 
                     className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
                     animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ opacity: 0, y: -5 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    whileHover={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.15, ease: "easeInOut" }}
                   >
                     ReFocused
                   </motion.span>
                   <motion.span 
                     className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
-                    initial={{ opacity: 0, y: 5 }}
+                    initial={{ opacity: 0, y: 3 }}
                     whileHover={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    transition={{ duration: 0.15, ease: "easeInOut" }}
                   >
-                    ReFocused AI
+                    ReFocused-AI
                   </motion.span>
                 </motion.span>
               </Link>
@@ -116,18 +115,18 @@ const Header = () => {
                   <motion.span 
                     className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
                     animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ opacity: 0, y: -5 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    whileHover={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.15, ease: "easeInOut" }}
                   >
                     ReFocused
                   </motion.span>
                   <motion.span 
                     className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
-                    initial={{ opacity: 0, y: 5 }}
+                    initial={{ opacity: 0, y: 3 }}
                     whileHover={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    transition={{ duration: 0.15, ease: "easeInOut" }}
                   >
-                    ReFocused AI
+                    ReFocused-AI
                   </motion.span>
                 </motion.span>
               </Link>
@@ -179,13 +178,13 @@ const Header = () => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleSound}
-              aria-label={soundEnabled ? "Mute sounds" : "Enable sounds"}
+              aria-label={!isGloballyMuted ? "Mute sounds" : "Enable sounds"}
               className="hidden sm:flex items-center justify-center p-1.5 rounded-full transition-all duration-200"
               style={{
-                background: soundEnabled ? "rgba(66, 185, 229, 0.15)" : "rgba(255, 100, 100, 0.15)",
+                background: !isGloballyMuted ? "rgba(66, 185, 229, 0.15)" : "rgba(255, 100, 100, 0.15)",
               }}
             >
-              {soundEnabled ? (
+              {!isGloballyMuted ? (
                 <Volume2 className="w-5 h-5 text-[#42b9e5]" />
               ) : (
                 <VolumeX className="w-5 h-5 text-red-400" />
@@ -238,7 +237,7 @@ const Header = () => {
                   onClick={toggleSound}
                   className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-[#42b9e5] hover:bg-[#42b9e5]/10 rounded-lg transition-all duration-200 w-full"
                 >
-                  {soundEnabled ? (
+                  {!isGloballyMuted ? (
                     <>
                       <Volume2 className="text-xl text-[#42b9e5]" />
                       <span className="text-lg">Sound On</span>
