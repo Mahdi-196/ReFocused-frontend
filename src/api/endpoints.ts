@@ -12,6 +12,7 @@ export const AUTH = {
   GOOGLE: '/auth/google',
   ME: '/user/me',
   CHANGE_PASSWORD: '/auth/change-password',
+  CHANGE_USERNAME: '/auth/change-username',
 };
 
 // User endpoints

@@ -29,7 +29,9 @@ interface UserData {
   email: string;
   name: string;
   username?: string;
-  createdAt: string;
+  createdAt?: string;
+  created_at?: string;
+  member_since?: string;
   avatar?: string;
   profile_picture?: string;
 }
@@ -231,6 +233,13 @@ const Profile = () => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  // Name change state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [isChangingName, setIsChangingName] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [nameSuccess, setNameSuccess] = useState('');
   
   // Settings hook
   const { settings, updateSettings } = useSettings();
@@ -327,6 +336,7 @@ const Profile = () => {
       // Load user profile data (bypass cache to get fresh data)
       const response = await client.get(AUTH.ME);
       const userData = response.data;
+      console.log('User data received:', userData);
       setUserData(userData);
       
       // Clear any cached user data to ensure fresh data loads
@@ -452,10 +462,6 @@ const Profile = () => {
       }
 
       console.log('Avatar updated successfully');
-      
-      // Show success message
-      setShowAvatarSuccess(true);
-      setTimeout(() => setShowAvatarSuccess(false), 3000);
     } catch (error: unknown) {
       console.error('Failed to update avatar:', error);
       
@@ -574,6 +580,64 @@ const Profile = () => {
     }
   };
 
+  const handleChangeName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newName.trim()) {
+      setNameError('Name cannot be empty');
+      return;
+    }
+
+    if (newName.trim().length > 100) {
+      setNameError('Name is too long (maximum 100 characters)');
+      return;
+    }
+
+    if (newName.trim() === userData?.name) {
+      setIsEditingName(false);
+      return;
+    }
+
+    setIsChangingName(true);
+    setNameError('');
+    setNameSuccess('');
+
+    try {
+      const result = await authService.changeAccountName(newName.trim());
+      
+      // Update local user data
+      if (userData) {
+        const updatedUserData = { ...userData, name: result.name };
+        setUserData(updatedUserData);
+        
+        // Trigger event for other components
+        window.dispatchEvent(new CustomEvent('userDataUpdated', { 
+          detail: { userData: updatedUserData } 
+        }));
+      }
+
+      setIsEditingName(false);
+    } catch (error: any) {
+      setNameError(error.message || 'Failed to change name');
+    } finally {
+      setIsChangingName(false);
+    }
+  };
+
+  const startEditingName = () => {
+    setNewName(userData?.name || '');
+    setIsEditingName(true);
+    setNameError('');
+    setNameSuccess('');
+  };
+
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setNewName('');
+    setNameError('');
+    setNameSuccess('');
+  };
+
   const menuItems = [
     { id: 'profile', icon: <User size={18} />, label: 'Profile' },
     { id: 'settings', icon: <Settings size={18} />, label: 'Account Settings' },
@@ -683,15 +747,6 @@ const Profile = () => {
                           'Change Avatar'
                         )}
                       </button>
-                      
-                      {showAvatarSuccess && (
-                        <div className="mt-2 px-3 py-2 bg-green-900/30 border border-green-700/50 rounded-lg text-green-400 text-xs flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Avatar saved successfully!
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex-1 space-y-6 w-full lg:w-auto">
@@ -706,20 +761,93 @@ const Profile = () => {
                       ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div className="space-y-4">
-                            <div className="flex items-center space-x-3">
-                              <h4 className="text-xl font-semibold text-white">
-                                {userData?.name || userData?.username || 'User'}
-                              </h4>
-                              <svg className="w-4 h-4 text-gray-400 hover:text-blue-400 cursor-pointer transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                              </svg>
-                            </div>
+                            {isEditingName ? (
+                              <form onSubmit={handleChangeName} className="space-y-3">
+                                <input
+                                  type="text"
+                                  value={newName}
+                                  onChange={(e) => setNewName(e.target.value)}
+                                  maxLength={100}
+                                  className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  disabled={isChangingName}
+                                  autoFocus
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    type="submit"
+                                    disabled={isChangingName || !newName.trim()}
+                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                  >
+                                    {isChangingName ? (
+                                      <>
+                                        <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Saving...
+                                      </>
+                                    ) : (
+                                      'Save'
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={cancelEditingName}
+                                    disabled={isChangingName}
+                                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <div className="flex items-center space-x-3">
+                                <h4 className="text-xl font-semibold text-white">
+                                  {userData?.name || userData?.username || 'User'}
+                                </h4>
+                                <button
+                                  type="button"
+                                  onClick={startEditingName}
+                                  className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+                                  title="Edit name"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                            
+                            {nameError && (
+                              <div className="text-xs text-red-400 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                {nameError}
+                              </div>
+                            )}
+                            
+                            {nameSuccess && (
+                              <div className="text-xs text-green-400 flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                {nameSuccess}
+                              </div>
+                            )}
+
                             <p className="text-gray-300 text-sm">{userData?.email}</p>
+
                             <p className="text-gray-400 text-sm">
-                              Member since {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'long' 
-                              }) : 'Unknown'}
+                              Member since {(() => {
+                                const memberDate = userData?.member_since || userData?.created_at || userData?.createdAt;
+                                if (memberDate) {
+                                  try {
+                                    const date = new Date(memberDate);
+                                    const month = date.getMonth() + 1;
+                                    const day = date.getDate();
+                                    const year = date.getFullYear().toString().slice(-2);
+                                    return `${month}/${day}/${year}`;
+                                  } catch (error) {
+                                    console.error('Error parsing member date:', error);
+                                    return 'Unknown';
+                                  }
+                                }
+                                return 'Unknown';
+                              })()}
                             </p>
                           </div>
                           
