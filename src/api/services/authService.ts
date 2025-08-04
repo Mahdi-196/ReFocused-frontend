@@ -28,7 +28,9 @@ interface AuthResponse {
     name: string;
     username?: string;
     createdAt: string;
+    member_since?: string;
     avatar?: string;
+    profile_picture?: string;
   };
 }
 
@@ -279,6 +281,37 @@ export const authService = {
       const errorMessage = error instanceof Error && 'response' in error 
         ? (error as {response?: {data?: {detail?: string}}}).response?.data?.detail || 'Failed to change password.'
         : 'Failed to change password.';
+      throw new Error(errorMessage);
+    }
+  },
+
+  /**
+   * Change account name
+   */
+  async changeAccountName(newName: string): Promise<{ success: boolean; message: string; name: string }> {
+    try {
+      const response = await client.put<{ success: boolean; message: string; name: string }>(AUTH.CHANGE_USERNAME, {
+        new_name: newName
+      });
+      
+      // Update cached user data with new name
+      const cachedUser = cacheService.get(CacheKeys.USER_PROFILE());
+      if (cachedUser) {
+        const updatedUser = { ...cachedUser, name: response.data.name };
+        cacheService.set(CacheKeys.USER_PROFILE(), updatedUser, CacheTTL.LONG);
+        
+        // Update localStorage as well
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('REF_USER', JSON.stringify(updatedUser));
+        }
+      }
+      
+      return response.data;
+    } catch (error: unknown) {
+      console.error(`API Error [${AUTH.CHANGE_USERNAME}]:`, error);
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {detail?: string}}}).response?.data?.detail || 'Failed to change account name.'
+        : 'Failed to change account name.';
       throw new Error(errorMessage);
     }
   },
