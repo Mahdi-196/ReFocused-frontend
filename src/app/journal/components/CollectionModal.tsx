@@ -52,11 +52,11 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[6px]" aria-hidden="true" />
       <div 
-        className="bg-gray-800 text-white rounded-lg shadow-xl w-[400px] p-6 border border-gray-600 relative transition-all duration-300 transform animate-in fade-in slide-in-from-bottom-4"
+        className="relative w-[400px] rounded-2xl shadow-2xl overflow-hidden p-6 text-white transition-all duration-300 transform animate-in fade-in slide-in-from-bottom-4 border border-gray-700/50"
+        style={{ backgroundColor: '#1E2938' }}
         onClick={e => e.stopPropagation()}
-        style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
       >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-white">{title}</h3>

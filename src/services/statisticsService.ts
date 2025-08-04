@@ -270,19 +270,22 @@ class StatisticsService {
   }
 
   /**
-   * Get filtered statistics with caching
+   * Get filtered statistics with optional caching bypass
    */
-  async getFilteredStats(filter: TimeFilter = 'D'): Promise<Statistics> {
+  async getFilteredStats(filter: TimeFilter = 'D', bypassCache: boolean = false): Promise<Statistics> {
     const cacheKey = this.getCacheKey(filter);
     
-    // Check cache first
-    const cached = cacheService.get<Statistics>(cacheKey);
-    if (cached) {
-      logger.cacheHit(cacheKey);
-      return cached;
+    // Check cache first (unless bypassed)
+    if (!bypassCache) {
+      const cached = cacheService.get<Statistics>(cacheKey);
+      if (cached) {
+        logger.cacheHit(cacheKey);
+        return cached;
+      }
+      logger.cacheMiss(cacheKey);
+    } else {
+      logger.debug('Cache bypassed for real-time statistics', { filter }, 'SERVICE');
     }
-
-    logger.cacheMiss(cacheKey);
 
     // Check API availability
     const apiAvailable = await this.checkApiAvailability();
@@ -292,9 +295,13 @@ class StatisticsService {
         const backendStats = await statisticsApiService.getStatisticsByFilter(filter);
         const stats = this.convertBackendStats(backendStats);
         
-        // Cache the result
-        cacheService.set(cacheKey, stats, CacheTTL.SHORT);
-        logger.info('Statistics loaded from API and cached', { filter, stats, cacheKey }, 'SERVICE');
+        // Only cache if not bypassed
+        if (!bypassCache) {
+          cacheService.set(cacheKey, stats, CacheTTL.SHORT);
+          logger.info('Statistics loaded from API and cached', { filter, stats, cacheKey }, 'SERVICE');
+        } else {
+          logger.info('Statistics loaded from API (no cache)', { filter, stats }, 'SERVICE');
+        }
         
         return stats;
       } catch (error) {
@@ -612,7 +619,7 @@ const statisticsService = new StatisticsService();
 export { statisticsService };
 
 // Legacy exports for backward compatibility
-export const getFilteredStats = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.getFilteredStats(filter);
+export const getFilteredStats = (filter: TimeFilter = 'D', bypassCache: boolean = false): Promise<Statistics> => statisticsService.getFilteredStats(filter, bypassCache);
 export const addFocusTime = (minutes: number, filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.addFocusTime(minutes, filter);
 export const incrementSessions = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.incrementSessions(filter);
 export const incrementTasksDone = (filter: TimeFilter = 'D'): Promise<Statistics> => statisticsService.incrementTasksDone(filter);

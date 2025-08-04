@@ -265,6 +265,25 @@ export const authService = {
   },
 
   /**
+   * Change user password
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await client.put<{ success: boolean; message: string }>(AUTH.CHANGE_PASSWORD, {
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+      return response.data;
+    } catch (error: unknown) {
+      console.error(`API Error [${AUTH.CHANGE_PASSWORD}]:`, error);
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as {response?: {data?: {detail?: string}}}).response?.data?.detail || 'Failed to change password.'
+        : 'Failed to change password.';
+      throw new Error(errorMessage);
+    }
+  },
+
+  /**
    * Clear user profile cache
    */
   clearUserCache() {

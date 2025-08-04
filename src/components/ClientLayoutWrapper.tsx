@@ -11,6 +11,7 @@ import { TokenExpiryNotification } from './TokenExpiryNotification';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { TimeProvider } from '@/contexts/TimeContext';
 import { AudioProvider } from '@/contexts/AudioContext';
+import { NetworkProvider } from './NetworkProvider';
 import { initializeAuth } from '@/api/client';
 
 export default function ClientLayoutWrapper({
@@ -99,27 +100,29 @@ export default function ClientLayoutWrapper({
   }
 
   return (
-    <AuthProvider>
-      <TimeProvider>
-        <AudioProvider>
-          <StatisticsInitializer />
-          <div className={isLandingPage ? '' : 'pt-20'}>
-            {!isLandingPage && <Header />}
-            <AnimatedLayout>
-              <main className={`${!isLandingPage ? 'container mx-auto px-4 py-8' : ''}`}>
-                {children}
-              </main>
-            </AnimatedLayout>
-            {shouldShowFooter && <Footer />}
-          </div>
-          
-          {/* Token expiry notification - positioned at top-right globally */}
-          {!isLandingPage && isAuthenticated && <TokenExpiryNotification />}
-          
-          {/* DevTools - positioned at bottom-right globally */}
-          {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}
-        </AudioProvider>
-      </TimeProvider>
-    </AuthProvider>
+    <NetworkProvider>
+      <AuthProvider>
+        <TimeProvider>
+          <AudioProvider>
+            <StatisticsInitializer />
+            <div className={isLandingPage ? '' : 'pt-20'}>
+              {!isLandingPage && <Header />}
+              <AnimatedLayout>
+                <main className={`${!isLandingPage ? 'container mx-auto px-4 py-8' : ''}`}>
+                  {children}
+                </main>
+              </AnimatedLayout>
+              {shouldShowFooter && <Footer />}
+            </div>
+            
+            {/* Token expiry notification - positioned at top-right globally */}
+            {!isLandingPage && isAuthenticated && <TokenExpiryNotification />}
+            
+            {/* DevTools - positioned at bottom-right globally */}
+            {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}
+          </AudioProvider>
+        </TimeProvider>
+      </AuthProvider>
+    </NetworkProvider>
   );
 } 

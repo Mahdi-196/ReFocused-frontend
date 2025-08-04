@@ -9,6 +9,11 @@ interface ApiResponse {
 }
 
 const ApiTestingBox = () => {
+  // === DEVELOPMENT ONLY - Hide in production ===
+  if (process.env.NEXT_PUBLIC_APP_ENV !== 'development') {
+    return null;
+  }
+
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [claudeLoading, setClaudeLoading] = useState(false);

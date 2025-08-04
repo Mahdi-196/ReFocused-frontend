@@ -25,7 +25,11 @@
       "WebFetch(domain:mixkit.co)",
       "WebFetch(domain:pixabay.com)",
       "Bash(timeout 10 yarn dev)",
-      "Bash(gtimeout:*)"
+      "Bash(gtimeout:*)",
+      "Bash(true)",
+      "Bash(timeout 8s yarn dev)",
+      "Bash(npm run build:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquare, Star } from 'lucide-react';
 
 interface FeedbackData {
@@ -32,16 +32,33 @@ export const FeedbackModal = ({
   setFeedbackData, 
   onSubmit 
 }: FeedbackModalProps) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-gradient-to-br from-gray-900/95 to-slate-900/95 backdrop-blur-sm border border-gray-700/50 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl"
-      >
+    <AnimatePresence mode="wait">
+      {isOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 20 }}
+            transition={{ 
+              duration: 0.2, 
+              ease: [0.16, 1, 0.3, 1], // Custom easing for smooth feel
+              layout: { duration: 0.2 }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-gradient-to-br from-gray-900 to-slate-900 border border-gray-700/50 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl"
+            style={{
+              willChange: 'transform, opacity', // Optimize for animations
+              backfaceVisibility: 'hidden', // Prevent flickering
+            }}
+          >
         <button
           onClick={onClose}
           className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center transition-colors"
@@ -137,7 +154,9 @@ export const FeedbackModal = ({
             Submit Feedback
           </button>
         </div>
-      </motion.div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

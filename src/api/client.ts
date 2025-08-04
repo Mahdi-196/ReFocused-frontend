@@ -115,8 +115,25 @@ client.interceptors.request.use(
 
 // Response interceptor for error handling
 client.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Mark network success for successful responses
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('networkSuccess'));
+    }
+    return response;
+  },
   async (error) => {
+    // Trigger network failure detection for network-related errors
+    const isNetworkError = 
+      error.code === 'ECONNABORTED' || 
+      error.code === 'ERR_NETWORK' || 
+      error.message === 'Network Error' ||
+      !error.response; // No response usually means network issue
+
+    if (isNetworkError && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('networkFailure'));
+    }
+    
     // Handle timeout errors
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
       logger.warn('API request timed out after 30 seconds', { url: error.config?.url }, 'API');

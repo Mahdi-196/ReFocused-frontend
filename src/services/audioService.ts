@@ -3,11 +3,16 @@ class AudioService {
   private masterVolume: number = 0.7;
   private ambientVolume: number = 0.5;
   private notificationVolume: number = 0.8;
+  private breathingVolume: number = 0.6;
   private isGloballyMuted: boolean = false;
 
   // Preload audio files for better performance
   private audioCache: Map<string, HTMLAudioElement> = new Map();
   private notificationCache: Map<string, HTMLAudioElement> = new Map();
+  
+  // Track pending play promises to prevent race conditions
+  private playingPromises: Map<HTMLAudioElement, Promise<void>> = new Map();
+  private audioStates: Map<HTMLAudioElement, 'idle' | 'playing' | 'paused' | 'loading'> = new Map();
 
   constructor() {
     this.preloadAudioFiles();
@@ -34,16 +39,13 @@ class AudioService {
         
         if (this.currentAudio) {
           if (this.isGloballyMuted) {
-            // Mute: pause current audio
-            this.currentAudio.pause();
+            // Mute: pause current audio safely
+            this.safePause(this.currentAudio);
           } else {
-            // Unmute: resume current audio if it was playing
-            const playPromise = this.currentAudio.play();
-            if (playPromise !== undefined) {
-              playPromise.catch(error => {
-                console.error('Failed to resume audio after unmute:', error);
-              });
-            }
+            // Unmute: resume current audio safely
+            this.safePlay(this.currentAudio).catch(error => {
+              console.error('Failed to resume audio after unmute:', error);
+            });
           }
         }
         // Update volume of current audio
@@ -63,6 +65,7 @@ class AudioService {
       audio.preload = 'auto';
       audio.loop = true;
       this.audioCache.set(soundId, audio);
+      this.audioStates.set(audio, 'idle');
     });
   }
 
@@ -74,10 +77,81 @@ class AudioService {
       audio.preload = 'auto';
       audio.loop = false;
       this.notificationCache.set(soundId, audio);
+      this.audioStates.set(audio, 'idle');
     });
   }
 
-  playAmbientSound(soundId: string): boolean {
+  // Safe play method that handles race conditions
+  private async safePlay(audio: HTMLAudioElement): Promise<boolean> {
+    try {
+      // Check if there's already a pending play promise
+      const existingPromise = this.playingPromises.get(audio);
+      if (existingPromise) {
+        console.log('Audio play already in progress, waiting for completion');
+        try {
+          await existingPromise;
+        } catch (error) {
+          // Ignore errors from previous play attempts
+        }
+      }
+
+      // Check current state
+      const currentState = this.audioStates.get(audio);
+      if (currentState === 'playing' || currentState === 'loading') {
+        console.log('Audio already playing or loading');
+        return true;
+      }
+
+      // Set state to loading
+      this.audioStates.set(audio, 'loading');
+
+      // Create and track the play promise
+      const playPromise = audio.play();
+      this.playingPromises.set(audio, playPromise);
+
+      await playPromise;
+      
+      // Success - update state
+      this.audioStates.set(audio, 'playing');
+      this.playingPromises.delete(audio);
+      
+      return true;
+    } catch (error) {
+      // Clean up on error
+      this.playingPromises.delete(audio);
+      this.audioStates.set(audio, 'idle');
+      
+      if (error.name === 'AbortError') {
+        console.log('Audio play was interrupted by pause - this is normal');
+        return false;
+      } else if (error.name === 'NotAllowedError') {
+        console.warn('Audio play blocked by browser - user interaction required');
+        return false;
+      } else {
+        console.error('Audio play failed:', error);
+        return false;
+      }
+    }
+  }
+
+  // Safe pause method that handles ongoing play promises
+  private safePause(audio: HTMLAudioElement): void {
+    try {
+      // Cancel any pending play promise
+      const pendingPromise = this.playingPromises.get(audio);
+      if (pendingPromise) {
+        this.playingPromises.delete(audio);
+      }
+
+      // Pause the audio
+      audio.pause();
+      this.audioStates.set(audio, 'paused');
+    } catch (error) {
+      console.error('Audio pause failed:', error);
+    }
+  }
+
+  async playAmbientSound(soundId: string): Promise<boolean> {
     try {
       // Don't play if globally muted
       if (this.isGloballyMuted) {
@@ -95,20 +169,17 @@ class AudioService {
         return false;
       }
 
-      // Set volume and play
+      // Set volume and reset position
       audio.volume = this.calculateEffectiveVolume();
       audio.currentTime = 0;
       
-      // Handle play promise (required for modern browsers)
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error('Audio play failed:', error);
-        });
+      // Use safe play method
+      const success = await this.safePlay(audio);
+      if (success) {
+        this.currentAudio = audio;
       }
-
-      this.currentAudio = audio;
-      return true;
+      
+      return success;
     } catch (error) {
       console.error('Failed to play ambient sound:', error);
       return false;
@@ -117,27 +188,24 @@ class AudioService {
 
   stopAmbientSound() {
     if (this.currentAudio) {
-      this.currentAudio.pause();
+      this.safePause(this.currentAudio);
       this.currentAudio.currentTime = 0;
+      this.audioStates.set(this.currentAudio, 'idle');
       this.currentAudio = null;
     }
   }
 
   pauseAmbientSound() {
     if (this.currentAudio) {
-      this.currentAudio.pause();
+      this.safePause(this.currentAudio);
     }
   }
 
-  resumeAmbientSound() {
+  async resumeAmbientSound(): Promise<boolean> {
     if (this.currentAudio) {
-      const playPromise = this.currentAudio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error('Audio resume failed:', error);
-        });
-      }
+      return await this.safePlay(this.currentAudio);
     }
+    return false;
   }
 
   setMasterVolume(volume: number) {
@@ -154,7 +222,11 @@ class AudioService {
     this.notificationVolume = Math.max(0, Math.min(1, volume / 100));
   }
 
-  playNotificationSound(soundId: string): boolean {
+  setBreathingVolume(volume: number) {
+    this.breathingVolume = Math.max(0, Math.min(1, volume / 100));
+  }
+
+  async playNotificationSound(soundId: string): Promise<boolean> {
     try {
       // Don't play if globally muted
       if (this.isGloballyMuted) {
@@ -172,15 +244,8 @@ class AudioService {
       audio.volume = this.masterVolume * this.notificationVolume;
       audio.currentTime = 0;
       
-      // Handle play promise
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error('Notification sound play failed:', error);
-        });
-      }
-
-      return true;
+      // Use safe play method
+      return await this.safePlay(audio);
     } catch (error) {
       console.error('Failed to play notification sound:', error);
       return false;
@@ -219,6 +284,20 @@ class AudioService {
     const src = this.currentAudio.src;
     const match = src.match(/\/audio\/ambient\/(\w+)\.mp3$/);
     return match ? match[1] : null;
+  }
+
+  // Cleanup method for components to use on unmount
+  cleanup(): void {
+    // Stop all audio and clear promises
+    this.stopAmbientSound();
+    
+    // Clear all pending promises
+    this.playingPromises.clear();
+    
+    // Reset all audio states
+    this.audioStates.forEach((state, audio) => {
+      this.audioStates.set(audio, 'idle');
+    });
   }
 }
 

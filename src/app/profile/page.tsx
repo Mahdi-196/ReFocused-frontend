@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { User, Settings, LogOut, MessageSquare, X, Star, Camera, Volume2, VolumeX, Bell, Wind } from 'lucide-react';
 import { GiVote } from "react-icons/gi";
 import PageTransition from '@/components/PageTransition';
@@ -14,6 +14,8 @@ import { USER, AUTH } from '@/api/endpoints';
 import { DeleteAccountModal } from '@/components/profile/DeleteAccountModal';
 import { ExportDataModal } from '@/components/profile/ExportDataModal';
 import { ClearActivityModal } from '@/components/profile/ClearActivityModal';
+import { AudioSettings } from '@/components/profile/AudioSettings';
+import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface FeedbackData {
   rating: number;
@@ -42,6 +44,143 @@ interface UserStats {
   journal_collections_count: number;
   account_age_days: number;
 }
+
+// Move FeedbackModal outside of Profile component to prevent recreation
+const FeedbackModal = ({ 
+  isOpen, 
+  onClose, 
+  feedbackData, 
+  setFeedbackData, 
+  onSubmit 
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  feedbackData: FeedbackData;
+  setFeedbackData: React.Dispatch<React.SetStateAction<FeedbackData>>;
+  onSubmit: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-gradient-to-br from-gray-900/95 to-slate-900/95 backdrop-blur-sm border border-gray-700/50 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center transition-colors"
+          aria-label="Close feedback modal"
+        >
+          <X className="w-5 h-5 text-gray-300" />
+        </button>
+
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Share Your Feedback</h2>
+          <p className="text-gray-300 text-sm">Help us improve ReFocused by sharing your thoughts and suggestions</p>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            Overall Experience <span className="text-red-400">*</span>
+          </label>
+          <div className="flex justify-center gap-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setFeedbackData(prev => ({ ...prev, rating: star }))}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
+                  star <= feedbackData.rating
+                    ? 'bg-yellow-500 text-white shadow-lg'
+                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50'
+                }`}
+              >
+                <Star className={`w-5 h-5 ${star <= feedbackData.rating ? 'fill-current' : ''}`} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            Feedback Category <span className="text-red-400">*</span>
+          </label>
+          <select
+            value={feedbackData.category}
+            onChange={(e) => setFeedbackData(prev => ({ ...prev, category: e.target.value }))}
+            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          >
+            <option value="">Select a category...</option>
+            {feedbackCategories.map((category) => (
+              <option key={category} value={category} className="bg-gray-800">
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            Your Message <span className="text-red-400">*</span>
+          </label>
+          <textarea
+            value={feedbackData.message}
+            onChange={(e) => setFeedbackData(prev => ({ ...prev, message: e.target.value }))}
+            placeholder="Tell us what you think, report a bug, or suggest a new feature..."
+            rows={5}
+            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+          />
+        </div>
+
+        <div className="mb-8">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            Contact Email (Optional)
+          </label>
+          <input
+            type="email"
+            value={feedbackData.contact}
+            onChange={(e) => setFeedbackData(prev => ({ ...prev, contact: e.target.value }))}
+            placeholder="your@email.com (if you'd like a response)"
+            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </div>
+
+        <div className="flex gap-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+          >
+            Submit Feedback
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+const feedbackCategories = [
+  'General Feedback',
+  'Bug Report',
+  'Feature Request',
+  'User Experience',
+  'Performance Issues',
+  'Content Suggestions'
+];
 
 const Profile = () => {
   const router = useRouter();
@@ -81,6 +220,17 @@ const Profile = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
   
   // Settings hook
   const { settings, updateSettings } = useSettings();
@@ -366,19 +516,68 @@ const Profile = () => {
     window.location.href = '/';
   };
 
+  const validatePassword = (password: string) => {
+    return {
+      length: password.length >= 8 && password.length <= 128,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    };
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const validation = validatePassword(newPassword);
+    const isValidPassword = Object.values(validation).every(Boolean);
+    const passwordsMatch = newPassword === confirmPassword && confirmPassword !== '';
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Please fill in all password fields');
+      return;
+    }
+    
+    if (!isValidPassword) {
+      setPasswordError('New password does not meet security requirements');
+      return;
+    }
+    
+    if (!passwordsMatch) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from current password');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    try {
+      await authService.changePassword(currentPassword, newPassword);
+      setPasswordSuccess('Password changed successfully');
+      
+      setTimeout(() => {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordSuccess('');
+      }, 3000);
+    } catch (error: any) {
+      setPasswordError(error.message || 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const menuItems = [
     { id: 'profile', icon: <User size={18} />, label: 'Profile' },
     { id: 'settings', icon: <Settings size={18} />, label: 'Account Settings' },
     { id: 'app-settings', icon: <Volume2 size={18} />, label: 'Audio' },
-  ];
-
-  const feedbackCategories = [
-    'General Feedback',
-    'Bug Report',
-    'Feature Request',
-    'User Experience',
-    'Performance Issues',
-    'Content Suggestions'
   ];
 
   const handleFeedbackSubmit = () => {
@@ -400,257 +599,9 @@ const Profile = () => {
     alert('Thank you for your feedback! We appreciate your input.');
   };
 
-  // Settings component helper functions
-  const VolumeSlider = ({ 
-    label, 
-    value, 
-    onChange, 
-    icon: Icon,
-    disabled = false 
-  }: {
-    label: string;
-    value: number;
-    onChange: (value: number) => void;
-    icon: React.ElementType;
-    disabled?: boolean;
-  }) => (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Icon className={`w-5 h-5 ${disabled ? 'text-gray-500' : 'text-blue-400'}`} />
-          <span className={`text-sm font-medium ${disabled ? 'text-gray-500' : 'text-gray-200'}`}>
-            {label}
-          </span>
-        </div>
-        <span className={`text-sm ${disabled ? 'text-gray-500' : 'text-gray-400'}`}>
-          {value}%
-        </span>
-      </div>
-      <div className="relative">
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          disabled={disabled}
-          className={`w-full h-2 rounded-lg appearance-none cursor-pointer slider ${
-            disabled ? 'opacity-50' : ''
-          }`}
-          style={{
-            background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${value}%, #374151 ${value}%, #374151 100%)`
-          }}
-        />
-      </div>
-    </div>
-  );
-
-  const ToggleSwitch = ({ 
-    enabled, 
-    onChange, 
-    disabled = false 
-  }: {
-    enabled: boolean;
-    onChange: (enabled: boolean) => void;
-    disabled?: boolean;
-  }) => (
-    <button
-      type="button"
-      onClick={() => !disabled && onChange(!enabled)}
-      disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-        enabled ? 'bg-blue-600' : 'bg-gray-600'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-          enabled ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
-  );
-
-  const FeedbackModal = () => {
-    if (!isFeedbackModalOpen) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-gradient-to-br from-gray-900/95 to-slate-900/95 backdrop-blur-sm border border-gray-700/50 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl"
-        >
-          <button
-            type="button"
-            onClick={() => setIsFeedbackModalOpen(false)}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center transition-colors"
-            aria-label="Close feedback modal"
-          >
-            <X className="w-5 h-5 text-gray-300" />
-          </button>
-
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <MessageSquare className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Share Your Feedback</h2>
-            <p className="text-gray-300 text-sm">Help us improve ReFocused by sharing your thoughts and suggestions</p>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Overall Experience <span className="text-red-400">*</span>
-            </label>
-            <div className="flex justify-center gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setFeedbackData(prev => ({ ...prev, rating: star }))}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
-                    star <= feedbackData.rating
-                      ? 'bg-yellow-500 text-white shadow-lg'
-                      : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50'
-                  }`}
-                >
-                  <Star className={`w-5 h-5 ${star <= feedbackData.rating ? 'fill-current' : ''}`} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Feedback Category <span className="text-red-400">*</span>
-            </label>
-            <select
-              value={feedbackData.category}
-              onChange={(e) => setFeedbackData(prev => ({ ...prev, category: e.target.value }))}
-              className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            >
-              <option value="">Select a category...</option>
-              {feedbackCategories.map((category) => (
-                <option key={category} value={category} className="bg-gray-800">
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Your Message <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={feedbackData.message}
-              onChange={(e) => setFeedbackData(prev => ({ ...prev, message: e.target.value }))}
-              placeholder="Tell us what you think, report a bug, or suggest a new feature..."
-              rows={5}
-              className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
-            />
-          </div>
-
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Contact Email (Optional)
-            </label>
-            <input
-              type="email"
-              value={feedbackData.contact}
-              onChange={(e) => setFeedbackData(prev => ({ ...prev, contact: e.target.value }))}
-              placeholder="your@email.com (if you'd like a response)"
-              className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            />
-          </div>
-
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={() => setIsFeedbackModalOpen(false)}
-              className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleFeedbackSubmit}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-            >
-              Submit Feedback
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  };
-
-
-  const renderAudioSettings = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between w-full">
-        <div className="flex items-center space-x-3">
-          <Bell className="w-5 h-5 text-blue-400" />
-          <span className="text-sm font-medium text-gray-200">Notification Sounds</span>
-        </div>
-        <ToggleSwitch
-          enabled={settings.audio.notificationSounds}
-          onChange={(enabled) => updateSettings('audio', { notificationSounds: enabled })}
-        />
-      </div>
-
-      <VolumeSlider
-        label="Master Volume"
-        value={settings.audio.masterVolume}
-        onChange={(value) => updateSettings('audio', { masterVolume: value })}
-        icon={settings.audio.masterVolume === 0 ? VolumeX : Volume2}
-      />
-
-      <VolumeSlider
-        label="Ambient Sounds"
-        value={settings.audio.ambientVolume}
-        onChange={(value) => updateSettings('audio', { ambientVolume: value })}
-        icon={Wind}
-        disabled={settings.audio.masterVolume === 0}
-      />
-
-      <VolumeSlider
-        label="Breathing Exercise Audio"
-        value={settings.audio.breathingVolume}
-        onChange={(value) => updateSettings('audio', { breathingVolume: value })}
-        icon={Wind}
-        disabled={settings.audio.masterVolume === 0}
-      />
-    </div>
-  );
-
-
-
-  const renderActiveAppSettingsSection = () => {
-    return renderAudioSettings();
-  };
 
   const renderAppSettings = () => {
-    return (
-      <div className="bg-gradient-to-br from-gray-800/90 to-slate-800/90 backdrop-blur-lg border border-gray-700/60 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="p-6 border-b border-gray-700">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-600/20 rounded-lg">
-              <Volume2 className="w-6 h-6 text-blue-400" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">Audio Settings</h2>
-              <p className="text-gray-400 text-sm">Customize your audio settings and sound preferences</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6">
-          <h3 className="text-xl font-semibold text-white mb-6">Audio</h3>
-          {renderActiveAppSettingsSection()}
-        </div>
-      </div>
-    );
+    return <AudioSettings />;
   };
 
   const renderContent = () => {
@@ -791,37 +742,143 @@ const Profile = () => {
                 <Settings className="w-5 h-5 mr-2 text-blue-400" />
                 Account Security
               </h3>
-              <div className="space-y-4">
+              <form onSubmit={handleChangePassword} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
-                  <input
-                    type="password"
-                    placeholder="Enter current password"
-                    className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                      className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+                      disabled={isChangingPassword}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                      disabled={isChangingPassword}
+                    >
+                      {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
-                    <input
-                      type="password"
-                      placeholder="Enter new password"
-                      className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+                        disabled={isChangingPassword}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                        disabled={isChangingPassword}
+                      >
+                        {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
-                    <input
-                      type="password"
-                      placeholder="Confirm new password"
-                      className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className={`w-full px-4 py-2 bg-gray-700/50 border rounded-lg text-white focus:outline-none focus:ring-2 focus:border-transparent pr-12 ${
+                          confirmPassword && newPassword !== confirmPassword
+                            ? 'border-red-500/50 focus:ring-red-500'
+                            : 'border-gray-600/50 focus:ring-blue-500'
+                        }`}
+                        disabled={isChangingPassword}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                        disabled={isChangingPassword}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <button type="button" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
-                  Update Password
+                
+                {newPassword && (
+                  <div className="mt-3 p-3 bg-gray-700/30 rounded-lg border border-gray-600/40">
+                    <p className="text-xs text-gray-400 mb-2">Password Requirements:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+                      {(() => {
+                        const validation = validatePassword(newPassword);
+                        return [
+                          { key: 'length', label: '8-128 characters', valid: validation.length },
+                          { key: 'uppercase', label: 'One uppercase letter', valid: validation.uppercase },
+                          { key: 'lowercase', label: 'One lowercase letter', valid: validation.lowercase },
+                          { key: 'number', label: 'One number', valid: validation.number },
+                          { key: 'special', label: 'One special character', valid: validation.special }
+                        ].map((req) => (
+                          <div key={req.key} className={`flex items-center gap-2 ${req.valid ? 'text-green-400' : 'text-gray-400'}`}>
+                            {req.valid ? <CheckCircle className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-gray-400" />}
+                            {req.label}
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <div className="text-xs text-red-400 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Passwords do not match
+                  </div>
+                )}
+
+                {confirmPassword && newPassword === confirmPassword && confirmPassword !== '' && (
+                  <div className="text-xs text-green-400 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Passwords match
+                  </div>
+                )}
+
+                {passwordError && (
+                  <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-400 text-sm flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    {passwordError}
+                  </div>
+                )}
+
+                {passwordSuccess && (
+                  <div className="p-3 bg-green-900/30 border border-green-700/50 rounded-lg text-green-400 text-sm flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                    {passwordSuccess}
+                  </div>
+                )}
+
+                <button 
+                  type="submit" 
+                  disabled={isChangingPassword}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isChangingPassword ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Updating Password...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
                 </button>
-              </div>
+              </form>
             </div>
 
 
@@ -911,7 +968,7 @@ const Profile = () => {
                 {[
                   "Develop the AI (add previous chat history, increase token context, and enhance AI capabilities)",
                   "Collaboration (work with other users, shared notebooks, and real-time co-editing)",
-                  "Personalized Customization (custom colors, themes, app features, and personalization options)"
+                  "Gamification System (achievements, complex monthly scoring, user levels, and progress rewards)"
                 ].map((option) => (
                   <label key={option} className="flex items-start gap-3 cursor-pointer p-3 rounded-lg hover:bg-gray-700/30 transition-colors">
                     <input
@@ -1038,7 +1095,7 @@ const Profile = () => {
                       key={item.id}
                       type="button"
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left ${
+                      className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left focus:outline-none focus:ring-0 focus:border-transparent outline-none border-0 ${
                         activeTab === item.id
                           ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                           : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
@@ -1052,7 +1109,7 @@ const Profile = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('voting')}
-                    className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left border-t border-gray-700/50 mt-4 pt-4 ${
+                    className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left border-t border-gray-700/50 mt-4 pt-4 focus:outline-none focus:ring-0 focus:border-transparent outline-none ${
                       activeTab === 'voting'
                         ? 'bg-blue-500/20 border border-blue-500/30'
                         : 'hover:bg-gray-700/50'
@@ -1068,7 +1125,7 @@ const Profile = () => {
                   <button
                     type="button"
                     onClick={() => setIsFeedbackModalOpen(true)}
-                    className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-gray-300 hover:text-white hover:bg-gray-700/50"
+                    className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-gray-300 hover:text-white hover:bg-gray-700/50 focus:outline-none focus:ring-0 focus:border-transparent outline-none"
                   >
                     <MessageSquare size={18} />
                     <span className="text-sm font-medium">Give Feedback</span>
@@ -1080,7 +1137,7 @@ const Profile = () => {
                   <button 
                     type="button"
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                    className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left text-red-400 hover:text-red-300 hover:bg-red-900/20 focus:outline-none focus:ring-0 focus:border-transparent outline-none"
                   >
                     <LogOut size={18} />
                     <span className="text-sm font-medium">Logout</span>
@@ -1090,12 +1147,31 @@ const Profile = () => {
             </div>
 
             <div className="lg:col-span-3">
-              {renderContent()}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ 
+                    duration: 0.2,
+                    ease: "easeInOut"
+                  }}
+                >
+                  {renderContent()}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
         </div>
 
-        <FeedbackModal />
+        <FeedbackModal
+          isOpen={isFeedbackModalOpen}
+          onClose={() => setIsFeedbackModalOpen(false)}
+          feedbackData={feedbackData}
+          setFeedbackData={setFeedbackData}
+          onSubmit={handleFeedbackSubmit}
+        />
         
         <AvatarSelector
           isOpen={isAvatarSelectorOpen}
@@ -1126,9 +1202,18 @@ const Profile = () => {
           onDeleteAccount={handleDeleteAccount}
           userEmail={userData?.email || ''}
         />
+
       </div>
       
       <style jsx>{`
+        button:focus,
+        button:focus-visible,
+        button:active {
+          outline: none !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 20px;

@@ -170,85 +170,181 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                   <div className="space-y-2">
                     {/* Checklist Goal */}
                     <div
-                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-300 ease-out ${
                         goalType === 'checklist'
-                          ? 'border-blue-500/50 bg-blue-500/10 shadow-md shadow-blue-500/20'
-                          : 'border-gray-700/50 bg-gray-800/30 hover:border-gray-600/50 hover:bg-gray-800/50'
-                      }`}
+                          ? 'border-blue-500/50 bg-blue-500/10 shadow-md shadow-blue-500/20 scale-105'
+                          : 'border-gray-700/50 bg-gray-800/30 hover:border-gray-600/50 hover:bg-gray-800/50 hover:scale-105'
+                      } active:scale-95`}
                       onClick={() => !isSubmitting && handleGoalTypeChange('checklist')}
                     >
                       <div className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          value="checklist"
-                          checked={goalType === 'checklist'}
-                          onChange={() => handleGoalTypeChange('checklist')}
-                          className="mt-1 flex-shrink-0 appearance-none w-4 h-4 border-2 border-gray-500 rounded-full checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                          disabled={isSubmitting}
-                        />
-                                                  <div>
-                            <div className="text-white text-sm font-medium flex items-center gap-2">
-                              <CheckSquare className="w-4 h-4 text-green-400" />
-                              Checklist
-                            </div>
-                            <div className="text-xs text-gray-400">Simple task - either done or not done</div>
+                        {/* Custom Circular Radio Button */}
+                        <div
+                          className={`
+                            relative flex-shrink-0 w-5 h-5 rounded-full cursor-pointer transition-all duration-300 ease-out mt-0.5
+                            ${goalType === 'checklist'
+                              ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-blue-500 shadow-lg shadow-blue-500/25 scale-105' 
+                              : 'bg-gray-700/80 border-2 border-gray-500/60 hover:border-gray-400 hover:bg-gray-600/80 hover:scale-105'
+                            }
+                            active:scale-95
+                          `}
+                        >
+                          {/* Checkmark */}
+                          <div className={`
+                            absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out
+                            ${goalType === 'checklist' ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}
+                          `}>
+                            <svg 
+                              className="w-3 h-3 text-white" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                              strokeWidth={3}
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                d="M5 13l4 4L19 7" 
+                              />
+                            </svg>
                           </div>
+                          
+                          {/* Ripple effect */}
+                          <div className={`
+                            absolute inset-0 rounded-full transition-all duration-500 ease-out
+                            ${goalType === 'checklist' ? 'bg-blue-400/30 animate-ping' : ''}
+                          `} 
+                          style={{ animationIterationCount: goalType === 'checklist' ? '1' : 'infinite' }} 
+                          />
+                        </div>
+                        
+                        <div>
+                          <div className="text-white text-sm font-medium flex items-center gap-2">
+                            <CheckSquare className="w-4 h-4 text-green-400" />
+                            Checklist
+                          </div>
+                          <div className="text-xs text-gray-400">Simple task - either done or not done</div>
+                        </div>
                       </div>
                     </div>
 
                     {/* Counter Goal */}
                     <div
-                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-300 ease-out ${
                         goalType === 'counter'
-                          ? 'border-blue-500/50 bg-blue-500/10 shadow-md shadow-blue-500/20'
-                          : 'border-gray-700/50 bg-gray-800/30 hover:border-gray-600/50 hover:bg-gray-800/50'
-                      }`}
+                          ? 'border-blue-500/50 bg-blue-500/10 shadow-md shadow-blue-500/20 scale-105'
+                          : 'border-gray-700/50 bg-gray-800/30 hover:border-gray-600/50 hover:bg-gray-800/50 hover:scale-105'
+                      } active:scale-95`}
                       onClick={() => !isSubmitting && handleGoalTypeChange('counter')}
                     >
                       <div className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          value="counter"
-                          checked={goalType === 'counter'}
-                          onChange={() => handleGoalTypeChange('counter')}
-                          className="mt-1 flex-shrink-0 appearance-none w-4 h-4 border-2 border-gray-500 rounded-full checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                          disabled={isSubmitting}
-                        />
-                                                  <div>
-                            <div className="text-white text-sm font-medium flex items-center gap-2">
-                              <Target className="w-4 h-4 text-blue-400" />
-                              Counter
-                            </div>
-                            <div className="text-xs text-gray-400">Set a target number and count up to it</div>
+                        {/* Custom Circular Radio Button */}
+                        <div
+                          className={`
+                            relative flex-shrink-0 w-5 h-5 rounded-full cursor-pointer transition-all duration-300 ease-out mt-0.5
+                            ${goalType === 'counter'
+                              ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-blue-500 shadow-lg shadow-blue-500/25 scale-105' 
+                              : 'bg-gray-700/80 border-2 border-gray-500/60 hover:border-gray-400 hover:bg-gray-600/80 hover:scale-105'
+                            }
+                            active:scale-95
+                          `}
+                        >
+                          {/* Checkmark */}
+                          <div className={`
+                            absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out
+                            ${goalType === 'counter' ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}
+                          `}>
+                            <svg 
+                              className="w-3 h-3 text-white" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                              strokeWidth={3}
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                d="M5 13l4 4L19 7" 
+                              />
+                            </svg>
                           </div>
+                          
+                          {/* Ripple effect */}
+                          <div className={`
+                            absolute inset-0 rounded-full transition-all duration-500 ease-out
+                            ${goalType === 'counter' ? 'bg-blue-400/30 animate-ping' : ''}
+                          `} 
+                          style={{ animationIterationCount: goalType === 'counter' ? '1' : 'infinite' }} 
+                          />
+                        </div>
+                        
+                        <div>
+                          <div className="text-white text-sm font-medium flex items-center gap-2">
+                            <Target className="w-4 h-4 text-blue-400" />
+                            Counter
+                          </div>
+                          <div className="text-xs text-gray-400">Set a target number and count up to it</div>
+                        </div>
                       </div>
                     </div>
 
                     {/* Percentage Goal */}
                     <div
-                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-300 ease-out ${
                         goalType === 'percentage'
-                          ? 'border-blue-500/50 bg-blue-500/10 shadow-md shadow-blue-500/20'
-                          : 'border-gray-700/50 bg-gray-800/30 hover:border-gray-600/50 hover:bg-gray-800/50'
-                      }`}
+                          ? 'border-blue-500/50 bg-blue-500/10 shadow-md shadow-blue-500/20 scale-105'
+                          : 'border-gray-700/50 bg-gray-800/30 hover:border-gray-600/50 hover:bg-gray-800/50 hover:scale-105'
+                      } active:scale-95`}
                       onClick={() => !isSubmitting && handleGoalTypeChange('percentage')}
                     >
                       <div className="flex items-start gap-3">
-                        <input
-                          type="radio"
-                          value="percentage"
-                          checked={goalType === 'percentage'}
-                          onChange={() => handleGoalTypeChange('percentage')}
-                          className="mt-1 flex-shrink-0 appearance-none w-4 h-4 border-2 border-gray-500 rounded-full checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                          disabled={isSubmitting}
-                        />
-                                                  <div>
-                            <div className="text-white text-sm font-medium flex items-center gap-2">
-                              <BarChart3 className="w-4 h-4 text-purple-400" />
-                              Percentage
-                            </div>
-                            <div className="text-xs text-gray-400">Track progress from 0% to 100%</div>
+                        {/* Custom Circular Radio Button */}
+                        <div
+                          className={`
+                            relative flex-shrink-0 w-5 h-5 rounded-full cursor-pointer transition-all duration-300 ease-out mt-0.5
+                            ${goalType === 'percentage'
+                              ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-blue-500 shadow-lg shadow-blue-500/25 scale-105' 
+                              : 'bg-gray-700/80 border-2 border-gray-500/60 hover:border-gray-400 hover:bg-gray-600/80 hover:scale-105'
+                            }
+                            active:scale-95
+                          `}
+                        >
+                          {/* Checkmark */}
+                          <div className={`
+                            absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out
+                            ${goalType === 'percentage' ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}
+                          `}>
+                            <svg 
+                              className="w-3 h-3 text-white" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                              strokeWidth={3}
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                d="M5 13l4 4L19 7" 
+                              />
+                            </svg>
                           </div>
+                          
+                          {/* Ripple effect */}
+                          <div className={`
+                            absolute inset-0 rounded-full transition-all duration-500 ease-out
+                            ${goalType === 'percentage' ? 'bg-blue-400/30 animate-ping' : ''}
+                          `} 
+                          style={{ animationIterationCount: goalType === 'percentage' ? '1' : 'infinite' }} 
+                          />
+                        </div>
+                        
+                        <div>
+                          <div className="text-white text-sm font-medium flex items-center gap-2">
+                            <BarChart3 className="w-4 h-4 text-purple-400" />
+                            Percentage
+                          </div>
+                          <div className="text-xs text-gray-400">Track progress from 0% to 100%</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -279,9 +375,6 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                       required
                       disabled={isSubmitting}
                     />
-                    <p className="text-xs text-gray-400 mt-2">
-                      Set your target number (2-999). You'll count up to this value.
-                    </p>
                   </motion.div>
                 )}
 

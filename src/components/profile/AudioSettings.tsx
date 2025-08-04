@@ -1,21 +1,112 @@
 import { Volume2, VolumeX, Bell, Wind } from 'lucide-react';
-// TODO: Implement VolumeSlider and ToggleSwitch components
-// import { VolumeSlider } from './ui/VolumeSlider';
-// import { ToggleSwitch } from './ui/ToggleSwitch';
+import { useCallback, useRef } from 'react';
+import { useAudioSettings } from '../../hooks/useSettings';
+import { audioService } from '../../services/audioService';
 
-interface AudioSettingsData {
-  notificationSounds: boolean;
-  masterVolume: number;
-  ambientVolume: number;
-  breathingVolume: number;
+interface VolumeSliderProps {
+  label: string;
+  icon: React.ReactNode;
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+  min?: number;
+  max?: number;
 }
 
-interface AudioSettingsProps {
-  settings: AudioSettingsData;
-  onSettingChange: (setting: string, value: boolean | number | string) => void;
+function VolumeSlider({ label, icon, value, onChange, disabled = false, min = 0, max = 100 }: VolumeSliderProps) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleChange = useCallback((newValue: number) => {
+    onChange(newValue);
+    
+    // Clear existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    // Set new timeout for debounced save (500ms after slider stops moving)
+    timeoutRef.current = setTimeout(() => {
+      // Trigger a custom event to indicate settings should be saved
+      window.dispatchEvent(new CustomEvent('audioSettingsChanged'));
+    }, 500);
+  }, [onChange]);
+  
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium text-gray-200 flex items-center space-x-2">
+          {icon}
+          <span>{label}</span>
+        </label>
+        <span className="text-sm text-gray-400">{value}%</span>
+      </div>
+      <div className="relative">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(e) => handleChange(parseInt(e.target.value))}
+          disabled={disabled}
+          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer disabled:opacity-50 slider"
+        />
+        <style jsx>{`
+          .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          .slider::-webkit-slider-thumb:hover {
+            background: #2563eb;
+            transform: scale(1.1);
+          }
+          .slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+          }
+          .slider::-moz-range-thumb:hover {
+            background: #2563eb;
+            transform: scale(1.1);
+          }
+        `}</style>
+      </div>
+    </div>
+  );
 }
 
-export const AudioSettings = ({ settings, onSettingChange }: AudioSettingsProps) => {
+export const AudioSettings = () => {
+  const { audioSettings, updateAudioSettings } = useAudioSettings();
+  
+  const handleVolumeChange = useCallback((setting: keyof typeof audioSettings, value: number) => {
+    updateAudioSettings({ [setting]: value });
+    
+    // Update audio service immediately for real-time feedback
+    switch (setting) {
+      case 'masterVolume':
+        audioService.setMasterVolume(value);
+        break;
+      case 'ambientVolume':
+        audioService.setAmbientVolume(value);
+        break;
+      case 'breathingVolume':
+        audioService.setBreathingVolume(value);
+        break;
+    }
+  }, [updateAudioSettings]);
+  
+  const handleToggleChange = useCallback((setting: keyof typeof audioSettings) => {
+    const newValue = !audioSettings[setting];
+    updateAudioSettings({ [setting]: newValue });
+  }, [audioSettings, updateAudioSettings]);
   return (
     <div className="bg-gradient-to-br from-gray-800/90 to-slate-800/90 backdrop-blur-lg border border-gray-700/60 rounded-2xl overflow-hidden shadow-2xl">
       <div className="p-6 border-b border-gray-700">
@@ -38,73 +129,37 @@ export const AudioSettings = ({ settings, onSettingChange }: AudioSettingsProps)
               <Bell className="w-5 h-5 text-blue-400" />
               <span className="text-sm font-medium text-gray-200">Notification Sounds</span>
             </div>
-            {/* TODO: Implement ToggleSwitch component */}
             <button
-              onClick={() => onSettingChange('notificationSounds', !settings.notificationSounds)}
-              className={`w-12 h-6 rounded-full ${settings.notificationSounds ? 'bg-blue-600' : 'bg-gray-600'} relative transition-colors`}
+              type="button"
+              onClick={() => handleToggleChange('notificationSounds')}
+              className={`w-12 h-6 rounded-full ${audioSettings.notificationSounds ? 'bg-blue-600' : 'bg-gray-600'} relative transition-all duration-200 ease-in-out hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50`}
             >
-              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${settings.notificationSounds ? 'translate-x-6' : 'translate-x-0.5'}`} />
+              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform duration-200 ease-in-out ${audioSettings.notificationSounds ? 'translate-x-6' : 'translate-x-0.5'}`} />
             </button>
           </div>
 
-          {/* TODO: Implement VolumeSlider component */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-200 flex items-center space-x-2">
-                {settings.masterVolume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                <span>Master Volume</span>
-              </label>
-              <span className="text-sm text-gray-400">{settings.masterVolume}%</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={settings.masterVolume}
-              onChange={(e) => onSettingChange('masterVolume', parseInt(e.target.value))}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-            />
-          </div>
+          <VolumeSlider
+            label="Master Volume"
+            icon={audioSettings.masterVolume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            value={audioSettings.masterVolume}
+            onChange={(value) => handleVolumeChange('masterVolume', value)}
+          />
 
-          {/* TODO: Implement VolumeSlider component */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-200 flex items-center space-x-2">
-                <Wind className="w-4 h-4" />
-                <span>Ambient Sounds</span>
-              </label>
-              <span className="text-sm text-gray-400">{settings.ambientVolume}%</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={settings.ambientVolume}
-              onChange={(e) => onSettingChange('ambientVolume', parseInt(e.target.value))}
-              disabled={settings.masterVolume === 0}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
-            />
-          </div>
+          <VolumeSlider
+            label="Ambient Sounds"
+            icon={<Wind className="w-4 h-4" />}
+            value={audioSettings.ambientVolume}
+            onChange={(value) => handleVolumeChange('ambientVolume', value)}
+            disabled={audioSettings.masterVolume === 0}
+          />
 
-          {/* TODO: Implement VolumeSlider component */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-200 flex items-center space-x-2">
-                <Wind className="w-4 h-4" />
-                <span>Breathing Sounds</span>
-              </label>
-              <span className="text-sm text-gray-400">{settings.breathingVolume}%</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={settings.breathingVolume}
-              onChange={(e) => onSettingChange('breathingVolume', parseInt(e.target.value))}
-              disabled={settings.masterVolume === 0}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
-            />
-          </div>
+          <VolumeSlider
+            label="Breathing Sounds"
+            icon={<Wind className="w-4 h-4" />}
+            value={audioSettings.breathingVolume}
+            onChange={(value) => handleVolumeChange('breathingVolume', value)}
+            disabled={audioSettings.masterVolume === 0}
+          />
         </div>
       </div>
     </div>

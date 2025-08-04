@@ -139,19 +139,21 @@ const HabitStreaks = () => {
     return habitCompletions[completionKey] || false;
   };
 
-  const getHabitIcon = (habitName: string) => {
+  const getHabitIcon = (habitName: string, isCompleted: boolean = false) => {
     const name = habitName.toLowerCase();
-    if (name.includes('meditat') || name.includes('mindful')) return <Brain className="w-4 h-4 text-purple-400" />;
-    if (name.includes('exercise') || name.includes('workout') || name.includes('gym')) return <Dumbbell className="w-4 h-4 text-red-400" />;
-    if (name.includes('read') || name.includes('book')) return <BookOpen className="w-4 h-4 text-green-400" />;
-    if (name.includes('water') || name.includes('hydrat')) return <Droplets className="w-4 h-4 text-blue-400" />;
-    if (name.includes('sleep') || name.includes('rest')) return <Moon className="w-4 h-4 text-indigo-400" />;
-    if (name.includes('walk') || name.includes('run')) return <Footprints className="w-4 h-4 text-orange-400" />;
-    if (name.includes('journal') || name.includes('write')) return <PenTool className="w-4 h-4 text-yellow-400" />;
-    if (name.includes('code') || name.includes('program')) return <Code className="w-4 h-4 text-cyan-400" />;
-    if (name.includes('clean') || name.includes('tidy')) return <Sparkles className="w-4 h-4 text-pink-400" />;
-    if (name.includes('study') || name.includes('learn')) return <GraduationCap className="w-4 h-4 text-emerald-400" />;
-    return <CheckCircle className="w-4 h-4 text-gray-400" />; // Default icon for other habits
+    const colorClass = isCompleted ? 'text-green-400' : '';
+    
+    if (name.includes('meditat') || name.includes('mindful')) return <Brain className={`w-4 h-4 ${colorClass || 'text-purple-400'}`} />;
+    if (name.includes('exercise') || name.includes('workout') || name.includes('gym')) return <Dumbbell className={`w-4 h-4 ${colorClass || 'text-red-400'}`} />;
+    if (name.includes('read') || name.includes('book')) return <BookOpen className={`w-4 h-4 ${colorClass || 'text-green-400'}`} />;
+    if (name.includes('water') || name.includes('hydrat')) return <Droplets className={`w-4 h-4 ${colorClass || 'text-blue-400'}`} />;
+    if (name.includes('sleep') || name.includes('rest')) return <Moon className={`w-4 h-4 ${colorClass || 'text-indigo-400'}`} />;
+    if (name.includes('walk') || name.includes('run')) return <Footprints className={`w-4 h-4 ${colorClass || 'text-orange-400'}`} />;
+    if (name.includes('journal') || name.includes('write')) return <PenTool className={`w-4 h-4 ${colorClass || 'text-yellow-400'}`} />;
+    if (name.includes('code') || name.includes('program')) return <Code className={`w-4 h-4 ${colorClass || 'text-cyan-400'}`} />;
+    if (name.includes('clean') || name.includes('tidy')) return <Sparkles className={`w-4 h-4 ${colorClass || 'text-pink-400'}`} />;
+    if (name.includes('study') || name.includes('learn')) return <GraduationCap className={`w-4 h-4 ${colorClass || 'text-emerald-400'}`} />;
+    return <CheckCircle className={`w-4 h-4 ${colorClass || 'text-gray-400'}`} />; // Default icon for other habits
   };
 
   if (loading) {
@@ -199,9 +201,8 @@ const HabitStreaks = () => {
         return (
           <div key={habit.id} className="flex justify-between items-center">
             <span className="flex items-center gap-2 text-gray-300">
-              {getHabitIcon(habit.name)}
+              {getHabitIcon(habit.name, isCompleted)}
               <span className={isCompleted ? 'line-through text-gray-400' : ''}>{habit.name}</span>
-              {isCompleted && <CheckIcon className="w-4 h-4" />}
             </span>
             <span className="text-gray-200 font-medium flex items-center gap-1">
               {habit.streak} {habit.streak === 1 ? 'day' : 'days'} <FireIcon className="w-4 h-4" />

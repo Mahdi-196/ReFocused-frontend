@@ -31,7 +31,8 @@ export function useStatistics() {
 
       setStatsLoading(true);
       try {
-        const filteredStats = await statisticsService.getFilteredStats(timeFilter);
+        // Always bypass cache for real-time statistics display
+        const filteredStats = await statisticsService.getFilteredStats(timeFilter, true);
         setStats(filteredStats);
       } catch (error) {
         console.error('Failed to load statistics:', error);
@@ -51,7 +52,8 @@ export function useStatistics() {
     const handleStatisticsUpdate = async () => {
       try {
         setStatsLoading(true);
-        const filteredStats = await statisticsService.getFilteredStats(timeFilter);
+        // Always bypass cache for real-time updates
+        const filteredStats = await statisticsService.getFilteredStats(timeFilter, true);
         setStats(filteredStats);
       } catch (error) {
         console.error('Failed to update statistics:', error);
@@ -64,12 +66,13 @@ export function useStatistics() {
     return () => window.removeEventListener('statisticsUpdated', handleStatisticsUpdate);
   }, [timeFilter, isAuthenticated]);
 
-  // Force refresh function
+  // Force refresh function - bypasses cache completely
   const forceRefresh = async () => {
     if (!isAuthenticated) return;
 
     setStatsLoading(true);
     try {
+      // Use refreshStatistics which completely bypasses cache
       const refreshedStats = await statisticsService.refreshStatistics(timeFilter);
       setStats(refreshedStats);
     } catch (error) {

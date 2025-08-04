@@ -39,11 +39,10 @@ const TaskList: React.FC<TaskListProps> = ({
           <ul className="space-y-2">
             {tasks.map(task => (
               <li key={task.id} className="group relative flex items-center justify-between gap-2 pr-8">
-                <div className="flex items-center gap-2 flex-grow">
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => {
+                <div className="flex items-center gap-3 flex-grow">
+                  {/* Custom Checkbox */}
+                  <div
+                    onClick={() => {
                       const wasCompleted = task.completed;
                       
                       // Use functional update for setting tasks
@@ -71,9 +70,51 @@ const TaskList: React.FC<TaskListProps> = ({
                         }, 1000);
                       }
                     }}
-                    className="appearance-none flex-shrink-0 w-5 h-5 rounded border-2 border-gray-500 text-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-700 checked:bg-blue-500 checked:border-blue-500 hover:border-gray-400 transition-colors cursor-pointer"
-                  />
-                  <span className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-200'}`}>
+                    className={`
+                      relative flex-shrink-0 w-5 h-5 rounded-md cursor-pointer transition-all duration-300 ease-out
+                      ${task.completed 
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-blue-500 shadow-lg shadow-blue-500/25 scale-105' 
+                        : 'bg-gray-700/80 border-2 border-gray-500/60 hover:border-gray-400 hover:bg-gray-600/80 hover:scale-105'
+                      }
+                      active:scale-95
+                    `}
+                  >
+                    {/* Checkmark */}
+                    <div className={`
+                      absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out
+                      ${task.completed ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}
+                    `}>
+                      <svg 
+                        className="w-3 h-3 text-white" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                        strokeWidth={3}
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          d="M5 13l4 4L19 7" 
+                        />
+                      </svg>
+                    </div>
+                    
+                    {/* Ripple effect */}
+                    <div className={`
+                      absolute inset-0 rounded-md transition-all duration-500 ease-out
+                      ${task.completed ? 'bg-blue-400/30 animate-ping' : ''}
+                    `} 
+                    style={{ animationIterationCount: task.completed ? '1' : 'infinite' }} 
+                    />
+                  </div>
+                  
+                  <span className={`
+                    text-sm transition-all duration-300 ease-out
+                    ${task.completed 
+                      ? 'text-gray-400 line-through transform scale-95' 
+                      : 'text-gray-200 hover:text-white'
+                    }
+                  `}>
                     {task.text}
                   </span>
                 </div>

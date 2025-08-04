@@ -18,13 +18,13 @@ const DropdownMenu = ({
 }: DropdownMenuProps) => {
   return (
     <div 
-      className={`w-48 bg-white rounded-md shadow-lg border border-gray-200 ${className}`}
+      className={`w-48 bg-gray-800 rounded-md shadow-lg border border-gray-700 ${className}`}
       onClick={e => e.stopPropagation()}
     >
       <div className="py-1">
         <button
           onClick={onEdit}
-          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+          className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
         >
           <Edit size={14} className="mr-2" />
           Edit
@@ -32,7 +32,7 @@ const DropdownMenu = ({
         {showDelete && (
           <button
             onClick={onDelete}
-            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+            className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors"
           >
             <Trash2 size={14} className="mr-2" />
             Delete

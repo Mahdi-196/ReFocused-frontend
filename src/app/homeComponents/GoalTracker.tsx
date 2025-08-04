@@ -359,8 +359,8 @@ const GoalTracker: React.FC = () => {
             
 
             
-            {/* Expiration indicator for 2-week goals */}
-            {expirationText && goalStatus !== 'completed_recent' && (
+            {/* Expiration indicator for 2-week goals - only show in development */}
+            {process.env.NEXT_PUBLIC_APP_ENV === 'development' && expirationText && goalStatus !== 'completed_recent' && (
               <span className={`text-xs px-2 py-1 rounded ${
                 expired 
                   ? 'bg-red-600/20 text-red-400' 
@@ -530,18 +530,6 @@ const GoalTracker: React.FC = () => {
           </SkeletonWrapper>
         )}
 
-        {/* Error State */}
-        {error && (
-          <div className="p-4 bg-red-600/20 border border-red-500/30 rounded-lg mb-4">
-            <p className="text-red-300 text-sm">{error}</p>
-            <button
-              onClick={loadGoals}
-              className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
-            >
-              Retry
-            </button>
-          </div>
-        )}
 
         {/* Filter goals based on selected timeframe */}
         {(() => {
@@ -549,7 +537,7 @@ const GoalTracker: React.FC = () => {
           return (
             <>
               {/* Empty State */}
-              {!isLoading && !error && goals.length === 0 && (
+              {!isLoading && goals.length === 0 && (
                 <div className="text-center py-12">
                   <p className="text-gray-400 mb-2">
                     No {selectedTimeframe === '2_week' ? '2-week' : 'long-term'} goals yet.
@@ -561,7 +549,7 @@ const GoalTracker: React.FC = () => {
               )}
 
               {/* Goals List */}
-              {!isLoading && !error && goals.length > 0 && (
+              {!isLoading && goals.length > 0 && (
                 <div className="max-h-96 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
                   {goals
                     .sort((a, b) => {
