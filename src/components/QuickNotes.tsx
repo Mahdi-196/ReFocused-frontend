@@ -140,11 +140,6 @@ export default function QuickNotes() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
         <h3 className="text-xl font-semibold text-white">Quick Notes & Todo</h3>
         <div className="flex gap-2 items-center">
-          {saveSuccess !== null && (
-            <span className={`text-sm ${saveSuccess ? 'text-green-400' : 'text-red-400'}`}>
-              {saveSuccess ? 'Saved successfully!' : 'Save failed.'}
-            </span>
-          )}
           <button
             onClick={clearAllData}
             className="px-3 py-1 border rounded bg-red-50 text-red-600 hover:bg-red-100"

@@ -270,6 +270,7 @@ ${results.join('\n\n')}
     }
   };
 
+  // === DEVELOPMENT ONLY - Hide in production ===
   if (process.env.NEXT_PUBLIC_APP_ENV !== 'development') {
     return null;
   }

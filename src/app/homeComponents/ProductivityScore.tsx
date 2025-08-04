@@ -91,17 +91,33 @@ const ProductivityScore = () => {
   }
 
   if (error) {
+    // Show default streak component with 0 values instead of error
     return (
       <div className="lg:col-span-3">
         <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center justify-between mb-6">
             <span className="text-xl font-semibold text-white flex items-center gap-2">
               <HiFire className="w-5 h-5 text-orange-400" />
               Daily Streak
             </span>
           </div>
-          <div className="text-center text-red-400">
-            <p className="text-sm">{error}</p>
+          
+          <div className="flex flex-col items-center">
+            <StreakCircularProgress value={0} maxValue={30} />
+            
+            <div className="text-center mb-4">
+              <p className="text-sm text-gray-300">
+                Best: <span className="text-orange-400 font-semibold">0</span> days
+              </p>
+            </div>
+            
+            <button 
+              onClick={handleCheckin}
+              disabled={isCheckinLoading}
+              className="bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isCheckinLoading ? 'Checking in...' : 'Check In to Maintain Streak'}
+            </button>
           </div>
         </div>
       </div>

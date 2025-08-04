@@ -29,8 +29,7 @@ const Pomodoro: React.FC = () => {
 
   const [autoStartBreaks, setAutoStartBreaks] = useState<boolean>(false);
   const [autoStartPomodoros, setAutoStartPomodoros] = useState<boolean>(false);
-  const [soundOn, setSoundOn] = useState<boolean>(false);
-  const [notificationSound, setNotificationSound] = useState<string>('gentle-chime');
+  const [notificationSound, setNotificationSound] = useState<string>('soft-bell');
   
   // === Temporary settings state (only applied when saved) ===
   const [tempPomodoroTime, setTempPomodoroTime] = useState<number>(25);
@@ -39,8 +38,7 @@ const Pomodoro: React.FC = () => {
   const [tempLongBreakInterval, setTempLongBreakInterval] = useState<number>(3);
   const [tempAutoStartBreaks, setTempAutoStartBreaks] = useState<boolean>(false);
   const [tempAutoStartPomodoros, setTempAutoStartPomodoros] = useState<boolean>(false);
-  const [tempSoundOn, setTempSoundOn] = useState<boolean>(false);
-  const [tempNotificationSound, setTempNotificationSound] = useState<string>('gentle-chime');
+  const [tempNotificationSound, setTempNotificationSound] = useState<string>('soft-bell');
 
   // === Timer Logic ===
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -52,50 +50,197 @@ const Pomodoro: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [isClient, setIsClient] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  
+  // === Session Tracking State ===
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [lastSessionEndTime, setLastSessionEndTime] = useState<number>(0);
+  const [sessionMinimumDuration, setSessionMinimumDuration] = useState<number>(0.8); // 80% of session duration
+  const [sessionsThisHour, setSessionsThisHour] = useState<number>(0);
+  const [hourlySessionLimit, setHourlySessionLimit] = useState<number>(12); // Max 12 sessions per hour
+  const [isInCooldown, setIsInCooldown] = useState<boolean>(false);
 
-  // === COMPLETE SESSION HELPER - Defined immediately after state to avoid reference errors ===
-  const completeSession = async (autoStart: boolean): Promise<void> => {
-    // Play notification sound if enabled
-    if (soundOn) {
-      audioService.playNotificationSound(notificationSound);
+  // === SESSION VALIDATION HELPERS ===
+  const isValidSession = (): boolean => {
+    if (!sessionStartTime) return false;
+    
+    const sessionDuration = Date.now() - sessionStartTime;
+    const expectedDuration = (mode === "pomodoro" ? pomodoroTime : 
+                             mode === "short" ? shortBreakTime : longBreakTime) * 60 * 1000;
+    const requiredDuration = expectedDuration * sessionMinimumDuration;
+    
+    // Check if session ran for minimum required duration
+    const isLongEnough = sessionDuration >= requiredDuration;
+    
+    // Check cooldown period (3 seconds between valid sessions)
+    const timeSinceLastSession = Date.now() - lastSessionEndTime;
+    const hasCooldownPassed = timeSinceLastSession >= 3000;
+    
+    // Check hourly rate limiting (only for pomodoro sessions)
+    const isWithinHourlyLimit = mode !== "pomodoro" || sessionsThisHour < hourlySessionLimit;
+    
+    // === DEVELOPMENT ONLY - Log validation details for debugging ===
+    if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+      if (!isLongEnough) {
+        console.log('⚠️ [VALIDATION] Session too short:', { sessionDuration, requiredDuration });
+      }
+      if (!hasCooldownPassed) {
+        console.log('⚠️ [VALIDATION] Cooldown not passed:', { timeSinceLastSession });
+      }
+      if (!isWithinHourlyLimit) {
+        console.log('⚠️ [VALIDATION] Hourly limit exceeded:', { sessionsThisHour, hourlySessionLimit });
+      }
     }
+    
+    return isLongEnough && hasCooldownPassed && isWithinHourlyLimit;
+  };
 
-    if (mode === "pomodoro") {
-      // Track completed focus session
-      const completedTime = pomodoroTime; // Already in minutes, no conversion needed
-      try {
-        console.log('🎯 [POMODORO] Session completed! Focus time:', completedTime, 'minutes');
-        
-        // Record the focus time (original duration, not time left)
-        await addFocusTime(completedTime);
-        
-        // Increment the session counter
-        await incrementSessions();
-        
-        console.log('✅ [POMODORO] Statistics updated successfully');
-      } catch (error) {
-        console.error('Failed to record session statistics:', error);
+  // Reset hourly session counter every hour
+  useEffect(() => {
+    const resetHourlyCounter = () => {
+      setSessionsThisHour(0);
+      // === DEVELOPMENT ONLY - Debug logging ===
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('🔄 [RATE_LIMIT] Hourly session counter reset');
+      }
+    };
+
+    // Reset at the start of each hour
+    const now = new Date();
+    const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0, 0);
+    const timeUntilNextHour = nextHour.getTime() - now.getTime();
+    
+    const timeout = setTimeout(() => {
+      resetHourlyCounter();
+      // Set up interval for subsequent hours
+      const interval = setInterval(resetHourlyCounter, 60 * 60 * 1000);
+      return () => clearInterval(interval);
+    }, timeUntilNextHour);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // === SESSION COMPLETION GUARD ===
+  const sessionCompletionInProgress = useRef<boolean>(false);
+  
+  // === NATURAL SESSION COMPLETION - When timer reaches 0 ===
+  const completeNaturalSession = async (autoStart: boolean): Promise<void> => {
+    // Prevent duplicate calls
+    if (sessionCompletionInProgress.current) {
+      // === DEVELOPMENT ONLY - Debug logging ===
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('⚠️ [TIMER] Session completion already in progress, ignoring duplicate call');
+      }
+      return;
+    }
+    
+    sessionCompletionInProgress.current = true;
+    // === DEVELOPMENT ONLY - Debug logging ===
+    if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+      console.log('🎯 [TIMER] Natural session completion detected');
+    }
+    
+    try {
+      // Play notification sound for natural completion
+      audioService.playNotificationSound(notificationSound).catch(error => {
+        console.error('Failed to play notification sound:', error);
+      });
+
+      if (mode === "pomodoro" && isValidSession()) {
+        // Track completed focus session only for valid natural completions
+        const completedTime = pomodoroTime;
+        try {
+          // === DEVELOPMENT ONLY - Debug logging ===
+          if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+            console.log('✅ [POMODORO] Valid session completed! Focus time:', completedTime, 'minutes');
+          }
+          
+          // Record the focus time and increment sessions
+          await addFocusTime(completedTime);
+          await incrementSessions();
+          
+          // Update last session end time and increment hourly counter
+          setLastSessionEndTime(Date.now());
+          setSessionsThisHour(prev => prev + 1);
+          
+          // Start cooldown period
+          setIsInCooldown(true);
+          setTimeout(() => {
+            setIsInCooldown(false);
+            // === DEVELOPMENT ONLY - Debug logging ===
+            if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+              console.log('✅ [COOLDOWN] Cooldown period ended');
+            }
+          }, 3000); // 3 second cooldown
+          
+          // === DEVELOPMENT ONLY - Debug logging ===
+          if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+            console.log('📊 [STATISTICS] Updated successfully');
+          }
+        } catch (error) {
+          console.error('❌ [ERROR] Failed to record session statistics:', error);
+        }
+      } else if (mode === "pomodoro") {
+        // === DEVELOPMENT ONLY - Debug logging ===
+        if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+          console.log('⚠️ [POMODORO] Session invalid - not counted in statistics');
+        }
       }
 
+      // Clear session tracking
+      setSessionStartTime(null);
+
+      // Handle mode transitions
+      if (mode === "pomodoro") {
+        setRounds((prev: number) => {
+          const newRounds = prev + 1;
+          const nextMode: TimerMode = newRounds % longBreakInterval === 0 ? "long" : "short";
+          setMode(nextMode);
+          setIsRunning(autoStart ? autoStartBreaks : false);
+          return newRounds;
+        });
+      } else {
+        setMode("pomodoro");
+        setIsRunning(autoStart ? autoStartPomodoros : false);
+      }
+    } finally {
+      // Always reset the guard after completion
+      sessionCompletionInProgress.current = false;
+    }
+  };
+
+  // === MANUAL SESSION COMPLETION - When manually skipped/reset ===
+  const completeManualSession = (): void => {
+    // === DEVELOPMENT ONLY - Debug logging ===
+    if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+      console.log('🔄 [TIMER] Manual session completion (skip/reset) - no statistics recorded');
+    }
+    
+    // NO notification sound for manual completion
+    // NO statistics recording
+    
+    // Clear session tracking
+    setSessionStartTime(null);
+
+    // Handle mode transitions without auto-start
+    if (mode === "pomodoro") {
       setRounds((prev: number) => {
         const newRounds = prev + 1;
         const nextMode: TimerMode = newRounds % longBreakInterval === 0 ? "long" : "short";
         setMode(nextMode);
-        // Only auto start if the session naturally ended (autoStart true)
-        setIsRunning(autoStart ? autoStartBreaks : false);
+        setIsRunning(false); // Never auto-start after manual completion
         return newRounds;
       });
     } else {
       setMode("pomodoro");
-      setIsRunning(autoStart ? autoStartPomodoros : false);
+      setIsRunning(false);
     }
   };
 
-  // Use ref to store the current completeSession function
-  const completeSessionRef = useRef<((autoStart: boolean) => Promise<void>) | null>(null);
+  // Use ref to store the current completion functions
+  const completeNaturalSessionRef = useRef<((autoStart: boolean) => Promise<void>) | null>(null);
 
-  // Update ref whenever component renders - simpler approach
-  completeSessionRef.current = completeSession;
+  // Update ref whenever component renders
+  completeNaturalSessionRef.current = completeNaturalSession;
 
   // Initialize client-side rendering flag
   useEffect(() => {
@@ -153,12 +298,6 @@ const Pomodoro: React.FC = () => {
           setAutoStartPomodoros(value);
           setTempAutoStartPomodoros(value);
         }
-        const storedSoundOn = await Promise.resolve(localStorage.getItem("soundOn"));
-        if (storedSoundOn) {
-          const value = storedSoundOn === "true";
-          setSoundOn(value);
-          setTempSoundOn(value);
-        }
         const storedNotificationSound = await Promise.resolve(localStorage.getItem("notificationSound"));
         if (storedNotificationSound) {
           setNotificationSound(storedNotificationSound);
@@ -199,6 +338,15 @@ const Pomodoro: React.FC = () => {
   useEffect(() => {
     if (!isRunning) return;
     
+    // Track session start time when timer begins
+    if (!sessionStartTime) {
+      setSessionStartTime(Date.now());
+      // === DEVELOPMENT ONLY - Debug logging ===
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('▶️ [TIMER] Session started:', new Date().toLocaleTimeString());
+      }
+    }
+    
     // Store the exact end time when timer starts
     const timerEndTime = Date.now() + timeLeft * 1000;
     
@@ -214,9 +362,9 @@ const Pomodoro: React.FC = () => {
         const newTimeLeft = Math.max((timerEndTime - Date.now()) / 1000, 0);
         setTimeLeft(newTimeLeft);
         
-        // If time is up while user was away
-        if (newTimeLeft <= 0) {
-          completeSession(true);
+        // If time is up while user was away - natural completion
+        if (newTimeLeft <= 0 && completeNaturalSessionRef.current) {
+          completeNaturalSessionRef.current(true);
         }
       }
     };
@@ -233,7 +381,10 @@ const Pomodoro: React.FC = () => {
         
         if (newTimeLeft <= 0.1) {
           clearInterval(interval);
-          completeSession(true);
+          // Natural completion - timer reached 0
+          if (completeNaturalSessionRef.current) {
+            completeNaturalSessionRef.current(true);
+          }
         }
       }
     }, 100);
@@ -242,7 +393,7 @@ const Pomodoro: React.FC = () => {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [isRunning, timeLeft, isClient]);
+  }, [isRunning, timeLeft, isClient, sessionStartTime]);
 
   // === PERSIST STATE ON CHANGES ===
   useEffect(() => {
@@ -277,7 +428,7 @@ const Pomodoro: React.FC = () => {
     setTempLongBreakInterval(longBreakInterval);
     setTempAutoStartBreaks(autoStartBreaks);
     setTempAutoStartPomodoros(autoStartPomodoros);
-    setTempSoundOn(soundOn);
+    setTempNotificationSound(notificationSound);
     setShowSettings(true);
   };
 
@@ -294,7 +445,6 @@ const Pomodoro: React.FC = () => {
     setLongBreakInterval(tempLongBreakInterval);
     setAutoStartBreaks(tempAutoStartBreaks);
     setAutoStartPomodoros(tempAutoStartPomodoros);
-    setSoundOn(tempSoundOn);
     setNotificationSound(tempNotificationSound);
     
     // Save to localStorage
@@ -306,7 +456,6 @@ const Pomodoro: React.FC = () => {
         localStorage.setItem("longBreakInterval", tempLongBreakInterval.toString());
         localStorage.setItem("autoStartBreaks", tempAutoStartBreaks.toString());
         localStorage.setItem("autoStartPomodoros", tempAutoStartPomodoros.toString());
-        localStorage.setItem("soundOn", tempSoundOn.toString());
         localStorage.setItem("notificationSound", tempNotificationSound);
       } catch (error) {
         console.error("Failed to save pomodoro settings to localStorage:", error);
@@ -317,7 +466,12 @@ const Pomodoro: React.FC = () => {
   };
 
   function handleSkip() {
-    completeSession(false);
+    // === DEVELOPMENT ONLY - Debug logging ===
+    if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+      console.log('⏭️ [TIMER] Manual skip triggered');
+    }
+    setIsRunning(false);
+    completeManualSession();
   }
 
   // === FORMAT TIME HELPER ===
@@ -329,15 +483,27 @@ const Pomodoro: React.FC = () => {
   }
 
   function handleReset() {
+    // === DEVELOPMENT ONLY - Debug logging ===
+    if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+      console.log('🔄 [TIMER] Manual reset triggered');
+    }
+    setIsRunning(false);
+    setSessionStartTime(null); // Clear session tracking
+    
+    // Reset timer to full duration
     if (mode === "pomodoro") setTimeLeft(pomodoroTime * 60);
     else if (mode === "short") setTimeLeft(shortBreakTime * 60);
     else setTimeLeft(longBreakTime * 60);
-    setIsRunning(false);
   }
 
   function changeMode(newMode: "pomodoro" | "short" | "long") {
+    // === DEVELOPMENT ONLY - Debug logging ===
+    if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+      console.log('🔄 [TIMER] Mode changed to:', newMode);
+    }
     setMode(newMode);
     setIsRunning(false);
+    setSessionStartTime(null); // Clear session tracking on mode change
   }
 
   // === DOT INDICATOR ADJUSTMENT ===
@@ -369,204 +535,270 @@ const Pomodoro: React.FC = () => {
   }
 
   return (
-    <div
-      className="w-full md:max-w-5xl mx-auto rounded-2xl shadow-md p-6 relative"
-      style={{ 
-        minHeight: "450px", 
-        background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" 
-      }}
-    >
+    <>
+    <div className="w-full max-w-7xl mx-auto bg-gradient-to-br from-gray-800/90 to-slate-800/90 backdrop-blur-lg border border-gray-700/60 rounded-2xl shadow-2xl p-8 relative flex flex-col min-h-[500px]">
       {/* Settings Icon (top-right) */}
       <div className="absolute top-4 right-4">
         <UserRoundCog
-          className="w-6 h-6 text-gray-600 cursor-pointer"
+          className="w-6 h-6 text-gray-400 hover:text-blue-400 cursor-pointer transition-colors duration-200"
           onClick={openSettings}
         />
       </div>
 
       {/* Title */}
-      <h1 className="text-2xl font-bold text-center mb-6 text-white">
-        Pomodoro Timer
-      </h1>
+      <div className="text-center mb-4">
+        <h1 className="text-2xl font-bold text-white mb-1">Pomodoro Timer</h1>
+        <p className="text-gray-400 text-xs">Stay focused and productive with timed work sessions</p>
+      </div>
 
-      {/* Timer Display Section with Clock Animation */}
-      <div className="flex flex-col items-center justify-center">
-        <div className="relative w-56 h-56 flex items-center justify-center mb-2">
-          <svg
-            width="100%"
-            height="100%"
-            viewBox="0 0 100 100"
-            className="absolute inset-0"
-          >
-            {/* Background Circle (light gray) with thinner line */}
-            <circle
-              cx="50"
-              cy="50"
-              r="45"
-              fill="none"
-              stroke="#e5e7eb"
-              strokeWidth="4"
-            />
-            {/* Progress Circle (blue) with thinner line */}
-            <circle
-              cx="50"
-              cy="50"
-              r="45"
-              fill="none"
-              stroke="#3B82F6"
-              strokeWidth="4"
-              strokeDasharray={circumference}
-              strokeDashoffset={dashOffset}
-              style={{
-                transition: "stroke-dashoffset 0.3s linear",
-                transform: "rotate(-90deg)",
-                transformOrigin: "50% 50%",
-              }}
-            />
-          </svg>
-          <div className="z-10 text-center">
-            <span className="text-5xl font-semibold text-white">
-              {formatTime(timeLeft)}
-            </span>
-            <div className="text-base text-gray-300">
-              {mode === "pomodoro"
-                ? "Focus"
-                : mode === "short"
-                ? "Short Break"
-                : "Long Break"}
-            </div>
-          </div>
-        </div>
-
-        {/* Dot Indicator for Sessions */}
-        <div className="flex space-x-2 my-3">
-          {Array.from({ length: longBreakInterval }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-3 h-3 rounded-full ${
-                i < sessionProgressValue ? "bg-blue-500" : "bg-gray-300"
+      {/* Mode Buttons - Moved to Top */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-gray-700/30 rounded-lg p-2 backdrop-blur-sm border border-gray-600/30">
+          <div className="flex space-x-2">
+            <button
+              onClick={() => changeMode("pomodoro")}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                mode === "pomodoro"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-gray-300 hover:text-white hover:bg-gray-600/50"
               }`}
-            />
-          ))}
-        </div>
-
-        {/* Control Buttons */}
-        <div className="flex items-center justify-center space-x-6 mt-2 mb-4">
-          <button
-            onClick={handleReset}
-            className="p-2 rounded-full hover:bg-gray-100 text-gray-600"
-          >
-            <RotateCw className="w-5 h-5" />
-          </button>
-          {isRunning ? (
-            <button
-              onClick={() => setIsRunning(false)}
-              className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700"
             >
-              <Pause className="w-6 h-6" />
+              Pomodoro
             </button>
-          ) : (
             <button
-              onClick={() => {
-                setIsRunning(true);
-              }}
-              className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700"
+              onClick={() => changeMode("short")}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                mode === "short"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-gray-300 hover:text-white hover:bg-gray-600/50"
+              }`}
             >
-              <Play className="w-6 h-6" />
+              Short Break
             </button>
-          )}
-          <button
-            onClick={handleSkip}
-            className="p-2 rounded-full hover:bg-gray-100 text-gray-600"
-          >
-            <ChevronsRight className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Mode Buttons */}
-        <div className="flex space-x-2 my-2">
-          <button
-            onClick={() => changeMode("pomodoro")}
-            className={`px-3 py-1 rounded ${
-              mode === "pomodoro"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            Pomodoro
-          </button>
-          <button
-            onClick={() => changeMode("short")}
-            className={`px-3 py-1 rounded ${
-              mode === "short"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            Short Break
-          </button>
-          <button
-            onClick={() => changeMode("long")}
-            className={`px-3 py-1 rounded ${
-              mode === "long"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            Long Break
-          </button>
+            <button
+              onClick={() => changeMode("long")}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                mode === "long"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                  : "text-gray-300 hover:text-white hover:bg-gray-600/50"
+              }`}
+            >
+              Long Break
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Settings Modal (Small Centered Modal) */}
-      {showSettings && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div
-            className="absolute inset-0 bg-black opacity-30"
-            onClick={closeSettings}
-          ></div>
-          <div className="bg-gray-800 text-white rounded-lg shadow-lg p-6 z-50 w-80"
-               style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Settings</h2>
-              <button onClick={closeSettings}>
-                <X className="w-5 h-5 text-gray-300" />
-              </button>
+      {/* Main Timer Section - Centered */}
+      <div className="flex-1 flex items-center justify-center py-4">
+        <div className="flex flex-col items-center space-y-6">
+          {/* Timer Circle */}
+          <div className="relative w-52 h-52 flex items-center justify-center">
+            <svg
+              width="100%"
+              height="100%"
+              viewBox="0 0 100 100"
+              className="absolute inset-0 drop-shadow-lg"
+            >
+              {/* Background Circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#374151"
+                strokeWidth="3"
+              />
+              {/* Progress Circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#3B82F6"
+                strokeWidth="3"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                style={{
+                  transition: "stroke-dashoffset 0.3s linear",
+                  transform: "rotate(-90deg)",
+                  transformOrigin: "50% 50%",
+                  filter: "drop-shadow(0 0 6px rgba(59, 130, 246, 0.5))"
+                }}
+              />
+            </svg>
+            <div className="z-10 text-center">
+              <span className="text-5xl font-bold text-white drop-shadow-lg">
+                {formatTime(timeLeft)}
+              </span>
+              <div className="text-base text-blue-300 font-medium mt-1">
+                {mode === "pomodoro"
+                  ? "Focus Time"
+                  : mode === "short"
+                  ? "Short Break"
+                  : "Long Break"}
+              </div>
             </div>
-            {/* Work Duration */}
-            <div className="mb-5">
-              <label className="block font-semibold mb-1 text-gray-300">
-                Work Duration: {tempPomodoroTime} min
+          </div>
+
+          {/* Timer Controls */}
+          <div className="flex items-center justify-center space-x-3">
+            <button
+              onClick={handleReset}
+              className="p-2.5 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 hover:text-white border border-gray-600/50 hover:border-gray-500/50 transition-all duration-200 backdrop-blur-sm"
+              title="Reset Timer"
+            >
+              <RotateCw className="w-4 h-4" />
+            </button>
+            {isRunning ? (
+              <button
+                onClick={() => setIsRunning(false)}
+                className="p-3 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 border border-red-500/50 hover:border-red-400/50 transition-all duration-200 backdrop-blur-sm shadow-lg"
+                title="Pause Timer"
+              >
+                <Pause className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (!isInCooldown) {
+                    setIsRunning(true);
+                  }
+                }}
+                disabled={isInCooldown}
+                className={`p-3 rounded-lg transition-all duration-200 backdrop-blur-sm shadow-lg ${
+                  isInCooldown 
+                    ? "bg-gray-600/20 text-gray-500 border border-gray-600/50 cursor-not-allowed" 
+                    : "bg-green-600/20 hover:bg-green-600/30 text-green-400 hover:text-green-300 border border-green-500/50 hover:border-green-400/50"
+                }`}
+                title={isInCooldown ? "Wait for cooldown to end" : "Start Timer"}
+              >
+                <Play className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              onClick={handleSkip}
+              className="p-2.5 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 hover:text-white border border-gray-600/50 hover:border-gray-500/50 transition-all duration-200 backdrop-blur-sm"
+              title="Skip Session"
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section - Session Progress */}
+      <div className="mt-4 flex justify-center">
+        <div className="bg-gray-700/50 rounded-lg px-6 py-2 backdrop-blur-sm border border-gray-600/30">
+          <div className="text-center mb-2">
+            <span className="text-xs font-medium text-gray-300">Session Progress</span>
+          </div>
+          <div className="flex space-x-3 justify-center">
+            {Array.from({ length: longBreakInterval }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                  i < sessionProgressValue 
+                    ? "bg-blue-500 border-blue-400 shadow-lg shadow-blue-500/50" 
+                    : "bg-transparent border-gray-500 hover:border-gray-400"
+                }`}
+              />
+            ))}
+          </div>
+          <div className="text-center mt-1">
+            <span className="text-xs text-gray-400">
+              {sessionProgressValue} of {longBreakInterval} completed
+            </span>
+          </div>
+        </div>
+      </div>
+
+      
+      {/* Custom Slider Styles */}
+      <style jsx>{`
+        .slider-blue::-webkit-slider-thumb {
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #3B82F6;
+          cursor: pointer;
+          border: 2px solid #1E40AF;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+          transition: all 0.2s ease;
+        }
+        .slider-blue::-webkit-slider-thumb:hover {
+          background: #2563EB;
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+        }
+        .slider-blue::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #3B82F6;
+          cursor: pointer;
+          border: 2px solid #1E40AF;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+          transition: all 0.2s ease;
+        }
+        .slider-blue::-moz-range-thumb:hover {
+          background: #2563EB;
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+        }
+        .slider-blue::-moz-range-track {
+          background: transparent;
+        }
+      `}</style>
+    </div>
+
+    {/* Settings Modal - Outside component container for viewport centering */}
+    {showSettings && (
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50 p-8" onClick={closeSettings}>
+        <div className="bg-gray-800 text-white rounded-lg p-6 w-[570px] max-w-full max-h-[87vh] overflow-y-auto shadow-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white">Timer Settings</h2>
+            <button 
+              onClick={closeSettings}
+              className="p-1.5 rounded-md bg-gray-700/50 hover:bg-gray-600/50 transition-colors duration-200"
+            >
+              <X className="w-4 h-4 text-gray-300" />
+            </button>
+          </div>
+          {/* Timer Durations */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-gray-700/30 rounded-md p-2.5 border border-gray-600/30">
+              <label className="block text-xs font-medium mb-1.5 text-white">
+                Work Duration: <span className="text-blue-400">{tempPomodoroTime} min</span>
               </label>
               <input
                 type="range"
                 min={1}
-                max={60}
+                max={90}
                 value={tempPomodoroTime}
                 onChange={(e) => setTempPomodoroTime(parseInt(e.target.value, 10))}
-                className="w-full accent-blue-500"
+                className="w-full h-1 bg-gray-600 rounded-sm appearance-none cursor-pointer slider-blue"
               />
             </div>
-            {/* Short Break */}
-            <div className="mb-5">
-              <label className="block font-semibold mb-1 text-gray-300">
-                Short Break: {tempShortBreakTime} min
+            
+            <div className="bg-gray-700/30 rounded-md p-2.5 border border-gray-600/30">
+              <label className="block text-xs font-medium mb-1.5 text-white">
+                Short Break: <span className="text-blue-400">{tempShortBreakTime} min</span>
               </label>
               <input
                 type="range"
                 min={1}
                 max={30}
                 value={tempShortBreakTime}
-                onChange={(e) =>
-                  setTempShortBreakTime(parseInt(e.target.value, 10))
-                }
-                className="w-full accent-blue-500"
+                onChange={(e) => setTempShortBreakTime(parseInt(e.target.value, 10))}
+                className="w-full h-1 bg-gray-600 rounded-sm appearance-none cursor-pointer slider-blue"
               />
             </div>
-            {/* Long Break */}
-            <div className="mb-5">
-              <label className="block font-semibold mb-1 text-gray-300">
-                Long Break: {tempLongBreakTime} min
+            
+            <div className="bg-gray-700/30 rounded-md p-2.5 border border-gray-600/30">
+              <label className="block text-xs font-medium mb-1.5 text-white">
+                Long Break: <span className="text-blue-400">{tempLongBreakTime} min</span>
               </label>
               <input
                 type="range"
@@ -574,93 +806,115 @@ const Pomodoro: React.FC = () => {
                 max={60}
                 value={tempLongBreakTime}
                 onChange={(e) => setTempLongBreakTime(parseInt(e.target.value, 10))}
-                className="w-full accent-blue-500"
+                className="w-full h-1 bg-gray-600 rounded-sm appearance-none cursor-pointer slider-blue"
               />
             </div>
-            {/* Sessions Before Long Break */}
-            <div className="mb-5">
-              <label className="block font-semibold mb-1 text-gray-300">
-                Sessions Before Long Break: {tempLongBreakInterval}
+            
+            <div className="bg-gray-700/30 rounded-md p-2.5 border border-gray-600/30">
+              <label className="block text-xs font-medium mb-1.5 text-white">
+                Sessions Before Long Break: <span className="text-blue-400">{tempLongBreakInterval}</span>
               </label>
               <input
                 type="range"
                 min={1}
                 max={10}
                 value={tempLongBreakInterval}
-                onChange={(e) =>
-                  setTempLongBreakInterval(parseInt(e.target.value, 10))
-                }
-                className="w-full accent-blue-500"
+                onChange={(e) => setTempLongBreakInterval(parseInt(e.target.value, 10))}
+                className="w-full h-1 bg-gray-600 rounded-sm appearance-none cursor-pointer slider-blue"
               />
             </div>
-            {/* Toggles */}
-            <div className="flex items-center justify-between mb-4 text-gray-300">
-              <span>Auto Start Breaks</span>
-              <input
-                type="checkbox"
-                checked={tempAutoStartBreaks}
-                onChange={(e) => setTempAutoStartBreaks(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-gray-700"
-              />
+          </div>
+          {/* Preferences */}
+          <div className="mt-4">
+            <h3 className="text-base font-semibold text-white mb-3">Preferences</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white font-medium">Auto Start Breaks</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tempAutoStartBreaks}
+                      onChange={(e) => setTempAutoStartBreaks(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Automatically start break sessions</p>
+              </div>
+              
+              <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white font-medium">Auto Start Work</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tempAutoStartPomodoros}
+                      onChange={(e) => setTempAutoStartPomodoros(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Automatically start work sessions</p>
+              </div>
             </div>
-            <div className="flex items-center justify-between mb-4 text-gray-300">
-              <span>Auto Start Work</span>
-              <input
-                type="checkbox"
-                checked={tempAutoStartPomodoros}
-                onChange={(e) => setTempAutoStartPomodoros(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-gray-700"
-              />
-            </div>
-            <div className="flex items-center justify-between mb-4 text-gray-300">
-              <span>Sound Notifications</span>
-              <input
-                type="checkbox"
-                checked={tempSoundOn}
-                onChange={(e) => setTempSoundOn(e.target.checked)}
-                className="form-checkbox h-5 w-5 text-blue-500 rounded border-gray-600 bg-gray-700"
-              />
-            </div>
-            {/* Notification Sound Selection */}
-            {tempSoundOn && (
-              <div className="mb-6">
-                <label className="block font-semibold mb-2 text-gray-300">
-                  Notification Sound
-                </label>
-                <div className="space-y-2">
-                  {audioService.getAvailableNotificationSounds().map((sound) => (
-                    <label key={sound.id} className="flex items-center text-gray-300 cursor-pointer">
+            
+          </div>
+          
+          {/* Notification Sound Selection - Always shown */}
+          <div className="mt-4 bg-gray-700/30 rounded-lg p-3 border border-gray-600/30">
+            <h4 className="block text-base font-semibold mb-3 text-white">
+              Notification Sound
+            </h4>
+            <p className="text-xs text-gray-400 mb-3">Choose the sound that plays when sessions complete</p>
+            <div className="space-y-2">
+              {audioService.getAvailableNotificationSounds().map((sound) => (
+                <div key={sound.id} className="bg-gray-600/30 rounded-md p-2.5 border border-gray-500/30 hover:bg-gray-600/40 transition-all duration-200">
+                  <label className="flex items-center text-white cursor-pointer">
+                    <div className="relative">
                       <input
                         type="radio"
                         name="notificationSound"
                         value={sound.id}
                         checked={tempNotificationSound === sound.id}
-                        onChange={() => setTempNotificationSound(sound.id)}
-                        className="form-radio h-4 w-4 text-blue-500 border-gray-600 bg-gray-700 mr-3"
+                        onChange={() => {
+                          setTempNotificationSound(sound.id);
+                          audioService.playNotificationSound(sound.id).catch(error => {
+                            console.error('Failed to play notification sound preview:', error);
+                          });
+                        }}
+                        className="sr-only peer"
                       />
-                      <span className="flex-1">{sound.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => audioService.playNotificationSound(sound.id)}
-                        className="ml-2 px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 rounded transition-colors"
-                      >
-                        Test
-                      </button>
-                    </label>
-                  ))}
+                      <div className="w-4 h-4 bg-gray-600 border-2 border-gray-500 rounded-full peer-checked:bg-blue-600 peer-checked:border-blue-500 transition-all duration-200"></div>
+                      <div className="absolute inset-0 w-4 h-4 rounded-full peer-checked:after:content-[''] peer-checked:after:absolute peer-checked:after:top-1/2 peer-checked:after:left-1/2 peer-checked:after:transform peer-checked:after:-translate-x-1/2 peer-checked:after:-translate-y-1/2 peer-checked:after:w-1.5 peer-checked:after:h-1.5 peer-checked:after:bg-white peer-checked:after:rounded-full"></div>
+                    </div>
+                    <span className="ml-2.5 text-sm font-medium">{sound.name}</span>
+                  </label>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+          </div>
+          <div className="mt-6 flex gap-3">
+            <button
+              onClick={closeSettings}
+              className="flex-1 px-4 py-2 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 hover:text-white border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200 text-sm font-medium"
+            >
+              Cancel
+            </button>
             <button
               onClick={saveSettings}
-              className="block w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
             >
               Save Settings
             </button>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    )}
+    </>
   );
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Lightbulb, Heart, BarChart3, Plus, Loader2, AlertCircle, Edit } from "lucide-react";
+import { Lightbulb, Heart, Plus, Loader2, Edit } from "lucide-react";
 import type { GratitudeEntry } from "../types";
 import { WRITING_PROMPTS } from "../utils";
 
@@ -9,26 +9,22 @@ interface SidebarProps {
   gratitudes: GratitudeEntry[];
   onAddGratitude: (text: string) => Promise<boolean>;
   onEditGratitude?: (id: number, text: string) => Promise<boolean>;
-  totalEntries: number;
-  totalGratitudes: number;
   isLoadingGratitudes?: boolean;
-  gratitudeError?: string | null;
-  onClearGratitudeError?: () => void;
+  selectedCollectionId?: string | null;
+  onCreateEntryWithTitle?: (title: string) => void;
 }
 
 /**
- * Sidebar component containing writing prompts, gratitude, and journal statistics
- * Provides inspiration and tracking features for journaling with backend integration
+ * Sidebar component containing writing prompts and gratitude
+ * Provides inspiration and gratitude tracking features for journaling with backend integration
  */
 export const Sidebar: React.FC<SidebarProps> = ({
   gratitudes,
   onAddGratitude,
   onEditGratitude,
-  totalEntries,
-  totalGratitudes,
   isLoadingGratitudes = false,
-  gratitudeError = null,
-  onClearGratitudeError
+  selectedCollectionId,
+  onCreateEntryWithTitle
 }) => {
   const [isAddingGratitude, setIsAddingGratitude] = React.useState(false);
   const [newGratitude, setNewGratitude] = React.useState("");
@@ -137,6 +133,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [autoSaveTimeout]);
 
+  const handlePromptClick = (prompt: string) => {
+    if (onCreateEntryWithTitle) {
+      onCreateEntryWithTitle(prompt);
+    }
+  };
+
   return (
     <div className="flex-1 xl:max-w-sm space-y-8">
       {/* Writing Prompts Section */}
@@ -152,6 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {WRITING_PROMPTS.map((prompt, index) => (
             <div 
               key={index} 
+              onClick={() => handlePromptClick(prompt)}
               className="text-base text-gray-300 hover:text-white transition-colors cursor-pointer py-3 px-4 rounded-lg hover:bg-gray-700/50 border border-transparent hover:border-gray-600"
             >
               {prompt}
@@ -170,23 +173,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <h2 className="text-xl font-semibold text-white">Gratitude</h2>
         </div>
 
-        {/* Error Display */}
-        {gratitudeError && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-600 rounded-lg">
-            <div className="flex items-center">
-              <AlertCircle className="w-4 h-4 text-red-400 mr-2" />
-              <span className="text-red-200 text-sm">{gratitudeError}</span>
-              {onClearGratitudeError && (
-                <button
-                  onClick={onClearGratitudeError}
-                  className="ml-auto text-red-400 hover:text-red-300"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
 
 
@@ -304,32 +290,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* Journal Stats Section */}
-      <div 
-        className="p-6 rounded-xl shadow-lg border border-gray-600 transition-all duration-300 hover:shadow-xl"
-        style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <BarChart3 className="text-green-400" size={24} />
-          <h2 className="text-xl font-semibold text-white">Journal Stats</h2>
-        </div>
-        <div className="space-y-6">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-green-400 mb-2">15</div>
-            <div className="text-base text-gray-400">Day Streak</div>
-          </div>
-          <div className="flex justify-between items-center">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-white mb-2">{totalEntries}</div>
-              <div className="text-sm text-gray-400">Total Entries</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-white mb-2">{totalGratitudes}</div>
-              <div className="text-sm text-gray-400">Gratitudes</div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }; 

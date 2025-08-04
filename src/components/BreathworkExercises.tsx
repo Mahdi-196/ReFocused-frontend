@@ -239,9 +239,6 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
                 <p className="text-gray-300">Focus on your breath and find inner peace</p>
               </div>
             </div>
-            <button className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 transition-colors text-sm font-medium">
-              ℹ️ Learn More
-            </button>
           </div>
           
           <p className="text-gray-300 leading-relaxed">

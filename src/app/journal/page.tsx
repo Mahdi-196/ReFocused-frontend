@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import PageTransition from '@/components/PageTransition';
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import DropdownMenu from "@/components/DropdownMenu";
@@ -27,6 +28,8 @@ import { useConsistentDate } from "@/hooks/useConsistentDate";
  * Provides a complete journaling experience with collections, entries, and backend integration
  */
 const Journal: React.FC = () => {
+  const router = useRouter();
+  
   // Authentication check and initialization
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -94,12 +97,18 @@ const Journal: React.FC = () => {
   const {
     gratitudes,
     isLoading: gratitudesLoading,
-    error: gratitudesError,
     addGratitude,
     updateGratitude,
-    clearError: clearGratitudeError,
-    totalGratitudes,
   } = gratitudeHook;
+
+  const handleCreateEntryWithTitle = (title: string) => {
+    const collectionId = selectedCollectionId || (collections.find((c) => c.name === "My Notes") || collections[0])?.id.toString();
+    if (!collectionId) {
+      alert("Please create a collection first");
+      return;
+    }
+    router.push(`/journal/entry?collection=${collectionId}&title=${encodeURIComponent(title)}`);
+  };
 
   // Show loading state while initial data loads or time service is not ready
   if ((collectionsLoading && collections.length === 0) || !dateReady) {
@@ -157,26 +166,6 @@ const Journal: React.FC = () => {
               <h1 className="text-4xl font-bold text-white mb-3">Journal</h1>
               <p className="text-lg text-gray-300">Record your thoughts, experiences, and insights</p>
               
-              {/* Error Banner */}
-              {(collectionsError || gratitudesError) && (
-                <div className="mt-4 p-4 bg-yellow-900/50 border border-yellow-600 rounded-lg max-w-2xl mx-auto">
-                  <div className="flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-yellow-400 mr-2" />
-                    <span className="text-yellow-200">
-                      Some features may be limited due to connection issues
-                    </span>
-                    <button
-                      onClick={() => {
-                        handleClearError();
-                        clearGratitudeError();
-                      }}
-                      className="ml-3 text-yellow-400 hover:text-yellow-300"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           
           {/* Main Layout - Three Columns */}
@@ -256,11 +245,9 @@ const Journal: React.FC = () => {
               gratitudes={gratitudes}
               onAddGratitude={addGratitude}
               onEditGratitude={updateGratitude}
-              totalEntries={totalEntries}
-              totalGratitudes={totalGratitudes}
               isLoadingGratitudes={gratitudesLoading}
-              gratitudeError={gratitudesError}
-              onClearGratitudeError={clearGratitudeError}
+              selectedCollectionId={selectedCollectionId}
+              onCreateEntryWithTitle={handleCreateEntryWithTitle}
             />
           </div>
 
@@ -300,8 +287,8 @@ const Journal: React.FC = () => {
             <div
               className="fixed z-[1000]"
               style={{
-                left: `${openDropdown.rect.left}px`,
-                top: `${openDropdown.rect.bottom + window.scrollY + 4}px`,
+                left: `${openDropdown.rect.right + 8}px`, // Position to the right of the button
+                top: `${openDropdown.rect.top}px`, // Align with button vertically
               }}
             >
               <DropdownMenu

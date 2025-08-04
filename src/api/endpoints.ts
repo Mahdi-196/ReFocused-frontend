@@ -11,6 +11,7 @@ export const AUTH = {
   REGISTER: '/auth/register',
   GOOGLE: '/auth/google',
   ME: '/user/me',
+  CHANGE_PASSWORD: '/auth/change-password',
 };
 
 // User endpoints

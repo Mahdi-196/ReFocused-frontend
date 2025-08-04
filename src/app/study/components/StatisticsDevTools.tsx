@@ -30,8 +30,8 @@ export default function StatisticsDevTools({ onRefresh }: StatisticsDevToolsProp
     setTimeInput(currentTime);
   }, []);
 
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development') {
+  // === DEVELOPMENT ONLY - Hide in production ===
+  if (process.env.NEXT_PUBLIC_APP_ENV !== 'development') {
     return null;
   }
 

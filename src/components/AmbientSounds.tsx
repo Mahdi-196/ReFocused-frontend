@@ -189,7 +189,9 @@ export default function AmbientSounds() {
             setDuration(parseInt(storedDuration, 10));
           }
           // Resume audio playback if was playing
-          audioService.playAmbientSound(lastSound.id);
+          audioService.playAmbientSound(lastSound.id).catch(error => {
+            console.error('Failed to resume audio on load:', error);
+          });
         } else {
           // Timer finished while away, handle session completion
           completeSession();
@@ -256,6 +258,14 @@ export default function AmbientSounds() {
     }
   }, [currentSound]);
 
+  // Cleanup audio on component unmount
+  useEffect(() => {
+    return () => {
+      // Stop any playing audio when component unmounts
+      audioService.stopAmbientSound();
+    };
+  }, []);
+
   const handleSoundSelect = (sound: Sound) => {
     if (currentSound?.id === sound.id) {
       if (!isPlaying) {
@@ -274,14 +284,14 @@ export default function AmbientSounds() {
     }
   };
 
-  const startPlaying = (selectedDuration: number | null) => {
+  const startPlaying = async (selectedDuration: number | null) => {
     if (!currentSound) return;
     
     setDuration(selectedDuration);
     setShowDurationPicker(false);
     
     // Start playing the actual audio
-    const success = audioService.playAmbientSound(currentSound.id);
+    const success = await audioService.playAmbientSound(currentSound.id);
     if (!success) {
       console.error('Failed to start audio playback');
       return;

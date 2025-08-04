@@ -97,6 +97,7 @@ function EntryContent() {
   useEffect(() => {
     const collectionId = searchParams.get('collection');
     const entryIdParam = searchParams.get('id');
+    const titleParam = searchParams.get('title');
 
     if (collectionsLoading) return; // Wait for collections to load
 
@@ -107,10 +108,18 @@ function EntryContent() {
       if (entryIdParam) {
         loadEntry(entryIdParam);
       }
+      // If creating a new entry with a title, set the title
+      else if (titleParam) {
+        setTitle(decodeURIComponent(titleParam));
+      }
     } else if (collections.length > 0) {
       const defaultCol = collections.find((c) => c.name === "My Notes") || collections[0];
       if (defaultCol) {
         setSelectedCollectionId(defaultCol.id.toString());
+        // If there's a title parameter and no specific collection, still set the title
+        if (titleParam) {
+          setTitle(decodeURIComponent(titleParam));
+        }
       }
     }
   }, [collections, searchParams, collectionsLoading]);
