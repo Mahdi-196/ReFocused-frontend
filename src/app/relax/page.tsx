@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Activity, Brain, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Activity, Brain, Info, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import PageTransition from '@/components/PageTransition';
 import BreathworkExercises from '@/components/BreathworkExercises';
@@ -44,6 +44,37 @@ export default function RelaxPage() {
   const [activeMode, setActiveMode] = useState<RelaxMode>('breathing');
   const [showMeditationGuide, setShowMeditationGuide] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState([
+    {
+      id: 'books',
+      title: 'Book Recommendations',
+      prompt: "Recommend 3 books about mindfulness, meditation, or personal growth that would help me develop a better meditation practice and reduce daily stress.",
+      icon: Brain,
+      color: 'blue'
+    },
+    {
+      id: 'affirmations',
+      title: 'Daily Affirmations',
+      prompt: "Create 5 personalized daily affirmations that will help me stay calm, focused, and positive throughout my day, especially during stressful moments.",
+      icon: Activity,
+      color: 'purple'
+    },
+    {
+      id: 'meditation',
+      title: 'Meditation Guidance',
+      prompt: "Guide me through a personalized 10-minute meditation session based on my current stress level and what I'm hoping to achieve from today's practice.",
+      icon: Activity,
+      color: 'green'
+    },
+    {
+      id: 'stress',
+      title: 'Stress Relief',
+      prompt: "Suggest 5 quick stress relief techniques I can use during work breaks, including breathing exercises and mindfulness practices under 5 minutes.",
+      icon: Brain,
+      color: 'orange'
+    }
+  ]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Initialize client-side rendering flag
   useEffect(() => {
@@ -98,6 +129,81 @@ export default function RelaxPage() {
     // Navigate to AI page with the message as a URL parameter
     const encodedMessage = encodeURIComponent(message);
     router.push(`/ai?message=${encodedMessage}`);
+  };
+
+  const refreshAISuggestions = async () => {
+    setIsRefreshing(true);
+    
+    try {
+      const response = await fetch('/api/claude/populate-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dataType: 'custom',
+          customPrompt: {
+            "task": "Generate 4 unique AI assistance prompts for a relaxation and mindfulness app.",
+            "instructions": {
+              "tone": "Calming, helpful, and wellness-focused.",
+              "categories": ["Book/Resource Recommendations", "Affirmations/Mantras", "Meditation/Mindfulness Guidance", "Stress Relief/Coping Techniques"],
+              "length_limit": "Each prompt must be 15-25 words maximum, similar to these examples: 'Recommend 3 books about mindfulness that help develop meditation practice and reduce daily stress' or 'Suggest 5 quick stress relief techniques for work breaks under 5 minutes'",
+              "format": "Populate the 'content_payload' array with 4 different assistance prompts. Your response should only be the completed JSON object."
+            },
+            "content_payload": [
+              {
+                "title": "<2-3 word title for category 1>",
+                "category": "<string for category 1>",
+                "prompt": "<15-25 word prompt for category 1>",
+                "color": "blue"
+              },
+              {
+                "title": "<2-3 word title for category 2>",
+                "category": "<string for category 2>",
+                "prompt": "<15-25 word prompt for category 2>",
+                "color": "purple"
+              },
+              {
+                "title": "<2-3 word title for category 3>",
+                "category": "<string for category 3>",
+                "prompt": "<15-25 word prompt for category 3>",
+                "color": "green"
+              },
+              {
+                "title": "<2-3 word title for category 4>",
+                "category": "<string for category 4>",
+                "prompt": "<15-25 word prompt for category 4>",
+                "color": "orange"
+              }
+            ]
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.content && data.content[0] && data.content[0].text) {
+          const contentPayload = JSON.parse(data.content[0].text);
+          if (contentPayload.content_payload && Array.isArray(contentPayload.content_payload)) {
+            const newSuggestions = contentPayload.content_payload.map((item: any, index: number) => ({
+              id: `suggestion-${index}`,
+              title: item.title || `Suggestion ${index + 1}`,
+              prompt: item.prompt || "Get personalized wellness guidance",
+              icon: index % 2 === 0 ? Brain : Activity,
+              color: item.color || ['blue', 'purple', 'green', 'orange'][index % 4]
+            }));
+            
+            setAiSuggestions(newSuggestions);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh AI suggestions:', error);
+      // Keep existing suggestions on error
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
@@ -318,75 +424,88 @@ export default function RelaxPage() {
 
         {/* AI Prompt Boxes */}
         <div className="w-full max-w-7xl mx-auto mb-8">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-white mb-2">AI Assistance</h2>
-            <p className="text-gray-300 text-sm">Get personalized recommendations and guidance</p>
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-center flex-1">
+              <h2 className="text-xl font-bold text-white mb-2">AI Assistance</h2>
+              <p className="text-gray-300 text-sm">Get personalized recommendations and guidance</p>
+            </div>
+            <button
+              onClick={refreshAISuggestions}
+              disabled={isRefreshing}
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium"
+            >
+              {isRefreshing ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-4 h-4" />
+                  Refresh
+                </>
+              )}
+            </button>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Book Recommendations */}
-            <div 
-              onClick={() => handleAIPrompt("Recommend 3 books about mindfulness, meditation, or personal growth that would help me develop a better meditation practice and reduce daily stress.")}
-              className="group bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-700/50 rounded-xl p-4 hover:border-blue-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-blue-400" />
+            {aiSuggestions.map((suggestion) => {
+              const IconComponent = suggestion.icon;
+              const colorClasses = {
+                blue: {
+                  bg: 'from-blue-900/40 to-indigo-900/40',
+                  border: 'border-blue-700/50 hover:border-blue-500/70',
+                  iconBg: 'bg-blue-500/20',
+                  iconColor: 'text-blue-400',
+                  titleColor: 'text-blue-200 group-hover:text-blue-100',
+                  textColor: 'text-blue-300/80'
+                },
+                purple: {
+                  bg: 'from-purple-900/40 to-violet-900/40',
+                  border: 'border-purple-700/50 hover:border-purple-500/70',
+                  iconBg: 'bg-purple-500/20',
+                  iconColor: 'text-purple-400',
+                  titleColor: 'text-purple-200 group-hover:text-purple-100',
+                  textColor: 'text-purple-300/80'
+                },
+                green: {
+                  bg: 'from-green-900/40 to-emerald-900/40',
+                  border: 'border-green-700/50 hover:border-green-500/70',
+                  iconBg: 'bg-green-500/20',
+                  iconColor: 'text-green-400',
+                  titleColor: 'text-green-200 group-hover:text-green-100',
+                  textColor: 'text-green-300/80'
+                },
+                orange: {
+                  bg: 'from-orange-900/40 to-red-900/40',
+                  border: 'border-orange-700/50 hover:border-orange-500/70',
+                  iconBg: 'bg-orange-500/20',
+                  iconColor: 'text-orange-400',
+                  titleColor: 'text-orange-200 group-hover:text-orange-100',
+                  textColor: 'text-orange-300/80'
+                }
+              };
+              
+              const colors = colorClasses[suggestion.color as keyof typeof colorClasses] || colorClasses.blue;
+              
+              return (
+                <div 
+                  key={suggestion.id}
+                  onClick={() => handleAIPrompt(suggestion.prompt)}
+                  className={`group bg-gradient-to-br ${colors.bg} border ${colors.border} rounded-xl p-4 hover:shadow-lg transition-all duration-200 cursor-pointer`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 ${colors.iconBg} rounded-lg flex items-center justify-center`}>
+                      <IconComponent className={`w-5 h-5 ${colors.iconColor}`} />
+                    </div>
+                    <h3 className={`font-semibold ${colors.titleColor}`}>{suggestion.title}</h3>
+                  </div>
+                  <p className={`${colors.textColor} text-sm leading-relaxed`}>
+                    "{suggestion.prompt}"
+                  </p>
                 </div>
-                <h3 className="font-semibold text-blue-200 group-hover:text-blue-100">Book Recommendations</h3>
-              </div>
-              <p className="text-blue-300/80 text-sm leading-relaxed">
-                "Recommend 3 books about mindfulness, meditation, or personal growth that would help me develop a better meditation practice and reduce daily stress."
-              </p>
-            </div>
-
-            {/* Daily Affirmations */}
-            <div 
-              onClick={() => handleAIPrompt("Create 5 personalized daily affirmations that will help me stay calm, focused, and positive throughout my day, especially during stressful moments.")}
-              className="group bg-gradient-to-br from-purple-900/40 to-violet-900/40 border border-purple-700/50 rounded-xl p-4 hover:border-purple-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-purple-400" />
-                </div>
-                <h3 className="font-semibold text-purple-200 group-hover:text-purple-100">Daily Affirmations</h3>
-              </div>
-              <p className="text-purple-300/80 text-sm leading-relaxed">
-                "Create 5 personalized daily affirmations that will help me stay calm, focused, and positive throughout my day, especially during stressful moments."
-              </p>
-            </div>
-
-            {/* Meditation Guidance */}
-            <div 
-              onClick={() => handleAIPrompt("Guide me through a personalized 10-minute meditation session based on my current stress level and what I'm hoping to achieve from today's practice.")}
-              className="group bg-gradient-to-br from-green-900/40 to-emerald-900/40 border border-green-700/50 rounded-xl p-4 hover:border-green-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-green-400" />
-                </div>
-                <h3 className="font-semibold text-green-200 group-hover:text-green-100">Meditation Guidance</h3>
-              </div>
-              <p className="text-green-300/80 text-sm leading-relaxed">
-                "Guide me through a personalized 10-minute meditation session based on my current stress level and what I'm hoping to achieve from today's practice."
-              </p>
-            </div>
-
-            {/* Stress Relief Tips */}
-            <div 
-              onClick={() => handleAIPrompt("Suggest 5 quick stress relief techniques I can use during work breaks, including breathing exercises and mindfulness practices under 5 minutes.")}
-              className="group bg-gradient-to-br from-orange-900/40 to-red-900/40 border border-orange-700/50 rounded-xl p-4 hover:border-orange-500/70 hover:shadow-lg transition-all duration-200 cursor-pointer"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-orange-400" />
-                </div>
-                <h3 className="font-semibold text-orange-200 group-hover:text-orange-100">Stress Relief</h3>
-              </div>
-              <p className="text-orange-300/80 text-sm leading-relaxed">
-                "Suggest 5 quick stress relief techniques I can use during work breaks, including breathing exercises and mindfulness practices under 5 minutes."
-              </p>
-            </div>
+              );
+            })}
           </div>
         </div>
 

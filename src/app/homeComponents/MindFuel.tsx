@@ -48,10 +48,15 @@ const MindFuel = () => {
       // Extract the content from Claude's response
       if (data.content && data.content[0] && data.content[0].text) {
         const contentPayload = JSON.parse(data.content[0].text);
-        if (contentPayload.content_payload) {
-          setMindFuelData(contentPayload.content_payload);
+        
+        // Handle complete response with all sections
+        console.log('🧠 Mind Fuel source: Claude API (comprehensive generation)');
+        console.log('🧠 Generated content:', contentPayload);
+        
+        if (contentPayload.weeklyFocus && contentPayload.tipOfTheDay && contentPayload.productivityHack && contentPayload.brainBoost && contentPayload.mindfulnessMoment) {
+          setMindFuelData(contentPayload);
         } else {
-          throw new Error('Invalid response format');
+          throw new Error('Invalid response format - missing required sections');
         }
       } else {
         throw new Error('Invalid response structure');
@@ -110,7 +115,7 @@ const MindFuel = () => {
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="font-bold text-sm text-gray-300">Weekly Focus</span>
+                <span className="font-bold text-sm text-gray-300">Daily Focus</span>
               </div>
               <p className="text-sm text-gray-200">
                 "{mindFuelData.weeklyFocus.focus}"
@@ -141,7 +146,7 @@ const MindFuel = () => {
               </div>
               <div>
                 <h4 className="text-sm font-medium mb-1 text-white">{mindFuelData.brainBoost.word}</h4>
-                <p className="text-xs text-gray-200">
+                <p className="text-sm text-gray-200">
                   {mindFuelData.brainBoost.definition}
                 </p>
               </div>

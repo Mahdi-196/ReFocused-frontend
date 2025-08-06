@@ -29,7 +29,13 @@
       "Bash(true)",
       "Bash(timeout 8s yarn dev)",
       "Bash(npm run build:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:dummyjson.com)",
+      "WebFetch(domain:quotable.io)",
+      "WebFetch(domain:type.fit)",
+      "WebFetch(domain:qapi.vercel.app)",
+      "Bash(nslookup:*)"
     ],
     "deny": []
   }

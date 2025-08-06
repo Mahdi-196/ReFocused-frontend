@@ -444,7 +444,7 @@ export default function AmbientSounds() {
                     startPlaying(value);
                   }
                 }}
-                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm transition-colors h-8 flex items-center"
+                className="px-3 py-2 bg-[#93979F] hover:bg-[#80848c] rounded text-white text-sm transition-colors h-8 flex items-center"
               >
                 Play
               </button>
