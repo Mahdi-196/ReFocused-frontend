@@ -8,6 +8,7 @@ import AnimatedLayout from './AnimatedLayout';
 import StatisticsInitializer from './StatisticsInitializer';
 import DevTools from './devTools';
 import { TokenExpiryNotification } from './TokenExpiryNotification';
+import DevTestingButton from './DevTestingButton';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { TimeProvider } from '@/contexts/TimeContext';
 import { AudioProvider } from '@/contexts/AudioContext';
@@ -120,6 +121,9 @@ export default function ClientLayoutWrapper({
             
             {/* DevTools - positioned at bottom-right globally */}
             {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}
+            
+            {/* API Testing Button - positioned at bottom-right */}
+            <DevTestingButton />
           </AudioProvider>
         </TimeProvider>
       </AuthProvider>

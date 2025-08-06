@@ -11,7 +11,7 @@ const DailyMomentum = dynamic(() => import('../homeComponents/DailyMomentum'), {
   ssr: false,
 });
 
-const QuoteOfTheDay = dynamic(() => import('../homeComponents/QuickAccess'), {
+const QuoteOfTheDay = dynamic(() => import('../../components/QuoteOfTheDay'), {
   ssr: false,
 });
 

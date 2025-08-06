@@ -11,37 +11,80 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const mindFuelPrompt = {
-      "task": "Generate unique content for a 'Mind Fuel' application screen.",
-      "instructions": {
-        "tone": "Inspirational, positive, and concise.",
-        "uniqueness": "All generated content must be new and different from any previous request.",
-        "format": "Populate the 'content_payload' object below with newly generated text that fulfills the description for each key. Your response should only be the completed JSON object."
-      },
-      "content_payload": {
-        "weeklyFocus": {
-          "description": "Generate a short, encouraging phrase or mantra for the week.",
-          "focus": "<string>"
-        },
-        "tipOfTheDay": {
-          "description": "Generate a single, actionable tip for improving daily workflow or well-being.",
-          "tip": "<string>"
-        },
-        "productivityHack": {
-          "description": "Generate a specific, actionable productivity hack or a well-known rule.",
-          "hack": "<string>"
-        },
-        "brainBoost": {
-          "description": "Generate an insightful word and its concise definition.",
-          "word": "<string>",
-          "definition": "<string>"
-        },
-        "mindfulnessMoment": {
-          "description": "Generate a brief, simple instruction for a mindfulness exercise, like a breathing technique.",
-          "moment": "<string>"
-        }
-      }
-    };
+    // Generate all content types in one comprehensive call
+    const concepts = ['leverage', 'pruning', 'clarity', 'momentum', 'consolidation', 'synthesis', 'distillation', 'resonance', 'calibration', 'emergence'];
+    const randomConcept = concepts[Math.floor(Math.random() * concepts.length)];
+    
+    const challenges = [
+      're-engaging after a distraction',
+      'the Sunday scaries',
+      'mental fatigue from video calls',
+      'organizing digital files',
+      'maintaining energy in the afternoon',
+      'staying focused in open offices',
+      'managing notification overload',
+      'transitioning between different types of work'
+    ];
+    const randomChallenge = challenges[Math.floor(Math.random() * challenges.length)];
+    
+    const fields = [
+      'library science',
+      'supply chain logistics',
+      'video game design',
+      'cinematography',
+      'orchestra conducting',
+      'surgical procedures',
+      'forensic investigation',
+      'botanical research',
+      'architectural planning',
+      'wildlife photography'
+    ];
+    const randomField = fields[Math.floor(Math.random() * fields.length)];
+    
+    const vocabularyDomains = ['Psychology', 'Philosophy', 'Architecture', 'Music Theory', 'Linguistics', 'Astronomy', 'Botany', 'Geology'];
+    const randomDomain = vocabularyDomains[Math.floor(Math.random() * vocabularyDomains.length)];
+    
+    const sensoryFocus = [
+      'the texture of the object closest to you',
+      'the ambient sounds in the room',
+      'the feeling of gravity on your body',
+      'the taste of water',
+      'the temperature of the air on your skin',
+      'the weight of your clothing',
+      'the rhythm of your heartbeat',
+      'the sensation of your feet touching the ground'
+    ];
+    const randomSensory = sensoryFocus[Math.floor(Math.random() * sensoryFocus.length)];
+
+    const fullPrompt = `Generate comprehensive Mind Fuel content with all 5 sections:
+
+1. Daily Focus: A motivational phrase (5-8 words) centered on the concept of ${randomConcept}
+2. Tip of the Day: An uncommon productivity tip (15-20 words) addressing ${randomChallenge}
+3. Productivity Hack: An unconventional technique (20-25 words) inspired by ${randomField}
+4. Brain Boost: A vocabulary word from ${randomDomain} with brief definition (8-12 words max)
+5. Mindfulness Moment: A sensory exercise (15-25 words) focused on ${randomSensory}
+
+CRITICAL: Your response must be ONLY a valid JSON object in exactly this format:
+{
+  "weeklyFocus": {
+    "focus": "your daily focus phrase"
+  },
+  "tipOfTheDay": {
+    "tip": "your tip"
+  },
+  "productivityHack": {
+    "hack": "your productivity hack"
+  },
+  "brainBoost": {
+    "word": "vocabulary word",
+    "definition": "brief definition"
+  },
+  "mindfulnessMoment": {
+    "moment": "your mindfulness exercise"
+  }
+}
+
+Do not include any other text, explanations, or formatting. Just the JSON object.`;
 
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -52,11 +95,12 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1000,
+        max_tokens: 500,
+        temperature: 0.7,
         messages: [
           {
             role: 'user',
-            content: JSON.stringify(mindFuelPrompt, null, 2)
+            content: fullPrompt
           }
         ]
       })
