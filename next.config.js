@@ -40,13 +40,17 @@ const nextConfig = {
   },
 
   async rewrites() {
-    return [
-      // Enable the rewrite rule to redirect API calls to the external backend
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://localhost:8000/api/v1/:path*',
-      },
-    ];
+    if (process.env.NODE_ENV !== 'production') {
+      return [
+        // Development: proxy API calls to local backend
+        {
+          source: '/api/v1/:path*',
+          destination: 'http://localhost:8000/api/v1/:path*',
+        },
+      ];
+    }
+    // Production: no rewrites; frontend calls backend directly via NEXT_PUBLIC_API_BASE_URL
+    return [];
   },
 
   async headers() {

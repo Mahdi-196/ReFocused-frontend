@@ -1,22 +1,27 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
-import ConfirmationDialog from "@/components/ConfirmationDialog";
-import DropdownMenu from "@/components/DropdownMenu";
-import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { JournalPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 import { initializeAuth } from '@/api/client';
 import { timeService } from '@/services/timeService';
 
-// Import new components
-import { CollectionModal } from "./components/CollectionModal";
-import { PasswordPromptModal } from "./components/PasswordPromptModal";
+// Priority 1: Critical components (immediate load)
 import { CollectionTabs } from "./components/CollectionTabs";
 import { SearchAndActions } from "./components/SearchAndActions";
-import { EntryGrid } from "./components/EntryGrid";
-import { Sidebar } from "./components/Sidebar";
+
+// Secondary components without custom loaders (page-level skeleton covers)
+const EntryGrid = dynamic(() => import("./components/EntryGrid").then(mod => ({ default: mod.EntryGrid })), { ssr: false });
+const Sidebar = dynamic(() => import("./components/Sidebar").then(mod => ({ default: mod.Sidebar })), { ssr: false });
+
+// Priority 3: Modal components (lazy load on demand)
+const CollectionModal = dynamic(() => import("./components/CollectionModal").then(mod => ({ default: mod.CollectionModal })), { ssr: false });
+const PasswordPromptModal = dynamic(() => import("./components/PasswordPromptModal").then(mod => ({ default: mod.PasswordPromptModal })), { ssr: false });
+const ConfirmationDialog = dynamic(() => import("@/components/ConfirmationDialog"), { ssr: false });
+const DropdownMenu = dynamic(() => import("@/components/DropdownMenu"), { ssr: false });
 
 // Import hooks
 import { useJournalState } from "./hooks/useJournalState";
@@ -29,6 +34,8 @@ import { useConsistentDate } from "@/hooks/useConsistentDate";
  */
 const Journal: React.FC = () => {
   const router = useRouter();
+  
+  // Remove progressive reveal; render all at once after skeleton delay
   
   // Authentication check and initialization
   useEffect(() => {
@@ -48,6 +55,10 @@ const Journal: React.FC = () => {
   const journalState = useJournalState();
   const gratitudeHook = useGratitude();
   const { isReady: dateReady } = useConsistentDate();
+  
+  useEffect(() => {
+    // keep hook for dependencies; no staged loading
+  }, [dateReady]);
   
 
   const {
@@ -129,13 +140,7 @@ const Journal: React.FC = () => {
             <h2 className="text-2xl font-bold text-white mb-4">Unable to Load Journal</h2>
             <p className="text-gray-300 mb-6 leading-relaxed break-words overflow-hidden">{collectionsError}</p>
             <div className="space-y-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                <RefreshCw className="w-5 h-5" />
-                Retry Loading
-              </button>
+              {/* Retry removed */}
               <button
                 onClick={handleClearError}
                 className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
@@ -151,16 +156,12 @@ const Journal: React.FC = () => {
 
   return (
     <PageTransition>
-      <SkeletonDemo
-        skeleton={<JournalPageSkeleton />}
-        delay={100} // Minimal delay for smooth transition
-        enabled={false} // Disable forced demo mode
-      >
+      <SkeletonDemo skeleton={<JournalPageSkeleton />} enabled={false}>
         <div 
           className="min-h-screen py-8"
           style={{ backgroundColor: "#1A2537" }}
         >
-          <div className="max-w-full mx-auto px-6">
+          <div className="max-w-full mx-auto px-6 overflow-visible">
             {/* Header */}
             <div className="mb-8 text-center">
               <h1 className="text-4xl font-bold text-white mb-3">Journal</h1>
@@ -172,7 +173,7 @@ const Journal: React.FC = () => {
           <div className="flex flex-col xl:flex-row gap-8 min-h-screen">
             
             {/* Left Column - Main Journal Content */}
-            <div className="flex-1 xl:flex-[2] max-w-none">
+            <div className="flex-1 xl:flex-[2] max-w-none overflow-visible">
               <div className="mb-8">
                 {/* Collection Navigation */}
                 <CollectionTabs
@@ -198,46 +199,47 @@ const Journal: React.FC = () => {
 
               {/* Entries Grid */}
               <div 
-                className={`${
-                  displayedEntries.length > 12 
-                    ? 'max-h-[1000px] overflow-y-auto pr-2' 
-                    : ''
-                }`}
-                style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#4B5563 #1F2937'
-                }}
-              >
-                <style jsx>{`
-                  div::-webkit-scrollbar {
-                    width: 6px;
-                  }
-                  div::-webkit-scrollbar-track {
-                    background: #1F2937;
-                    border-radius: 3px;
-                  }
-                  div::-webkit-scrollbar-thumb {
-                    background: #4B5563;
-                    border-radius: 3px;
-                  }
-                  div::-webkit-scrollbar-thumb:hover {
-                    background: #6B7280;
-                  }
-                `}</style>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  <EntryGrid
-                    entries={displayedEntries}
-                    selectedCollection={selectedCollection}
-                    searchQuery={searchQuery}
-                    selectedCollectionId={selectedCollectionId}
-                    onEditEntry={handleEditEntry}
-                    onOpenDropdown={setOpenDropdown}
-                    openDropdown={openDropdown}
-                    collections={collections}
-                    isLoading={collectionsLoading}
-                  />
+                  className={`${
+                    displayedEntries.length > 12 
+                      ? 'max-h-[1000px] overflow-y-auto pr-2 py-4' 
+                      : ''
+                  }`}
+                  style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#4B5563 #1F2937',
+                    overflowX: 'visible'
+                  }}
+                >
+                  <style jsx>{`
+                    div::-webkit-scrollbar {
+                      width: 6px;
+                    }
+                    div::-webkit-scrollbar-track {
+                      background: #1F2937;
+                      border-radius: 3px;
+                    }
+                    div::-webkit-scrollbar-thumb {
+                      background: #4B5563;
+                      border-radius: 3px;
+                    }
+                    div::-webkit-scrollbar-thumb:hover {
+                      background: #6B7280;
+                    }
+                  `}</style>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 px-3 md:px-5 overflow-visible">
+                    <EntryGrid
+                      entries={displayedEntries}
+                      selectedCollection={selectedCollection}
+                      searchQuery={searchQuery}
+                      selectedCollectionId={selectedCollectionId}
+                      onEditEntry={handleEditEntry}
+                      onOpenDropdown={setOpenDropdown}
+                      openDropdown={openDropdown}
+                      collections={collections}
+                      isLoading={collectionsLoading}
+                    />
+                  </div>
                 </div>
-              </div>
             </div>
 
             {/* Right Column - Sidebar */}

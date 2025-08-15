@@ -77,7 +77,7 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
               type="text"
               id="collectionName"
               value={safeFormData.name}
-              onChange={(e) => onFormChange({ name: e.target.value })}
+              onChange={(e) => onFormChange({ name: e.target.value.slice(0, 25) })}
               onKeyDown={handleKeyDown}
               placeholder="Enter collection name..."
               disabled={editingCollection?.name === "My Notes"}
@@ -91,6 +91,7 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
                   : 'border-gray-600'
               }`}
               autoFocus={editingCollection?.name !== "My Notes"}
+              maxLength={25}
             />
             <button
               type="button"
@@ -119,6 +120,7 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
                 onChange={(e) => onFormChange({ currentPassword: e.target.value })}
                 placeholder="Enter current password..."
                 className="w-full pl-3 pr-4 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                maxLength={100}
               />
             </div>
           )}
@@ -133,9 +135,10 @@ export const CollectionModal: React.FC<CollectionModalProps> = ({
                 type="password"
                 id="password"
                 value={safeFormData.password}
-                onChange={(e) => onFormChange({ password: e.target.value })}
+                onChange={(e) => onFormChange({ password: e.target.value.slice(0, 100) })}
                 placeholder={editingCollection ? "Enter new password..." : "Enter password..."}
                 className="w-full pl-3 pr-4 py-2 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                maxLength={100}
               />
             </div>
           )}

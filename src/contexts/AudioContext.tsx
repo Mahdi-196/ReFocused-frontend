@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 interface AudioContextType {
   isGloballyMuted: boolean;
@@ -39,20 +39,22 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isGloballyMuted]);
 
-  const toggleGlobalMute = () => {
+  const toggleGlobalMute = useCallback(() => {
     setIsGloballyMuted(prev => !prev);
-  };
+  }, []);
 
-  const setGlobalMute = (muted: boolean) => {
+  const setGlobalMute = useCallback((muted: boolean) => {
     setIsGloballyMuted(muted);
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    isGloballyMuted,
+    toggleGlobalMute,
+    setGlobalMute
+  }), [isGloballyMuted, toggleGlobalMute, setGlobalMute]);
 
   return (
-    <AudioContext.Provider value={{
-      isGloballyMuted,
-      toggleGlobalMute,
-      setGlobalMute
-    }}>
+    <AudioContext.Provider value={contextValue}>
       {children}
     </AudioContext.Provider>
   );

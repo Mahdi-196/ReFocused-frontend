@@ -1,57 +1,14 @@
 "use client";
 
 import { useState } from 'react';
-import { BookOpen, RotateCcw } from 'lucide-react';
-
-interface WordData {
-  word: string;
-  pronunciation: string;
-  definition: string;
-  example: string;
-}
+import { BookOpen } from 'lucide-react';
+import { useWordOfTheDaySimple as useWordOfTheDay } from '../../hooks/useDailyContentSimple';
 
 const WordOfTheDay = () => {
-  const [wordData, setWordData] = useState<WordData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data: wordData, loading, error, refresh, isCached } = useWordOfTheDay();
+  const [isFading, setIsFading] = useState(false);
 
-  const fetchWordData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/claude/word-of-day', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API call failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.content && data.content[0] && data.content[0].text) {
-        const contentPayload = JSON.parse(data.content[0].text);
-        // Handle new direct JSON format
-        if (contentPayload.word && contentPayload.pronunciation && contentPayload.definition && contentPayload.example) {
-          console.log('📚 Word source: Claude API (domain-specific generation)');
-          console.log('📚 Generated word:', contentPayload.word);
-          setWordData(contentPayload);
-        } else {
-          throw new Error('Invalid response format');
-        }
-      } else {
-        throw new Error('Invalid response structure');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch word data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Manual refresh removed
 
   return (
   <section 
@@ -63,42 +20,30 @@ const WordOfTheDay = () => {
         <h2 id="word-of-the-day" className="flex items-center gap-2 text-lg font-semibold text-white">
           <BookOpen className="w-5 h-5 text-green-400" />
           Word of the Day
-        </h2>
-        <button
-          type="button"
-          onClick={fetchWordData}
-          disabled={loading}
-          className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-xs rounded-md transition duration-200 flex items-center gap-1"
-        >
-          {loading ? (
-            <>
-              <div className="animate-spin h-3 w-3 border border-white border-t-transparent rounded-full"></div>
-              Generating...
-            </>
-          ) : (
-            <>
-              <RotateCcw className="w-3 h-3" />
-              Refresh
-            </>
+          {isCached && process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+            <span className="ml-2 px-1.5 py-0.5 text-xs bg-green-500/20 text-green-400 rounded" title="Loaded from cache">
+              📋
+            </span>
           )}
-        </button>
+        </h2>
+        {/* Refresh removed */}
       </div>
       
       {error && (
         <div className="mb-4 p-2 bg-red-900/20 border border-red-500/30 rounded-md">
-          <p className="text-xs text-red-400">Error: {error}</p>
+          <p className="text-xs text-red-400">Failed to load the word. Please try again.</p>
         </div>
       )}
 
-      {!wordData && !loading && !error && (
+      {!wordData && loading && (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <BookOpen className="w-10 h-10 text-green-400 mb-3" />
-          <p className="text-gray-400 text-sm mb-4">Click "Refresh" to generate Word of the Day</p>
+          <div className="animate-spin h-8 w-8 border-2 border-green-400 border-t-transparent rounded-full mb-3"></div>
+          <p className="text-gray-400 text-sm">Loading your daily word...</p>
         </div>
       )}
 
       {wordData && (
-        <div className="space-y-2">
+        <div className={`space-y-2 transition-opacity duration-500 ${isFading ? 'opacity-0' : 'opacity-100'}`}>
           <div>
             <h3 className="text-xl font-bold text-white mb-1 break-words">{wordData.word}</h3>
             <p className="text-sm text-gray-300 italic mb-2 break-words" aria-label="Pronunciation">{wordData.pronunciation}</p>

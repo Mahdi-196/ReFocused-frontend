@@ -5,6 +5,8 @@ import client from '../api/client';
 import { timeService } from '../services/timeService';
 import { useAuth } from '@/contexts/AuthContext';
 import TimeTravel from './devTools/TimeTravel';
+import DailyCacheStatus from './DailyCacheStatus';
+import ConsoleControlPanel from './ConsoleControlPanel';
 
 const DevTools: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -325,7 +327,7 @@ ${results.join('\n\n')}
     <div className="fixed bottom-4 right-4 z-50">
       <button
         onClick={() => setIsVisible(!isVisible)}
-        className="bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium shadow-lg hover:bg-purple-700 transition-colors"
+        className="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium shadow-lg hover:bg-blue-700 transition-colors"
       >
         🔧 Dev Tools
       </button>
@@ -372,6 +374,18 @@ ${results.join('\n\n')}
                 ⚠️ This will log you out and clear all cached data
               </div>
             </div>
+          </div>
+
+          {/* Daily Cache Status (inline) */}
+          <div className="mb-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <h3 className="text-gray-900 dark:text-white font-bold mb-3 text-sm">📋 Daily Cache Status</h3>
+            <DailyCacheStatus />
+          </div>
+
+          {/* Console Control (inline) */}
+          <div className="mb-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <h3 className="text-gray-900 dark:text-white font-bold mb-3 text-sm">🖥️ Console Control</h3>
+            <ConsoleControlPanel inline />
           </div>
           
           {/* Authentication Debug Section */}

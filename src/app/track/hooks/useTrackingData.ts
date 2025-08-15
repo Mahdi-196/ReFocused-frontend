@@ -338,9 +338,6 @@ export function useTrackingData(currentMonth: Date) {
     const newCompletionState = !isCurrentlyCompleted;
     
     const habitBefore = habits.find(h => h.id === habitId);
-    console.log(`🔄 Toggling habit ${habitId} (${habitBefore?.name}) completion for ${targetDate}:`);
-    console.log(`   Current state: ${isCurrentlyCompleted} -> ${newCompletionState}`);
-    console.log(`   Current streak: ${habitBefore?.streak}`);
     
     try {
       // Optimistic update
@@ -367,10 +364,6 @@ export function useTrackingData(currentMonth: Date) {
       
       // Apply correct frontend streak calculations
       const correctedHabits = getHabitsWithCorrectStreaks(updatedHabits, completionMap);
-      const habitAfter = correctedHabits.find(h => h.id === habitId);
-      console.log(`✅ After frontend correction:`);
-      console.log(`   Habit ${habitId} streak: ${habitBefore?.streak} -> ${habitAfter?.streak}`);
-      console.log(`   All corrected habit streaks:`, correctedHabits.map(h => ({ id: h.id, name: h.name, streak: h.streak })));
       setHabits(correctedHabits);
       
       return { success: true };

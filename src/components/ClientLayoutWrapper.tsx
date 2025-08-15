@@ -8,12 +8,14 @@ import AnimatedLayout from './AnimatedLayout';
 import StatisticsInitializer from './StatisticsInitializer';
 import DevTools from './devTools';
 import { TokenExpiryNotification } from './TokenExpiryNotification';
-import DevTestingButton from './DevTestingButton';
+import CacheManager from './CacheManager';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { TimeProvider } from '@/contexts/TimeContext';
 import { AudioProvider } from '@/contexts/AudioContext';
 import { NetworkProvider } from './NetworkProvider';
 import { initializeAuth } from '@/api/client';
+import DataPreloader from './DataPreloader';
+import DailyCacheStatus from './DailyCacheStatus';
 
 export default function ClientLayoutWrapper({
   children,
@@ -22,6 +24,7 @@ export default function ClientLayoutWrapper({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isAiPage = pathname === '/ai';
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const isLandingPage = pathname === '/';
@@ -83,13 +86,35 @@ export default function ClientLayoutWrapper({
     initializeAuth();
   }, []);
 
-  // Show loading spinner for protected routes while checking auth
+  // Show loading skeleton for protected routes while checking auth
   if (!isLandingPage && isLoading) {
     return (
-      <div className="min-h-screen bg-[#10182B] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#42b9e5] mx-auto mb-4"></div>
-          <p className="text-slate-300">Loading...</p>
+      <div className="min-h-screen bg-[#10182B]">
+        {/* Header skeleton */}
+        <div className="fixed top-0 left-0 right-0 bg-[#10182B]/80 backdrop-blur-md shadow py-4 border-b border-gray-400/20 z-50">
+          <div className="w-full flex items-center justify-between px-4 md:px-6">
+            <div className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-slate-700/50 rounded animate-pulse"></div>
+              <div className="w-24 h-6 bg-slate-700/50 rounded animate-pulse"></div>
+            </div>
+            <div className="hidden md:flex space-x-6">
+              {[1,2,3,4,5].map(i => (
+                <div key={i} className="w-16 h-6 bg-slate-700/50 rounded animate-pulse"></div>
+              ))}
+            </div>
+            <div className="w-8 h-8 bg-slate-700/50 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+        {/* Content skeleton */}
+        <div className="pt-20 container mx-auto px-4 py-8">
+          <div className="space-y-4">
+            <div className="w-48 h-8 bg-slate-700/50 rounded animate-pulse"></div>
+            <div className="grid gap-4 md:grid-cols-3">
+              {[1,2,3].map(i => (
+                <div key={i} className="h-32 bg-slate-700/50 rounded-lg animate-pulse"></div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -106,10 +131,18 @@ export default function ClientLayoutWrapper({
         <TimeProvider>
           <AudioProvider>
             <StatisticsInitializer />
+            <CacheManager />
+            <DataPreloader />
+            {isAiPage && (
+              <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900">
+                <div className="absolute inset-0 opacity-45 bg-[radial-gradient(800px_400px_at_15%_10%,rgba(59,130,246,0.10),transparent_60%)]" />
+                <div className="absolute inset-0 opacity-45 bg-[radial-gradient(700px_350px_at_85%_90%,rgba(59,130,246,0.10),transparent_60%)]" />
+              </div>
+            )}
             <div className={isLandingPage ? '' : 'pt-20'}>
               {!isLandingPage && <Header />}
               <AnimatedLayout>
-                <main className={`${!isLandingPage ? 'container mx-auto px-4 py-8' : ''}`}>
+                <main className={`${!isLandingPage ? (isAiPage ? 'min-h-screen w-full p-0 m-0' : 'container mx-auto px-4 py-8') : ''}`}>
                   {children}
                 </main>
               </AnimatedLayout>
@@ -122,8 +155,8 @@ export default function ClientLayoutWrapper({
             {/* DevTools - positioned at bottom-right globally */}
             {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}
             
-            {/* API Testing Button - positioned at bottom-right */}
-            <DevTestingButton />
+            {/* Daily Cache Status - positioned at bottom-left for development */}
+            <DailyCacheStatus />
           </AudioProvider>
         </TimeProvider>
       </AuthProvider>

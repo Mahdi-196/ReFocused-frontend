@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, MessageCircle } from 'lucide-react';
+import { useState } from 'react';
+import { MessageCircle } from 'lucide-react';
+import { useQuoteOfTheDaySimple as useQuoteOfTheDay } from '../hooks/useDailyContentSimple';
 
 interface Quote {
   text: string;
@@ -9,90 +10,18 @@ interface Quote {
 }
 
 interface QuoteOfTheDayProps {
-  quote?: Quote;
-  resetIntervalHours?: number;
-  onRefresh?: () => void;
-}
-
-
-interface ApiQuoteData {
-  text: string;
-  author: string;
+  resetIntervalHours?: number; // Legacy prop, no longer used
+  onRefresh?: () => void; // Legacy prop, no longer used  
 }
 
 export default function QuoteOfTheDay({ 
-  quote: initialQuote, 
-  resetIntervalHours = 24,
+  resetIntervalHours = 24, // Legacy compatibility
   onRefresh 
-}: QuoteOfTheDayProps) {
-  const [quote, setQuote] = useState<Quote | null>(initialQuote || null);
+}: QuoteOfTheDayProps = {}) {
+  const { data: quote, loading, error, refresh, isCached } = useQuoteOfTheDay();
   const [isFading, setIsFading] = useState(false);
-  const [isApiLoading, setIsApiLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
 
-  const fetchQuoteFromApi = async () => {
-    setIsApiLoading(true);
-    setApiError(null);
-    
-    try {
-      // Use Claude API for generating quotes
-      const claudeResponse = await fetch('/api/claude/quote-of-day', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (claudeResponse.ok) {
-        const claudeData = await claudeResponse.json();
-        
-        if (claudeData.content && claudeData.content[0] && claudeData.content[0].text) {
-          const contentPayload = JSON.parse(claudeData.content[0].text);
-          // Handle new direct JSON format
-          if (contentPayload.text && contentPayload.author) {
-            console.log('📝 Quote source: Claude API (real historical quotes)');
-            console.log('📝 Generated quote from:', contentPayload.author);
-            return contentPayload as ApiQuoteData;
-          }
-        }
-      }
-
-      throw new Error('Claude API failed to generate quote');
-    } catch (err) {
-      setApiError('Failed to generate quote');
-      return null;
-    } finally {
-      setIsApiLoading(false);
-    }
-  };
-
-  const refreshQuote = useCallback(async () => {
-    setIsFading(true);
-    
-    if (onRefresh) {
-      onRefresh();
-      setIsFading(false);
-    } else {
-      // Get quote from API
-      const apiQuote = await fetchQuoteFromApi();
-      
-      setTimeout(() => {
-        if (apiQuote) {
-          setQuote(apiQuote);
-        }
-        setIsFading(false);
-      }, 500);
-    }
-  }, [onRefresh]);
-
-  useEffect(() => {
-    const interval = setInterval(
-      refreshQuote,
-      resetIntervalHours * 60 * 60 * 1000
-    );
-
-    return () => clearInterval(interval);
-  }, [resetIntervalHours, refreshQuote]);
+  // Manual refresh removed
 
   return (
     <section 
@@ -104,38 +33,25 @@ export default function QuoteOfTheDay({
           <h2 id="quote-of-the-day" className="flex items-center gap-2 text-lg font-semibold text-white">
             <MessageCircle className="w-5 h-5 text-blue-400" />
             Quote of the Day
-          </h2>
-          <button
-            type="button"
-            onClick={refreshQuote}
-            disabled={isApiLoading}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs rounded-md transition duration-200 flex items-center gap-1"
-            aria-label="Refresh quote"
-          >
-            {isApiLoading ? (
-              <>
-                <div className="animate-spin h-3 w-3 border border-white border-t-transparent rounded-full"></div>
-                Generating...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-3 h-3" />
-                Refresh
-              </>
+            {isCached && process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+              <span className="ml-2 px-1.5 py-0.5 text-xs bg-green-500/20 text-green-400 rounded" title="Loaded from cache">
+                📋
+              </span>
             )}
-          </button>
+          </h2>
+          {/* Refresh removed */}
         </div>
         
-        {apiError && (
+        {error && (
           <div className="mb-4 p-2 bg-red-900/20 border border-red-500/30 rounded-md">
-            <p className="text-xs text-red-400">Error: {apiError}</p>
+            <p className="text-xs text-red-400">Failed to load quote. Please try again.</p>
           </div>
         )}
 
-        {!quote && !isApiLoading && !apiError && (
+        {!quote && loading && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <MessageCircle className="w-10 h-10 text-blue-400 mb-3" />
-            <p className="text-gray-400 text-sm mb-4">Click "Refresh" to generate Quote of the Day</p>
+            <div className="animate-spin h-8 w-8 border-2 border-blue-400 border-t-transparent rounded-full mb-3"></div>
+            <p className="text-gray-400 text-sm">Loading your daily quote...</p>
           </div>
         )}
 

@@ -46,75 +46,75 @@ export default function ExtendedExhaleBreathing({ isPlaying, timeLeft, durationS
 
   return (
     <div className="flex flex-col items-center justify-between mx-auto mb-4 min-h-[264px]">
-      {/* Extended Exhale Visualization */}
-      <div className="relative w-full max-w-2xl h-32 mb-4 flex-shrink-0">
+      {/* Breathing Circle Visualization */}
+      <div className="relative w-full max-w-sm h-48 mb-4 flex-shrink-0">
         <svg className="w-full h-full" viewBox="0 0 200 200">
-          {/* Background timeline */}
+          {/* Timeline Progress Bar - positioned above circle */}
           <rect
-            x="10"
-            y="85"
-            width="180"
-            height="18"
+            x="40"
+            y="30"
+            width="120"
+            height="12"
             fill="#f3f4f6"
-            rx="9"
+            rx="6"
           />
           
-          {/* Inhale section (4s out of 10s = 40% of 180px = 72px) */}
+          {/* Inhale section (4s out of 10s = 40% of 120px = 48px) */}
           <rect
-            x="10"
-            y="85"
-            width="72"
-            height="18"
+            x="40"
+            y="30"
+            width="48"
+            height="12"
             fill="#e0f2fe"
-            rx="9"
+            rx="6"
           />
           
-          {/* Exhale section (6s out of 10s = 60% of 180px = 108px) */}
+          {/* Exhale section (6s out of 10s = 60% of 120px = 72px) */}
           <rect
-            x="82"
-            y="85"
-            width="108"
-            height="18"
+            x="88"
+            y="30"
+            width="72"
+            height="12"
             fill="#fef3c7"
-            rx="9"
+            rx="6"
           />
           
           {/* Progress indicator */}
           <rect
-            x={phase === 'inhale' ? 10 : 82}
-            y="85"
-            width={(phase === 'inhale' ? 72 : 108) * progress}
-            height="18"
+            x={phase === 'inhale' ? 40 : 88}
+            y="30"
+            width={(phase === 'inhale' ? 48 : 72) * progress}
+            height="12"
             fill={phase === 'inhale' ? '#0891b2' : '#f59e0b'}
-            rx="9"
+            rx="6"
             style={{
               transition: 'width 0.1s ease-out'
             }}
           />
           
-          {/* Phase labels - above timeline only */}
+          {/* Phase labels - above timeline */}
           <text
-            x="46"
-            y="75"
+            x="64"
+            y="22"
             textAnchor="middle"
-            className="text-base fill-cyan-700 font-semibold"
+            className="text-sm fill-cyan-700 font-semibold"
           >
             Inhale
           </text>
           
           <text
-            x="136"
-            y="75"
+            x="124"
+            y="22"
             textAnchor="middle"
-            className="text-base fill-amber-700 font-semibold"
+            className="text-sm fill-amber-700 font-semibold"
           >
             Exhale
           </text>
-          
-          {/* Central breathing circle - moved down */}
+
+          {/* Central breathing circle */}
           <circle
             cx="100"
-            cy="150"
+            cy="130"
             r={50 + (phase === 'inhale' ? progress * 20 : (1 - progress) * 20)}
             fill="url(#extendedGradient)"
             stroke={phase === 'inhale' ? '#0891b2' : '#f59e0b'}
@@ -138,7 +138,7 @@ export default function ExtendedExhaleBreathing({ isPlaying, timeLeft, durationS
                       <circle
                         key={`inhale-${particle}`}
                         cx={100 - particle * 20}
-                        cy={170 + particle * 10 * Math.sin(progress * 4 * Math.PI)}
+                        cy={150 + particle * 10 * Math.sin(progress * 4 * Math.PI)}
                         r="2"
                         fill="#0891b2"
                         opacity={0.8 - particle * 0.2}
@@ -159,7 +159,7 @@ export default function ExtendedExhaleBreathing({ isPlaying, timeLeft, durationS
                       <circle
                         key={`exhale-${particle}`}
                         cx={100 + particle * 15}
-                        cy={170 - particle * 8 + 10 * Math.sin(progress * 2 * Math.PI)}
+                        cy={150 - particle * 8 + 10 * Math.sin(progress * 2 * Math.PI)}
                         r="1.5"
                         fill="#f59e0b"
                         opacity={0.9 - particle * 0.15}

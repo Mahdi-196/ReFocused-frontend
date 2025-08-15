@@ -39,7 +39,8 @@ class TokenRefreshManager {
     // Also check immediately
     this.checkTokenExpiry();
 
-    console.log('🔄 Token refresh monitoring started');
+    // Suppress monitoring start message
+    // console.log('🔄 Token refresh monitoring started');
   }
 
   /**
@@ -49,7 +50,8 @@ class TokenRefreshManager {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      console.log('🔄 Token refresh monitoring stopped');
+      // Suppress monitoring stop message
+      // console.log('🔄 Token refresh monitoring stopped');
     }
   }
 
@@ -68,7 +70,10 @@ class TokenRefreshManager {
     const now = Math.floor(Date.now() / 1000);
     const timeUntilExpiry = validation.payload.exp - now;
 
-    console.log('🔄 [TOKEN MONITOR] Time until expiry:', timeUntilExpiry, 'seconds');
+    // Suppress token monitoring logs
+    // if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+    //   console.log('🔄 [TOKEN MONITOR] Time until expiry:', timeUntilExpiry, 'seconds');
+    // }
 
     // Auto-logout if very close to expiry
     if (timeUntilExpiry <= this.options.autoLogoutThreshold) {

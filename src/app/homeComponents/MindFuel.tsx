@@ -1,72 +1,14 @@
 "use client";
 
 import { useState } from 'react';
-import { Lightbulb, Brain, RotateCcw } from 'lucide-react';
-
-interface MindFuelData {
-  weeklyFocus: {
-    focus: string;
-  };
-  tipOfTheDay: {
-    tip: string;
-  };
-  productivityHack: {
-    hack: string;
-  };
-  brainBoost: {
-    word: string;
-    definition: string;
-  };
-  mindfulnessMoment: {
-    moment: string;
-  };
-}
+import { Lightbulb } from 'lucide-react';
+import { useMindFuelSimple as useMindFuel } from '../../hooks/useDailyContentSimple';
 
 const MindFuel = () => {
-  const [mindFuelData, setMindFuelData] = useState<MindFuelData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data: mindFuelData, loading, error, refresh, isCached } = useMindFuel();
+  const [isFading, setIsFading] = useState(false);
 
-  const fetchMindFuelData = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetch('/api/claude/mind-fuel', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API call failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Extract the content from Claude's response
-      if (data.content && data.content[0] && data.content[0].text) {
-        const contentPayload = JSON.parse(data.content[0].text);
-        
-        // Handle complete response with all sections
-        console.log('🧠 Mind Fuel source: Claude API (comprehensive generation)');
-        console.log('🧠 Generated content:', contentPayload);
-        
-        if (contentPayload.weeklyFocus && contentPayload.tipOfTheDay && contentPayload.productivityHack && contentPayload.brainBoost && contentPayload.mindfulnessMoment) {
-          setMindFuelData(contentPayload);
-        } else {
-          throw new Error('Invalid response format - missing required sections');
-        }
-      } else {
-        throw new Error('Invalid response structure');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch Mind Fuel data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Manual refresh removed
 
   return (
     <section 
@@ -78,41 +20,30 @@ const MindFuel = () => {
           <h2 id="mind-fuel" className="flex items-center gap-2 text-xl font-semibold text-white">
             <Lightbulb className="w-5 h-5 text-yellow-400" />
             Mind Fuel
-          </h2>
-          <button
-            onClick={fetchMindFuelData}
-            disabled={loading}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs rounded-md transition duration-200 flex items-center gap-1"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin h-3 w-3 border border-white border-t-transparent rounded-full"></div>
-                Generating...
-              </>
-            ) : (
-              <>
-                <RotateCcw className="w-3 h-3" />
-                Refresh
-              </>
+            {isCached && process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+              <span className="ml-2 px-1.5 py-0.5 text-xs bg-green-500/20 text-green-400 rounded" title="Loaded from cache">
+                📋
+              </span>
             )}
-          </button>
+          </h2>
+          {/* Refresh removed */}
         </div>
 
         {error && (
           <div className="mb-4 p-2 bg-red-900/20 border border-red-500/30 rounded-md">
-            <p className="text-xs text-red-400">Error: {error}</p>
+            <p className="text-xs text-red-400">Failed to load Mind Fuel. Please try again.</p>
           </div>
         )}
 
-        {!mindFuelData && !loading && !error && (
+        {!mindFuelData && loading && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Brain className="w-10 h-10 text-purple-400 mb-3" />
-            <p className="text-gray-400 text-sm mb-4">Click "Refresh" to generate Mind Fuel content</p>
+            <div className="animate-spin h-8 w-8 border-2 border-yellow-400 border-t-transparent rounded-full mb-3"></div>
+            <p className="text-gray-400 text-sm">Loading your daily mind fuel...</p>
           </div>
         )}
 
         {mindFuelData && (
-          <div className="space-y-6">
+          <div className={`space-y-6 transition-opacity duration-500 ${isFading ? 'opacity-0' : 'opacity-100'}`}>
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-bold text-sm text-gray-300">Daily Focus</span>

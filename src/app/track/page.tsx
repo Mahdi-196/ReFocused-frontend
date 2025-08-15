@@ -1,16 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import NumberMood from '@/components/NumberMood';
+import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
 import AuthGuard from '@/components/AuthGuard';
 import { TrackPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 
-// Import components
-import TrackingStats from './components/TrackingStats';
-import HabitTracking from './components/HabitTracking';
-import CalendarView from './components/CalendarView';
-import CacheControls from './components/CacheControls';
+// Priority 1: Critical above-the-fold components (immediate load)
+import NumberMood from '@/components/NumberMood';
+
+// Secondary without custom loaders
+const TrackingStats = dynamic(() => import('./components/TrackingStats'), { ssr: false });
+
+const HabitTracking = dynamic(() => import('./components/HabitTracking'), { ssr: false });
+
+// Priority 3: Heavy components (delayed load)
+const CalendarView = dynamic(() => import('./components/CalendarView'), { ssr: false });
+
+// Removed CacheControls from header
 
 // Import hooks
 import { useTrackingData } from './hooks/useTrackingData';
@@ -26,6 +33,8 @@ export default function TrackPage() {
   const [currentMonth, setCurrentMonth] = useState(() => {
     return new Date(currentDate + 'T00:00:00');
   });
+  
+  // Remove staged reveals; render all together after skeleton delay
 
   // Backend health tracking
   const [backendHealth, setBackendHealth] = useState<{
@@ -67,7 +76,6 @@ export default function TrackPage() {
 
   // Wrapped setCurrentMonth that tracks manual changes
   const handleMonthChange = (newMonth: Date) => {
-    console.log('📅 [TRACK PAGE] User manually changed month to:', newMonth.toISOString().slice(0, 7));
     setCurrentMonth(newMonth);
     setUserChangedMonth(true);
     
@@ -93,7 +101,6 @@ export default function TrackPage() {
     
     // Only update if the month actually changed to avoid unnecessary re-renders
     if (currentMonth.toISOString().slice(0, 7) !== newMonth.toISOString().slice(0, 7)) {
-      console.log('📅 [TRACK PAGE] Updating calendar month from', currentMonth.toISOString().slice(0, 7), 'to', newMonth.toISOString().slice(0, 7));
       setCurrentMonth(newMonth);
     }
   }, [currentDate, currentMonth, userChangedMonth]);
@@ -121,6 +128,8 @@ export default function TrackPage() {
     error: calendarError,
     toggleHabitCompletion: toggleCalendarHabit
   } = useCalendarData(currentMonth, habits);
+
+  useEffect(() => {}, []);
 
   // Update backend health based on calendar loading state
   useEffect(() => {
@@ -156,11 +165,7 @@ export default function TrackPage() {
   return (
     <AuthGuard>
       <PageTransition>
-        <SkeletonDemo
-          skeleton={<TrackPageSkeleton />}
-          delay={100}
-          enabled={false}
-        >
+        <SkeletonDemo skeleton={<TrackPageSkeleton />} enabled={false}>
           <div 
             className="min-h-screen py-8"
             style={{ backgroundColor: "#1A2537" }}
@@ -174,12 +179,7 @@ export default function TrackPage() {
                     <p className="text-white/80">Monitor your mood, habits, and daily progress</p>
                   </div>
                   
-                  {/* Cache Controls */}
-                  <div className="relative">
-                    <CacheControls
-                      refreshCache={refreshCache}
-                    />
-                  </div>
+                  {/* Cache Controls removed */}
                 </div>
               </header>
 
@@ -268,7 +268,7 @@ export default function TrackPage() {
                 isHabitCompleted={isHabitCompleted}
               />
 
-              {/* Mood Tracking Section */}
+              {/* Mood Tracking Section - Primary */}
               <section className="mb-8">
                 <NumberMood />
               </section>

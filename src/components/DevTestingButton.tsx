@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { TestTube } from 'lucide-react';
-import TestingModal from './TestingModal';
+// Testing modal removed
 
 export default function DevTestingButton() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,10 +22,7 @@ export default function DevTestingButton() {
         <TestTube className="w-5 h-5" />
       </button>
       
-      <TestingModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
+      {/* Testing modal removed */}
     </>
   );
 }

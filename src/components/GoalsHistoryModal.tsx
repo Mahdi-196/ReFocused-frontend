@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Clock, Target, TrendingUp, Filter, BarChart3, CheckSquare, ChevronDown } from 'lucide-react';
+import { X, Calendar, Clock, Hash, TrendingUp, Filter, BarChart3, CheckSquare, ChevronDown } from 'lucide-react';
 import { 
   GoalHistoryEntry, 
   GoalsHistoryResponse, 
@@ -75,11 +75,13 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
       setIsLoading(true);
       setError(null);
       
-      console.log('🔍 [GOALS_HISTORY] Loading history with filters:', {
-        daysBack: selectedFilter.daysBack,
-        type: selectedFilter.type,
-        duration: selectedFilter.duration
-      });
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('🔍 [GOALS_HISTORY] Loading history with filters:', {
+          daysBack: selectedFilter.daysBack,
+          type: selectedFilter.type,
+          duration: selectedFilter.duration
+        });
+      }
       
       const response = await goalsService.getGoalsHistory({
         days_back: selectedFilter.daysBack,
@@ -88,17 +90,18 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
         limit: 100
       });
       
-      console.log('📋 [GOALS_HISTORY] Response received:', {
-        goalsCount: response.goals.length,
-        totalCount: response.total_count,
-        dateRange: response.date_range,
-        goals: response.goals
-      });
-      
-      console.log('📋 [GOALS_HISTORY] Raw response object:', response);
-      console.log('📋 [GOALS_HISTORY] Response.goals type:', typeof response.goals);
-      console.log('📋 [GOALS_HISTORY] Response.goals is array:', Array.isArray(response.goals));
-      console.log('📋 [GOALS_HISTORY] First goal sample:', response.goals[0]);
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('📋 [GOALS_HISTORY] Response received:', {
+          goalsCount: response.goals.length,
+          totalCount: response.total_count,
+          dateRange: response.date_range,
+          goals: response.goals
+        });
+        console.log('📋 [GOALS_HISTORY] Raw response object:', response);
+        console.log('📋 [GOALS_HISTORY] Response.goals type:', typeof response.goals);
+        console.log('📋 [GOALS_HISTORY] Response.goals is array:', Array.isArray(response.goals));
+        console.log('📋 [GOALS_HISTORY] First goal sample:', response.goals[0]);
+      }
       
       setHistory(response.goals);
     } catch (error) {
@@ -111,16 +114,20 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
 
   const loadStats = async () => {
     try {
-      console.log('📊 [GOALS_STATS] Loading stats for days back:', selectedFilter.daysBack);
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('📊 [GOALS_STATS] Loading stats for days back:', selectedFilter.daysBack);
+      }
       const statsData = await goalsService.getCompletionStats(selectedFilter.daysBack);
       
-      console.log('📊 [GOALS_STATS] Stats received:', {
-        totalCompleted: statsData.total_completed,
-        avgDays: statsData.avg_completion_days,
-        completionRate: statsData.completion_rate,
-        byType: statsData.by_type,
-        byDuration: statsData.by_duration
-      });
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('📊 [GOALS_STATS] Stats received:', {
+          totalCompleted: statsData.total_completed,
+          avgDays: statsData.avg_completion_days,
+          completionRate: statsData.completion_rate,
+          byType: statsData.by_type,
+          byDuration: statsData.by_duration
+        });
+      }
       
       setStats(statsData);
     } catch (error) {
@@ -138,16 +145,20 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
   // Group goals by completion date with date validation
   const groupedHistory = history.reduce((groups, goal) => {
     try {
-      console.log('🔍 [GROUPING] Processing goal:', {
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('🔍 [GROUPING] Processing goal:', {
         id: goal.id,
         name: goal.name,
         completed_at: goal.completed_at,
         completed_at_type: typeof goal.completed_at
-      });
+        });
+      }
       
       // Handle null/undefined completed_at
       if (!goal.completed_at) {
-        console.warn('🔍 [GROUPING] Goal has no completed_at:', goal.id, goal.name);
+        if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+          console.warn('🔍 [GROUPING] Goal has no completed_at:', goal.id, goal.name);
+        }
         return groups;
       }
       
@@ -155,7 +166,9 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
       let cleanedDateString = goal.completed_at;
       if (cleanedDateString.includes('+00:00Z')) {
         cleanedDateString = cleanedDateString.replace('+00:00Z', 'Z');
-        console.log('🔍 [GROUPING] Fixed malformed date:', goal.completed_at, '->', cleanedDateString);
+        if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+          console.log('🔍 [GROUPING] Fixed malformed date:', goal.completed_at, '->', cleanedDateString);
+        }
       }
       
       // Validate and parse the date
@@ -163,19 +176,25 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
       
       // Check if date is valid
       if (isNaN(completedDate.getTime())) {
-        console.warn('🔍 [GROUPING] Invalid date found for goal:', goal.id, 'completed_at:', goal.completed_at);
+        if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+          console.warn('🔍 [GROUPING] Invalid date found for goal:', goal.id, 'completed_at:', goal.completed_at);
+        }
         return groups;
       }
       
       const dateString = completedDate.toDateString();
-      console.log('🔍 [GROUPING] Using date string:', dateString, 'for goal:', goal.id);
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('🔍 [GROUPING] Using date string:', dateString, 'for goal:', goal.id);
+      }
       
       if (!groups[dateString]) {
         groups[dateString] = [];
       }
       groups[dateString].push(goal);
       
-      console.log('🔍 [GROUPING] Added goal to group:', dateString, 'total in group:', groups[dateString].length);
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('🔍 [GROUPING] Added goal to group:', dateString, 'total in group:', groups[dateString].length);
+      }
     } catch (error) {
       console.error('🔍 [GROUPING] Error parsing date for goal:', goal.id, error);
     }
@@ -186,10 +205,12 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
     new Date(b).getTime() - new Date(a).getTime()
   );
   
-  console.log('🔍 [SORTING] Grouped history keys:', Object.keys(groupedHistory));
-  console.log('🔍 [SORTING] Sorted dates:', sortedDates);
-  console.log('🔍 [SORTING] Total groups:', Object.keys(groupedHistory).length);
-  console.log('🔍 [SORTING] History length:', history.length);
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+    console.log('🔍 [SORTING] Grouped history keys:', Object.keys(groupedHistory));
+    console.log('🔍 [SORTING] Sorted dates:', sortedDates);
+    console.log('🔍 [SORTING] Total groups:', Object.keys(groupedHistory).length);
+    console.log('🔍 [SORTING] History length:', history.length);
+  }
 
   const getGoalTypeIcon = (type: GoalType) => {
     switch (type) {
@@ -226,7 +247,7 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
             <div className="flex-shrink-0 p-6 border-b border-gray-700/50">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
                     <Calendar className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -252,7 +273,7 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700/30">
                     <div className="flex items-center gap-2 mb-1">
-                      <Target className="w-4 h-4 text-green-400" />
+                      <Hash className="w-4 h-4 text-green-400" />
                       <span className="text-xs text-gray-400">Completed</span>
                     </div>
                     <span className="text-xl font-bold text-white">{stats.total_completed}</span>
@@ -273,7 +294,9 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                   value={selectedFilter.daysBack}
                   onChange={(e) => {
                     const newDaysBack = parseInt(e.target.value);
-                    console.log('📅 [FILTER] Changing daysBack from', selectedFilter.daysBack, 'to', newDaysBack);
+                    if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+                      console.log('📅 [FILTER] Changing daysBack from', selectedFilter.daysBack, 'to', newDaysBack);
+                    }
                     setSelectedFilter(prev => ({ ...prev, daysBack: newDaysBack }));
                   }}
                   className="px-3 py-1 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500/50"
@@ -297,7 +320,7 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                     )}
                     {selectedFilter.type === 'counter' && (
                       <>
-                        <Target className="w-3 h-3 text-blue-400" />
+                        <Hash className="w-3 h-3 text-blue-400" />
                         <span>Counter</span>
                       </>
                     )}
@@ -345,7 +368,7 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                         }}
                         className="flex items-center gap-2 w-full px-3 py-2 text-left text-white text-sm hover:bg-gray-700 transition-colors"
                       >
-                        <Target className="w-3 h-3 text-blue-400" />
+                        <Hash className="w-3 h-3 text-blue-400" />
                         <span>Counter</span>
                       </button>
                       <button
@@ -366,7 +389,9 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                   value={selectedFilter.duration || ''}
                   onChange={(e) => {
                     const newDuration = e.target.value as GoalDuration || undefined;
-                    console.log('⏱️ [FILTER] Changing duration from', selectedFilter.duration, 'to', newDuration);
+                    if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+                      console.log('⏱️ [FILTER] Changing duration from', selectedFilter.duration, 'to', newDuration);
+                    }
                     setSelectedFilter(prev => ({ 
                       ...prev, 
                       duration: newDuration 
@@ -413,7 +438,8 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                         const token = localStorage.getItem('REF_TOKEN');
                         console.log('🧪 [RAW_API_TEST] Auth token:', token ? 'present' : 'missing');
                         
-                        const url = 'http://localhost:8000/api/v1/goals/history?days_back=90&limit=100';
+                        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://your-backend-domain.com';
+                        const url = `${backendUrl}/api/v1/goals/history?days_back=90&limit=100`;
                         console.log('🧪 [RAW_API_TEST] Request URL:', url);
                         
                         const headers: HeadersInit = {

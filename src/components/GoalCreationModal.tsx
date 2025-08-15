@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { X, CheckSquare, Target, BarChart3 } from 'lucide-react';
+import { X, CheckSquare, Hash, BarChart3 } from 'lucide-react';
 import { GoalType, CreateGoalRequest, validateGoalInput, sanitizeGoalName, getDurationDisplayName } from '@/types/goal';
 
 interface GoalCreationModalProps {
@@ -280,7 +280,7 @@ const GoalCreationModal: React.FC<GoalCreationModalProps> = ({
                         
                         <div>
                           <div className="text-white text-sm font-medium flex items-center gap-2">
-                            <Target className="w-4 h-4 text-blue-400" />
+                            <Hash className="w-4 h-4 text-blue-400" />
                             Counter
                           </div>
                           <div className="text-xs text-gray-400">Set a target number and count up to it</div>

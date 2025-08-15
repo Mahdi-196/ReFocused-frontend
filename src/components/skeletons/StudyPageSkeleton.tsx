@@ -3,153 +3,59 @@ import { SkeletonWrapper, Skeleton } from './SkeletonConfig';
 export const StudyPageSkeleton = () => {
   return (
     <SkeletonWrapper>
-      <div 
-        className="min-h-screen py-8"
-        style={{ backgroundColor: "#1A2537" }}
-      >
+      <div className="min-h-screen py-8" style={{ backgroundColor: '#1A2537' }}>
         <div className="container mx-auto px-4">
-          
-          {/* Pomodoro Timer Section */}
+          {/* Pomodoro (outline only) */}
           <section className="mb-12">
             <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-8">
-              <div className="text-center">
-                <Skeleton height={32} width={200} className="mb-6 mx-auto" />
-                
-                {/* Timer circle */}
-                <div className="flex justify-center mb-6">
-                  <Skeleton height={200} width={200} circle />
-                </div>
-                
-                {/* Timer controls */}
-                <div className="flex justify-center gap-4 mb-6">
-                  <Skeleton height={48} width={120} />
-                  <Skeleton height={48} width={120} />
-                  <Skeleton height={48} width={120} />
-                </div>
-                
-                {/* Session info */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="text-center">
-                      <Skeleton height={16} width={80} className="mb-2" />
-                      <Skeleton height={24} width={60} />
-                    </div>
-                  ))}
-                </div>
+              <Skeleton height={28} width={220} className="mb-6 mx-auto" />
+              <div className="flex justify-center mb-6">
+                <Skeleton height={180} width={180} circle />
               </div>
+              <Skeleton height={44} width={320} className="mx-auto" />
             </div>
           </section>
 
-          {/* Quick Notes Section */}
+          {/* Quick Notes (outline only) */}
           <section className="mb-12">
             <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
-              <Skeleton height={24} width={120} className="mb-4" />
-              
-              {/* Editor toolbar */}
-              <div className="border-b border-gray-600/30 pb-3 mb-4">
-                <div className="flex gap-2">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton key={i} height={32} width={32} />
-                  ))}
-                </div>
-              </div>
-              
-              {/* Editor content area */}
-              <Skeleton height={200} className="mb-4" />
-              
-              {/* Save button */}
-              <div className="flex justify-end">
-                <Skeleton height={36} width={100} />
-              </div>
+              <Skeleton height={24} width={140} className="mb-4" />
+              <Skeleton height={200} />
             </div>
           </section>
 
-          {/* Study Tools Section - 3 column grid */}
+          {/* Study Tools (outline only) */}
           <section className="mb-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
-              {/* Study Sets Panel */}
               <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Skeleton height={20} width={100} />
-                  <Skeleton height={32} width={80} />
-                </div>
-                
-                {/* Study sets list */}
-                <div className="space-y-3">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="p-3 border border-gray-600/30 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <Skeleton height={16} width={120} />
-                        <Skeleton height={20} width={20} />
-                      </div>
-                      <Skeleton height={12} width={80} />
-                    </div>
-                  ))}
-                </div>
+                <Skeleton height={24} width={160} className="mb-4" />
+                <Skeleton height={160} />
               </div>
-
-              {/* Flashcard Display */}
-              <div className="md:col-span-2">
-                <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <Skeleton height={20} width={120} />
-                    <Skeleton height={32} width={100} />
-                  </div>
-                  
-                  {/* Flashcard */}
-                  <div className="border border-gray-600/30 rounded-lg p-8 mb-4">
-                    <div className="text-center">
-                      <Skeleton height={16} width={60} className="mb-4" />
-                      <Skeleton height={24} width={200} className="mb-6" />
-                      <Skeleton height={16} count={3} />
-                    </div>
-                  </div>
-                  
-                  {/* Flashcard controls */}
-                  <div className="flex justify-center gap-4">
-                    <Skeleton height={40} width={100} />
-                    <Skeleton height={40} width={100} />
-                    <Skeleton height={40} width={100} />
-                  </div>
-                </div>
+              <div className="md:col-span-2 bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
+                <Skeleton height={24} width={180} className="mb-4" />
+                <Skeleton height={220} className="mb-4" />
+                <Skeleton height={40} width={240} className="mx-auto" />
               </div>
             </div>
           </section>
 
-          {/* Statistics Section */}
+          {/* Statistics (outline only, mirror real component) */}
           <section className="mb-8">
             <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <Skeleton height={24} width={120} />
-                <div className="flex gap-2">
-                  <Skeleton height={32} width={60} />
-                  <Skeleton height={32} width={60} />
-                  <Skeleton height={32} width={60} />
+              <div className="flex justify-between items-center mb-4">
+                <div className="inline-flex gap-2">
+                  <Skeleton height={28} width={32} />
+                  <Skeleton height={28} width={32} />
+                  <Skeleton height={28} width={32} />
                 </div>
               </div>
-              
-              {/* Stats grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="text-center p-4 border border-gray-600/30 rounded-lg">
-                    <Skeleton height={16} width={80} className="mb-2" />
-                    <Skeleton height={28} width={60} className="mb-1" />
-                    <Skeleton height={12} width={40} />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="p-4 text-center border border-gray-600/30 rounded-lg">
+                    <Skeleton height={16} width={100} className="mx-auto mb-2" />
+                    <Skeleton height={24} width={80} className="mx-auto" />
                   </div>
                 ))}
-              </div>
-              
-              {/* Charts area */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border border-gray-600/30 rounded-lg p-4">
-                  <Skeleton height={16} width={100} className="mb-4" />
-                  <Skeleton height={200} />
-                </div>
-                <div className="border border-gray-600/30 rounded-lg p-4">
-                  <Skeleton height={16} width={100} className="mb-4" />
-                  <Skeleton height={200} />
-                </div>
               </div>
             </div>
           </section>
@@ -157,4 +63,4 @@ export const StudyPageSkeleton = () => {
       </div>
     </SkeletonWrapper>
   );
-}; 
+};

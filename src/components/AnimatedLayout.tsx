@@ -2,14 +2,14 @@
 
 import { AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
-import { ReactNode } from 'react';
+import { ReactNode, memo } from 'react';
 import ClientOnly from './ClientOnly';
 
 interface AnimatedLayoutProps {
   children: ReactNode;
 }
 
-export default function AnimatedLayout({ children }: AnimatedLayoutProps) {
+function AnimatedLayout({ children }: AnimatedLayoutProps) {
   const pathname = usePathname();
 
   return (
@@ -21,4 +21,6 @@ export default function AnimatedLayout({ children }: AnimatedLayoutProps) {
       </AnimatePresence>
     </ClientOnly>
   );
-} 
+}
+
+export default memo(AnimatedLayout); 

@@ -121,10 +121,10 @@ class AudioService {
       this.playingPromises.delete(audio);
       this.audioStates.set(audio, 'idle');
       
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.log('Audio play was interrupted by pause - this is normal');
         return false;
-      } else if (error.name === 'NotAllowedError') {
+      } else if (error instanceof Error && error.name === 'NotAllowedError') {
         console.warn('Audio play blocked by browser - user interaction required');
         return false;
       } else {

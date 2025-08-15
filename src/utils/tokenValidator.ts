@@ -44,17 +44,20 @@ export const tokenValidator = {
         // Check if token is expired
         const isExpired = payload.exp && payload.exp < now;
         
-        console.log('🔍 [TOKEN DEBUG] JWT validation:', {
-          isExpired,
-          expiresAt,
-          issuedAt,
-          timeUntilExpiry: payload.exp ? (payload.exp - now) : 'unknown',
-          payload: {
-            sub: payload.sub,
-            exp: payload.exp,
-            iat: payload.iat
-          }
-        });
+        // Only log in development
+        if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+          console.log('🔍 [TOKEN DEBUG] JWT validation:', {
+            isExpired,
+            expiresAt,
+            issuedAt,
+            timeUntilExpiry: payload.exp ? (payload.exp - now) : 'unknown',
+            payload: {
+              sub: payload.sub,
+              exp: payload.exp,
+              iat: payload.iat
+            }
+          });
+        }
 
         return {
           isValid: !isExpired,

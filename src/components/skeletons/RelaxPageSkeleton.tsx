@@ -136,8 +136,8 @@ export const RelaxPageSkeleton = () => {
               <Skeleton height={24} width={200} className="mb-6" />
               
               {/* Suggestion cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 3 }).map((_, i) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="p-4 border border-gray-600/30 rounded-xl">
                     <div className="flex items-center gap-3 mb-3">
                       <Skeleton height={40} width={40} />

@@ -1,5 +1,8 @@
 // src/app/layout.tsx
 
+// Import console override first to ensure it initializes before any other code
+import '@/utils/consoleOverride';
+
 import type { Metadata } from "next";
 import { inter } from './fonts';
 import '../globals.css';
@@ -8,7 +11,7 @@ import PerformanceMonitor from '@/components/PerformanceMonitor';
 
 export const metadata: Metadata = {
   title: 'Daily Mantra & Weekly Mindfulness Theme | ReFocused',
-  description: 'ReFocused: Daily mantras, mindful breathing exercises and weekly themes like Stoicism to boost your resilience.',
+  description: 'ReFocused: Daily mantras, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
   keywords: [
     'productivity',
     'mindfulness',
@@ -35,7 +38,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Daily Mantra & Weekly Mindfulness Theme | ReFocused',
-    description: 'ReFocused: Daily mantras, mindful breathing exercises and weekly themes like Stoicism to boost your resilience.',
+    description: 'ReFocused: Daily mantras, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
     url: 'https://refocused.app',
     siteName: 'ReFocused',
     locale: 'en_US',
@@ -52,7 +55,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Daily Mantra & Weekly Mindfulness Theme | ReFocused',
-    description: 'ReFocused: Daily mantras, mindful breathing exercises and weekly themes like Stoicism to boost your resilience.',
+    description: 'ReFocused: Daily mantras, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
     creator: '@refocused_app',
     images: ['/twitter-image.jpg'],
   },
@@ -83,6 +86,44 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
+        {/* Console Override Script - Must be first to catch early logs */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                'use strict';
+                var isDevelopment = window.location.hostname === 'localhost' || 
+                                   window.location.hostname === '127.0.0.1' || 
+                                   window.location.hostname.includes('localhost') ||
+                                   (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_APP_ENV === 'development');
+                
+                if (!isDevelopment) {
+                  console.log = function() {};
+                  console.info = function() {};
+                  console.debug = function() {};
+                  console.trace = function() {};
+                  console.group = function() {};
+                  console.groupEnd = function() {};
+                  console.table = function() {};
+                }
+                
+                window.__consoleOverrideStatus = {
+                  isDevelopment: isDevelopment,
+                  isInitialized: true,
+                  logsHidden: !isDevelopment
+                };
+                
+                if (isDevelopment) {
+                  // Suppress initialization message in development
+                  // console.log('🔧 Console override initialized in development mode');
+                } else {
+                  console.log('🚫 Console override initialized - logs hidden in production');
+                }
+              })();
+            `
+          }}
+        />
+        
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#3B82F6" />
         <meta name="mobile-web-app-capable" content="yes" />
