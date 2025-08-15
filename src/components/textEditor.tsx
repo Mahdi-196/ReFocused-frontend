@@ -89,9 +89,37 @@ const TextEditor: React.FC<Props> = ({
   if (!isMounted) return null; // Prevent hydration mismatch
 
   return (
-    <div className="h-full w-full overflow-y-auto max-h-[calc(100vh-16rem)] min-h-[300px]">
+    <div className="h-full w-full min-h-[300px]">
       <style dangerouslySetInnerHTML={{
         __html: `
+          /* Sticky toolbar and dark theme adjustments */
+          .ql-toolbar.ql-snow {
+            position: sticky;
+            top: 0; /* stick to very top of the scroll container */
+            z-index: 30;
+            background: #0E172B; /* fully opaque to prevent text showing through */
+            -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.38); /* slightly brighter separation */
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+          }
+
+          .ql-container.ql-snow {
+            border: 1px solid rgba(255, 255, 255, 0.38); /* white outline for editor */
+            border-top: none;
+            margin-top: 0; /* container sits right under toolbar */
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+          }
+
+          .ql-container.ql-snow:focus-within {
+            border-color: rgba(255, 255, 255, 0.65);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+          }
+
           .ql-toolbar .ql-stroke {
             stroke: white !important;
           }
@@ -107,6 +135,16 @@ const TextEditor: React.FC<Props> = ({
           .ql-toolbar button:hover .ql-fill {
             fill: #60a5fa !important;
           }
+          .ql-toolbar button {
+            border-radius: 0.5rem;
+            transition: background-color 0.15s ease, transform 0.15s ease;
+          }
+          .ql-toolbar button:hover {
+            background: rgba(255, 255, 255, 0.06);
+          }
+          .ql-toolbar button:active {
+            transform: scale(0.97);
+          }
           .ql-toolbar button.ql-active .ql-stroke {
             stroke: #3b82f6 !important;
           }
@@ -115,6 +153,7 @@ const TextEditor: React.FC<Props> = ({
           }
           .ql-editor {
             color: white !important;
+            padding-top: 16px; /* ensure first lines never collide with toolbar */
           }
           .ql-editor p {
             color: white !important;
@@ -123,12 +162,25 @@ const TextEditor: React.FC<Props> = ({
             background: white !important;
             border: 1px solid #d1d5db !important;
           }
+          /* Ensure icons in dropdowns are visible on white background */
+          .ql-picker-options .ql-stroke {
+            stroke: #374151 !important; /* slate-700 */
+          }
+          .ql-picker-options .ql-fill {
+            fill: #374151 !important; /* slate-700 */
+          }
           .ql-picker-item {
             color: #374151 !important;
           }
           .ql-picker-item:hover {
             background: #f3f4f6 !important;
             color: #111827 !important;
+          }
+          .ql-picker-item:hover .ql-stroke {
+            stroke: #111827 !important; /* slate-900 */
+          }
+          .ql-picker-item:hover .ql-fill {
+            fill: #111827 !important; /* slate-900 */
           }
           .ql-picker-options * {
             color: #374151 !important;

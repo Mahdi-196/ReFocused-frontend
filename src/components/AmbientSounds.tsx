@@ -83,7 +83,9 @@ const getFromLocalStorage = (key: string): string | null => {
       return localStorage.getItem(key);
     }
   } catch (error) {
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
     console.warn('Failed to access localStorage:', error);
+  }
   }
   return null;
 };
@@ -94,7 +96,9 @@ const setToLocalStorage = (key: string, value: string): void => {
       localStorage.setItem(key, value);
     }
   } catch (error) {
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
     console.warn('Failed to save to localStorage:', error);
+  }
   }
 };
 
@@ -131,7 +135,9 @@ export default function AmbientSounds() {
       // Track completed focus session - same logic as Pomodoro
       const completedTime = duration; // Already in minutes
       try {
-        console.log('🎵 [AMBIENT SOUNDS] Session completed! Focus time:', completedTime, 'minutes');
+        if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+          console.log('🎵 [AMBIENT SOUNDS] Session completed! Focus time:', completedTime, 'minutes');
+        }
         
         // Record the focus time (original duration, not time left)
         await addFocusTime(completedTime);
@@ -139,7 +145,9 @@ export default function AmbientSounds() {
         // Increment the session counter
         await incrementSessions();
         
-        console.log('✅ [AMBIENT SOUNDS] Statistics updated successfully');
+        if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+          console.log('✅ [AMBIENT SOUNDS] Statistics updated successfully');
+        }
       } catch (error) {
         console.error('Failed to record ambient sounds session statistics:', error);
       }
@@ -336,11 +344,12 @@ export default function AmbientSounds() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6">
+    <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-          🎵 Ambient Sounds
+          <Music className="w-5 h-5 text-purple-400" />
+          Ambient Sounds
         </h2>
         
         {/* Now Playing */}
@@ -463,7 +472,7 @@ export default function AmbientSounds() {
 
       {/* Controls */}
       {currentSound && (
-        <div className="mt-6 pt-4 border-t border-gray-600/50">
+        <div className="mt-4 pt-3 border-t border-gray-600/50">
           <div className="flex items-center justify-between text-sm text-gray-300">
             <span>
               {isPlaying ? 'Playing' : 'Paused'} • {currentSound.name}

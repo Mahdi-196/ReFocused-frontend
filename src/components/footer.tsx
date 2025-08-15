@@ -33,7 +33,7 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-[#0F1419] border-t border-gray-800">
+    <footer className="bg-[#0F1419] border-t border-gray-800" suppressHydrationWarning>
       {/* Back to Top Button */}
       <div className="container mx-auto px-4 py-2">
         <div className="flex justify-end">
@@ -83,14 +83,19 @@ const Footer = () => {
               content.
             </p>
 
-            <form onSubmit={handleNewsletterSubmit} className="space-y-3">
-              <div className="relative">
+            <form onSubmit={handleNewsletterSubmit} className="space-y-3" autoComplete="off" data-lpignore="true">
+              <div className="relative" data-lpignore="true">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
                   className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                  autoComplete="off"
+                  inputMode="email"
+                  name="newsletter-email"
+                  id="newsletter-email"
+                  data-lpignore="true"
                   disabled={subscribed}
                 />
                 <button
@@ -128,7 +133,7 @@ const Footer = () => {
             </div>
 
             <div className="flex items-center gap-2 text-gray-400 text-sm">
-              <span>
+              <span suppressHydrationWarning>
                 © {new Date().getFullYear()} ReFocused. Made for your growth.
               </span>
             </div>

@@ -114,7 +114,8 @@ export const ExportDataModal = ({
   const handleDownload = () => {
     if (exportData?.file_path) {
       // Create a download link
-      const downloadUrl = `/api/v1/user/me/export/${taskId}/download`;
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://your-backend-domain.com';
+      const downloadUrl = `${backendUrl}/api/v1/user/me/export/${taskId}/download`;
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = `my_data_export_${new Date().toISOString().split('T')[0]}.json`;

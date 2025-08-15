@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from 'react';
+import { CheckIcon } from '@/components/icons';
 import { incrementTasksDone } from "@/services/statisticsService";
 
 // Define Task type locally or import from a shared types file
@@ -40,8 +41,9 @@ const TaskList: React.FC<TaskListProps> = ({
             {tasks.map(task => (
               <li key={task.id} className="group relative flex items-center justify-between gap-2 pr-8">
                 <div className="flex items-center gap-3 flex-grow">
-                  {/* Custom Checkbox */}
-                  <div
+                  {/* Custom Checkbox (matches habit style) */}
+                  <button
+                    type="button"
                     onClick={() => {
                       const wasCompleted = task.completed;
                       
@@ -63,55 +65,30 @@ const TaskList: React.FC<TaskListProps> = ({
                         apiTimeoutRef.current = setTimeout(() => {
                           try {
                             incrementTasksDone();
-                            console.log('✅ [TASK LIST] Task completion tracked for:', task.text);
                           } catch (error) {
-                            console.error('Failed to track task completion:', error);
+                            if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+                              console.error('Failed to track task completion:', error);
+                            }
                           }
                         }, 1000);
                       }
                     }}
                     className={`
-                      relative flex-shrink-0 w-5 h-5 rounded-md cursor-pointer transition-all duration-300 ease-out
-                      ${task.completed 
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-blue-500 shadow-lg shadow-blue-500/25 scale-105' 
-                        : 'bg-gray-700/80 border-2 border-gray-500/60 hover:border-gray-400 hover:bg-gray-600/80 hover:scale-105'
-                      }
-                      active:scale-95
+                      w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all
+                      ${task.completed
+                        ? 'border-emerald-400 text-emerald-400 bg-transparent'
+                        : 'border-gray-400 hover:border-emerald-400 hover:bg-emerald-400/10'}
                     `}
                   >
-                    {/* Checkmark */}
-                    <div className={`
-                      absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out
-                      ${task.completed ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}
-                    `}>
-                      <svg 
-                        className="w-3 h-3 text-white" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                        strokeWidth={3}
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          d="M5 13l4 4L19 7" 
-                        />
-                      </svg>
-                    </div>
-                    
-                    {/* Ripple effect */}
-                    <div className={`
-                      absolute inset-0 rounded-md transition-all duration-500 ease-out
-                      ${task.completed ? 'bg-blue-400/30 animate-ping' : ''}
-                    `} 
-                    style={{ animationIterationCount: task.completed ? '1' : 'infinite' }} 
-                    />
-                  </div>
+                    {task.completed && (
+                      <CheckIcon className="w-4 h-4" color="#34d399" />
+                    )}
+                  </button>
                   
                   <span className={`
                     text-sm transition-all duration-300 ease-out
                     ${task.completed 
-                      ? 'text-gray-400 line-through transform scale-95' 
+                      ? 'text-gray-400' 
                       : 'text-gray-200 hover:text-white'
                     }
                   `}>

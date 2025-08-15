@@ -2,20 +2,40 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { User, Settings, LogOut, MessageSquare, X, Star, Camera, Volume2, VolumeX, Bell, Wind } from 'lucide-react';
 import { GiVote } from "react-icons/gi";
 import PageTransition from '@/components/PageTransition';
-import AvatarSelector from '@/components/AvatarSelector';
 import { useSettings } from '@/hooks/useSettings';
 import client, { initializeAuth } from '@/api/client';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/api/services/authService';
 import { USER, AUTH } from '@/api/endpoints';
-import { DeleteAccountModal } from '@/components/profile/DeleteAccountModal';
-import { ExportDataModal } from '@/components/profile/ExportDataModal';
-import { ClearActivityModal } from '@/components/profile/ClearActivityModal';
-import { AudioSettings } from '@/components/profile/AudioSettings';
 import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+
+// Priority 1: Critical components (immediate load)
+import AvatarSelector from '@/components/AvatarSelector';
+
+// Priority 2: Tab-based components (lazy load on demand)
+const DeleteAccountModal = dynamic(() => import('@/components/profile/DeleteAccountModal').then(mod => ({ default: mod.DeleteAccountModal })), { ssr: false });
+const ExportDataModal = dynamic(() => import('@/components/profile/ExportDataModal').then(mod => ({ default: mod.ExportDataModal })), { ssr: false });
+const ClearActivityModal = dynamic(() => import('@/components/profile/ClearActivityModal').then(mod => ({ default: mod.ClearActivityModal })), { ssr: false });
+const AudioSettings = dynamic(() => import('@/components/profile/AudioSettings').then(mod => ({ default: mod.AudioSettings })), { 
+  ssr: false,
+  loading: () => (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-6 bg-gray-700 rounded w-32 mb-4"></div>
+      <div className="space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
+            <div className="h-4 bg-gray-700 rounded w-24"></div>
+            <div className="h-6 bg-gray-700 rounded w-12"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ),
+});
 
 interface FeedbackData {
   rating: number;
@@ -213,6 +233,9 @@ const Profile = () => {
   const [avatarLoading, setAvatarLoading] = useState(true);
   const [avatarLoadTimeout, setAvatarLoadTimeout] = useState<NodeJS.Timeout | null>(null);
   
+  // Tab-based loading states
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set(['profile']));
+  
   // Avatar cache to store loaded images
   const avatarCache = useRef<Map<string, HTMLImageElement>>(new Map());
   
@@ -243,6 +266,16 @@ const Profile = () => {
   
   // Settings hook
   const { settings, updateSettings } = useSettings();
+
+  // Optimized tab change handler with progressive loading
+  const handleTabChange = (tabName: string) => {
+    setActiveTab(tabName);
+    
+    // Load tab content on demand
+    if (!loadedTabs.has(tabName)) {
+      setLoadedTabs(prev => new Set([...prev, tabName]));
+    }
+  };
 
   // Function to preload and cache avatar
   const preloadAvatar = (url: string): Promise<void> => {
@@ -336,7 +369,9 @@ const Profile = () => {
       // Load user profile data (bypass cache to get fresh data)
       const response = await client.get(AUTH.ME);
       const userData = response.data;
-      console.log('User data received:', userData);
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('User data received:', userData);
+      }
       setUserData(userData);
       
       // Clear any cached user data to ensure fresh data loads
@@ -374,7 +409,9 @@ const Profile = () => {
         setUserStats(statsResponse.data);
       } catch {
         // If stats endpoint doesn't exist, create mock stats
-        console.log('Stats endpoint not available, using mock data');
+        if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+          console.log('Stats endpoint not available, using mock data');
+        }
         setUserStats({
           goals_total: 0,
           goals_completed: 0,
@@ -461,7 +498,9 @@ const Profile = () => {
         }));
       }
 
-      console.log('Avatar updated successfully');
+      if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+        console.log('Avatar updated successfully');
+      }
     } catch (error: unknown) {
       console.error('Failed to update avatar:', error);
       
@@ -507,9 +546,13 @@ const Profile = () => {
   };
 
   const handleClearActivity = async () => {
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
     console.log('🗑️ [PROFILE] Starting activity data clearing...');
+  }
     const result = await authService.clearActivityData();
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
     console.log('✅ [PROFILE] Successfully cleared data:', result);
+  }
     return result;
   };
 
@@ -588,8 +631,8 @@ const Profile = () => {
       return;
     }
 
-    if (newName.trim().length > 100) {
-      setNameError('Name is too long (maximum 100 characters)');
+    if (newName.trim().length > 25) {
+      setNameError('Name is too long (maximum 25 characters)');
       return;
     }
 
@@ -650,7 +693,9 @@ const Profile = () => {
       return;
     }
     
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
     console.log('Feedback submitted:', feedbackData);
+  }
     
     setFeedbackData({
       rating: 0,
@@ -767,7 +812,7 @@ const Profile = () => {
                                   type="text"
                                   value={newName}
                                   onChange={(e) => setNewName(e.target.value)}
-                                  maxLength={100}
+                                  maxLength={25}
                                   className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   disabled={isChangingName}
                                   autoFocus
@@ -799,7 +844,7 @@ const Profile = () => {
                               </form>
                             ) : (
                               <div className="flex items-center space-x-3">
-                                <h4 className="text-xl font-semibold text-white">
+                                <h4 className="text-xl font-semibold text-white truncate">
                                   {userData?.name || userData?.username || 'User'}
                                 </h4>
                                 <button
@@ -1083,10 +1128,22 @@ const Profile = () => {
         );
 
       case 'app-settings':
-        return renderAppSettings();
+        return loadedTabs.has('app-settings') ? renderAppSettings() : (
+          <div className="space-y-4 animate-pulse">
+            <div className="h-6 bg-gray-700 rounded w-32 mb-4"></div>
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
+                  <div className="h-4 bg-gray-700 rounded w-24"></div>
+                  <div className="h-6 bg-gray-700 rounded w-12"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
 
       case 'voting':
-        return (
+        return loadedTabs.has('voting') ? (
           <div className="space-y-8">
             <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-blue-700/50 rounded-xl p-6">
               <h3 className="text-xl font-semibold text-blue-300 mb-4">Feature Voting</h3>
@@ -1131,6 +1188,18 @@ const Profile = () => {
               >
                 Submit Vote
               </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 animate-pulse">
+            <div className="bg-gray-800/30 rounded-xl p-6">
+              <div className="h-6 bg-gray-700 rounded w-32 mb-4"></div>
+              <div className="h-4 bg-gray-700 rounded w-64 mb-6"></div>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-12 bg-gray-700 rounded"></div>
+                ))}
+              </div>
             </div>
           </div>
         );
@@ -1209,7 +1278,7 @@ const Profile = () => {
                     </div>
                   ) : (
                     <>
-                      <h3 className="text-lg font-semibold text-white">
+                      <h3 className="text-lg font-semibold text-white truncate">
                         {userData?.name || userData?.username || 'User'}
                       </h3>
                       <p className="text-sm text-gray-400">{userData?.email}</p>
@@ -1222,7 +1291,7 @@ const Profile = () => {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setActiveTab(item.id)}
+                      onClick={() => handleTabChange(item.id)}
                       className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left focus:outline-none focus:ring-0 focus:border-transparent outline-none border-0 ${
                         activeTab === item.id
                           ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
@@ -1236,7 +1305,7 @@ const Profile = () => {
                   
                   <button
                     type="button"
-                    onClick={() => setActiveTab('voting')}
+                    onClick={() => handleTabChange('voting')}
                     className={`w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-left border-t border-gray-700/50 mt-4 pt-4 focus:outline-none focus:ring-0 focus:border-transparent outline-none ${
                       activeTab === 'voting'
                         ? 'bg-blue-500/20 border border-blue-500/30'
@@ -1274,7 +1343,7 @@ const Profile = () => {
               </div>
             </div>
 
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3 max-h-[calc(100vh-12rem)] overflow-y-auto">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}

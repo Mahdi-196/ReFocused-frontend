@@ -13,13 +13,13 @@ export const SkeletonDemo: React.FC<SkeletonDemoProps> = ({
   skeleton,
   delay = 100, // Minimal delay for smooth transition
   enabled = false, // disabled by default for performance
-  isLoading = false // actual loading state
+  isLoading // leave undefined unless you want to control explicitly
 }) => {
-  const [showSkeleton, setShowSkeleton] = useState(enabled || isLoading);
+  const [showSkeleton, setShowSkeleton] = useState<boolean>(enabled || !!isLoading);
 
   useEffect(() => {
     // If we have an actual loading state, use that instead of demo mode
-    if (isLoading !== undefined) {
+    if (typeof isLoading === 'boolean') {
       setShowSkeleton(isLoading);
       return;
     }

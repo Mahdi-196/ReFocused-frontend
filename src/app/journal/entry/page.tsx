@@ -3,21 +3,23 @@
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, Save, AlertCircle, Loader2, BookOpen, Calendar, Clock } from "lucide-react";
+import { ChevronLeft, Save, AlertCircle, Loader2, BookOpen, Calendar, Clock, Lock } from "lucide-react";
 import { useTime } from '@/contexts/TimeContext';
 import { timeService } from '@/services/timeService';
 import PageTransition from '@/components/PageTransition';
-import { initializeAuth } from '@/api/client';
+import { initializeAuth, collectionTokens } from '@/api/client';
 import { useConsistentDate } from '@/hooks/useConsistentDate';
 
 // Import types and hooks
-import type { Entry } from "../types";
+import type { Entry, Collection, PasswordPrompt } from "../types";
 import { useCollections } from "../hooks/useCollections";
 import { formatCurrentDate } from "../utils";
 
-const TextEditor = dynamic(() => import("@/components/textEditor"), {
-  ssr: false,
-});
+const TextEditor = dynamic(() => import("@/components/textEditor"), { ssr: false });
+const PasswordPromptModal = dynamic(
+  () => import("../components/PasswordPromptModal").then(mod => ({ default: mod.PasswordPromptModal })),
+  { ssr: false }
+);
 
 /**
  * Entry editor component for creating and editing journal entries
@@ -26,7 +28,7 @@ const TextEditor = dynamic(() => import("@/components/textEditor"), {
 function EntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { collections, saveEntry, getEntry, isLoading: collectionsLoading, error: collectionsError } = useCollections();
+  const { collections, saveEntry, getEntry, verifyPassword, isLoading: collectionsLoading, error: collectionsError } = useCollections();
   const { loading: timeLoading, getCurrentDate } = useTime();
   const { currentDate: consistentDate, isReady: dateReady } = useConsistentDate();
   const [title, setTitle] = useState("");
@@ -43,6 +45,8 @@ function EntryContent() {
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [autoSaveTimeoutId, setAutoSaveTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const { getCurrentDateTime } = useTime();
+  const [passwordPrompt, setPasswordPrompt] = useState<PasswordPrompt | null>(null);
+  const [enteredPassword, setEnteredPassword] = useState("");
   
   const MAX_CHARACTERS = 100000;
   const MAX_TITLE_CHARACTERS = 100;
@@ -52,16 +56,14 @@ function EntryContent() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
-      console.log('🔐 ENTRY: Checking authentication...', { hasToken: !!token, tokenPreview: token?.substring(0, 20) + '...' });
       
       if (!token || token === 'dummy-auth-token') {
-        console.log('🔐 ENTRY: No valid authentication token found, redirecting to landing page');
+        // No valid authentication token; redirect to landing
         window.location.href = '/';
         return;
       }
       
       // Initialize authentication in axios client
-      console.log('🔐 ENTRY: Initializing authentication in axios client...');
       initializeAuth();
     }
   }, []);
@@ -123,6 +125,39 @@ function EntryContent() {
       }
     }
   }, [collections, searchParams, collectionsLoading]);
+
+  // Handle collection change with password gate for private collections
+  const handleCollectionChange = (value: string) => {
+    const col: Collection | undefined = collections.find(c => c.id.toString() === value);
+    if (!col) return;
+    const isPrivate = col.isPrivate ?? col.is_private;
+    if (isPrivate) {
+      const token = collectionTokens.get(value);
+      if (!token) {
+        setPasswordPrompt({ collectionId: value, name: col.name });
+        setEnteredPassword("");
+        return; // wait for password before switching
+      }
+    }
+    setSelectedCollectionId(value);
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!passwordPrompt) return;
+    const ok = await verifyPassword(passwordPrompt.collectionId, enteredPassword);
+    if (ok) {
+      setPasswordPrompt(null);
+      setEnteredPassword("");
+      setSelectedCollectionId(passwordPrompt.collectionId);
+    } else {
+      alert('Invalid password for this collection');
+    }
+  };
+
+  const handleClosePasswordPrompt = () => {
+    setPasswordPrompt(null);
+    setEnteredPassword("");
+  };
 
   const loadEntry = async (id: string) => {
     setIsLoadingEntry(true);
@@ -194,11 +229,24 @@ function EntryContent() {
       return false;
     }
 
+    // Ensure we have access to private collections before proceeding
+    const isPrivate = selectedCollection.isPrivate ?? selectedCollection.is_private;
+    if (isPrivate) {
+      const token = selectedCollectionId ? collectionTokens.get(selectedCollectionId) : null;
+      if (!token) {
+        if (!isAutoSave) {
+          setPasswordPrompt({ collectionId: selectedCollectionId!, name: selectedCollection.name });
+        }
+        return false;
+      }
+    }
+
     // For new entries, don't generate an ID - let the backend assign it
     // For existing entries, use the stored entryId from previous saves
     const currentEntryId = entryId;
     
-    console.log('💾 Saving entry to collection:', {
+    // Saving entry
+    console.log('Saving entry:', {
       collectionId: selectedCollectionId,
       collectionName: selectedCollection.name,
       collectionIdInt: parseInt(selectedCollectionId),
@@ -228,8 +276,8 @@ function EntryContent() {
         lastSavedAt: currentDateTime,
       };
 
-      console.log('💾 Entry data to save:', entry);
-      console.log('🔍 TIME SERVICE STATE:', {
+      // Entry data and time service state
+      console.log('Time service state:', {
         mockDate: timeService.getCurrentDate(),
         mockDateTime: timeService.getCurrentDateTime(),
         isMockActive: timeService.isMockDate(),
@@ -242,10 +290,9 @@ function EntryContent() {
         // Set the entry ID from the backend response for future autosaves
         if (!entryId && savedEntry.id) {
           setEntryId(savedEntry.id);
-          console.log(`🆔 Entry ID set from backend: ${savedEntry.id}`);
         }
         
-        console.log(`✅ Entry ${isAutoSave ? 'auto-' : ''}saved successfully with ID: ${savedEntry.id}`);
+        // Saved successfully
         setHasUnsavedChanges(false);
         setLastSavedTime(new Date());
         if (!isAutoSave) {
@@ -344,10 +391,13 @@ function EntryContent() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-slate-900" style={{ backgroundColor: '#0E172B' }}>
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          {/* Enhanced Header */}
-          <div className="mb-8">
+      {/* Full-page layout without gradients */}
+      <div className="min-h-screen flex flex-col bg-[#0E172B]">
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+            {/* Header */}
+            <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <button
                 onClick={handleBack}
@@ -363,7 +413,7 @@ function EntryContent() {
                 <div className="relative">
                   <select
                     value={selectedCollectionId || ""}
-                    onChange={(e) => setSelectedCollectionId(e.target.value)}
+                    onChange={(e) => handleCollectionChange(e.target.value)}
                     className="appearance-none px-4 py-3 pr-10 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-700/50"
                     aria-label="Select collection for this entry"
                     disabled={isSaving || isLoadingEntry}
@@ -371,7 +421,7 @@ function EntryContent() {
                     <option value="" disabled>Select Collection</option>
                     {collections.map(col => (
                       <option key={col.id} value={col.id}>
-                        {col.name} {col.isPrivate ? "🔒" : ""}
+                        {col.name} {col.isPrivate ? " (Private)" : ""}
                       </option>
                     ))}
                   </select>
@@ -417,26 +467,26 @@ function EntryContent() {
             )}
           </div>
 
-          {/* Enhanced Entry Editor */}
-          <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden">
+            {/* Editor Surface - full-width translucent panel with internal scroll */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[calc(100vh-160px)]">
             {/* Editor Header */}
-            <div className="p-8 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/50 to-slate-800/50">
+              <div className="p-6 sm:p-8 border-b border-white/10 bg-white/5">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/20 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/15 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
                     <Calendar className="w-4 h-4" />
                     <span>{formattedDate}</span>
                   </div>
                   
                   {isLoadingEntry && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-sm rounded-lg">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 text-sm rounded-lg">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Loading entry...</span>
                     </div>
                   )}
                 </div>
-                
-                <div className="flex items-center gap-4 text-gray-400 text-sm">
+                  
+                  <div className="flex items-center gap-4 text-gray-300 text-sm">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     {isAutoSaving ? (
@@ -484,8 +534,10 @@ function EntryContent() {
               </div>
             </div>
 
-            {/* Content Editor */}
-            <div className="p-8">
+            {/* Content Editor (scrollable) */}
+              <div className="flex-1 overflow-y-auto pt-0 pb-8 px-6 sm:px-8">
+                {/* Spacer to keep content clear of sticky toolbar while scrolling */}
+                <div className="h-3"></div>
               {/* Character limit warning */}
               {charCount > MAX_CHARACTERS * 0.9 && (
                 <div className={`mb-4 p-3 rounded-xl border ${
@@ -517,8 +569,17 @@ function EntryContent() {
 
             </div>
           </div>
+          </div>
         </div>
       </div>
+      {/* Password Prompt Modal */}
+      <PasswordPromptModal
+        passwordPrompt={passwordPrompt}
+        enteredPassword={enteredPassword}
+        onPasswordChange={setEnteredPassword}
+        onSubmit={handlePasswordSubmit}
+        onClose={handleClosePasswordPrompt}
+      />
     </PageTransition>
   );
 }
@@ -528,21 +589,6 @@ function EntryContent() {
  * Handles loading states for search params
  */
 export default function Entry() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-900" style={{ backgroundColor: '#0E172B' }}>
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <BookOpen className="w-8 h-8 text-white" />
-          </div>
-          <div className="flex items-center space-x-3 text-white">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-lg font-medium">Loading editor...</span>
-          </div>
-        </div>
-      </div>
-    }>
-      <EntryContent />
-    </Suspense>
-  );
-} 
+  // Remove suspense fallback UI to avoid component-level loading; page renders together
+  return <EntryContent />;
+}

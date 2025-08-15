@@ -24,11 +24,10 @@ export default function CheckIcon({
       strokeWidth="2" 
       strokeLinecap="round" 
       strokeLinejoin="round" 
-      className={`lucide lucide-check-check ${className}`}
+      className={`lucide lucide-check ${className}`}
       style={iconSize}
     >
-      <path d="M18 6 7 17l-5-5"/>
-      <path d="m22 10-7.5 7.5L13 16"/>
+      <path d="M20 6 9 17l-5-5"/>
     </svg>
   );
 } 

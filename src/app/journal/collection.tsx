@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
-import { FiSearch, FiPlus, FiFilter, FiGrid, FiList, FiLock, FiUnlock } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiFilter, FiGrid, FiList } from 'react-icons/fi';
 import { useTime } from '@/contexts/TimeContext';
 
 export type Entry = {

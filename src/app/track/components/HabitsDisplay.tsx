@@ -1,4 +1,6 @@
 import React from "react";
+import { CheckCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import { UserHabit } from "../types";
 
 interface HabitWithCompletion {
@@ -137,48 +139,19 @@ export default function HabitsDisplay({
                 }}
                 onClick={handleToggle}
               >
-                <div className="flex items-center gap-3">
-                  <>
-                    {completed ? (
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: "#02C951" }}
-                      >
-                        <svg
-                          className="w-4 h-4 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: "#FA2C37" }}
-                      >
-                        <svg
-                          className="w-4 h-4 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </>
+                  <div className="flex items-center gap-3">
+                    <motion.span
+                      key={completed ? 'done' : 'todo'}
+                      initial={{ scale: 0.85, rotate: -8, opacity: 0.85 }}
+                      animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                    >
+                      <CheckCircle
+                        className={`w-6 h-6 ${
+                          completed ? "text-[#06DF73]" : "text-gray-400"
+                        }`}
+                      />
+                    </motion.span>
                   <div className="flex flex-col">
                     <span className="text-white text-sm">{habit.name}</span>
                     {!wasActive && (

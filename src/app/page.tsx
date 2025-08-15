@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from '@/components/icons';
 import { FaBrain, FaRobot, FaMouse } from 'react-icons/fa';
 import { HiBeaker, HiUser, HiAcademicCap, HiSparkles } from 'react-icons/hi2';
-import AuthModal from '@/components/AuthModal';
+// Lazy load non-critical components
+const AuthModal = dynamic(() => import('@/components/AuthModal'), { ssr: false });
+
+// Lazy load page sections
+const FeaturesSection = dynamic(() => Promise.resolve(({ children }: { children: React.ReactNode }) => <>{children}</>), { ssr: false });
+const AISection = dynamic(() => Promise.resolve(({ children }: { children: React.ReactNode }) => <>{children}</>), { ssr: false });
+const CTASection = dynamic(() => Promise.resolve(({ children }: { children: React.ReactNode }) => <>{children}</>), { ssr: false });
 import { getStudySets } from '@/services/studyService';
 import { authService } from '@/api/services/authService';
 import { useRouter } from 'next/navigation';
@@ -72,19 +79,15 @@ export default function HomePage() {
     setCacheTestResult('');
     
     try {
-      console.log('🧪 [CACHE TEST] Testing study sets caching...');
-      
       // First call - should fetch from API
       const start1 = Date.now();
       const sets1 = await getStudySets();
       const time1 = Date.now() - start1;
-      console.log('🧪 [CACHE TEST] First call took:', time1 + 'ms');
       
       // Second call - should use cache
       const start2 = Date.now();
-      await getStudySets(); // Cache warmup
+      await getStudySets();
       const time2 = Date.now() - start2;
-      console.log('🧪 [CACHE TEST] Second call took:', time2 + 'ms');
       
       setCacheTestResult(`✅ Cache test completed!
 First call: ${time1}ms (API)
@@ -93,7 +96,6 @@ Study sets found: ${sets1.length}
 ${time2 < time1 / 2 ? 'Cache is working! 🎉' : 'Cache may not be working properly 🤔'}`);
       
     } catch (error) {
-      console.error('🧪 [CACHE TEST] Error:', error);
       setCacheTestResult(`❌ Cache test failed: ${error}`);
     } finally {
       setIsTestingCache(false);
@@ -105,18 +107,14 @@ ${time2 < time1 / 2 ? 'Cache is working! 🎉' : 'Cache may not be working prope
     setCacheTestResult('');
     
     try {
-      console.log('🧪 [CACHE TEST] Testing auth caching...');
-      
       // Test cached user data
       const cachedUser = authService.getCachedUser();
-      console.log('🧪 [CACHE TEST] Cached user:', cachedUser);
       
       setCacheTestResult(`👤 Auth cache test:
 Cached user: ${cachedUser ? JSON.stringify(cachedUser, null, 2) : 'No cached user found'}
 Is authenticated: ${authService.isAuthenticated()}`);
       
     } catch (error) {
-      console.error('🧪 [CACHE TEST] Auth error:', error);
       setCacheTestResult(`❌ Auth cache test failed: ${error}`);
     } finally {
       setIsTestingCache(false);
@@ -156,24 +154,16 @@ Is authenticated: ${authService.isAuthenticated()}`);
         {/* Base gradient background */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#10182B] via-[#10182B] to-[#0c1324]"></div>
         
-        {/* Floating dots background */}
-        <div className="absolute inset-0 overflow-hidden opacity-70">
-          {/* App color floating dots with varied animations */}
+        {/* Optimized floating dots background - reduced from 15 to 8 for better performance */}
+        <div className="absolute inset-0 overflow-hidden opacity-60">
           <div className="absolute w-3 h-3 bg-[#42b9e5]/60 rounded-full float-1" style={{ top: '20%', left: '15%' }}></div>
           <div className="absolute w-2 h-2 bg-[#4f83ed]/70 rounded-full float-2" style={{ top: '35%', left: '80%' }}></div>
           <div className="absolute w-2.5 h-2.5 bg-[#4f83ed]/65 rounded-full float-4" style={{ top: '75%', left: '70%' }}></div>
           <div className="absolute w-2 h-2 bg-[#4f83ed]/70 rounded-full float-3" style={{ top: '18%', left: '75%' }}></div>
-          <div className="absolute w-1 h-1 bg-[#42b9e5]/80 rounded-full float-4" style={{ top: '85%', left: '20%' }}></div>
-          <div className="absolute w-1 h-1 bg-[#4f83ed]/85 rounded-full float-4" style={{ top: '90%', left: '75%' }}></div>
           <div className="absolute w-5 h-5 bg-[#42b9e5]/45 rounded-full float-2" style={{ top: '80%', left: '40%' }}></div>
           <div className="absolute w-2.5 h-2.5 bg-[#42b9e5]/65 rounded-full float-1" style={{ top: '12%', left: '35%' }}></div>
           <div className="absolute w-2 h-2 bg-[#42b9e5]/70 rounded-full float-3" style={{ top: '25%', left: '65%' }}></div>
           <div className="absolute w-1.5 h-1.5 bg-[#42b9e5]/75 rounded-full float-5" style={{ top: '40%', left: '10%' }}></div>
-          <div className="absolute w-2 h-2 bg-[#4f83ed]/60 rounded-full float-1" style={{ top: '50%', left: '5%' }}></div>
-          <div className="absolute w-1.5 h-1.5 bg-[#42b9e5]/70 rounded-full float-3" style={{ top: '65%', left: '8%' }}></div>
-          <div className="absolute w-2.5 h-2.5 bg-[#4f83ed]/55 rounded-full float-2" style={{ top: '22%', left: '90%' }}></div>
-          <div className="absolute w-1 h-1 bg-[#42b9e5]/80 rounded-full float-4" style={{ top: '42%', left: '92%' }}></div>
-          <div className="absolute w-1.5 h-1.5 bg-[#4f83ed]/65 rounded-full float-5" style={{ top: '62%', left: '88%' }}></div>
         </div>
 
         {/* Global CSS for animations */}
@@ -342,6 +332,7 @@ Is authenticated: ${authService.isAuthenticated()}`);
       </section>
 
       {/* ReFocused Features Section */}
+      <FeaturesSection>
       <section id="features" className="py-12 px-4 bg-gradient-to-b from-[#0c1324] to-[#10182B]">
         <div className="container mx-auto">
           <div className="text-center mb-10">
@@ -426,8 +417,10 @@ Is authenticated: ${authService.isAuthenticated()}`);
           </div>
         </div>
       </section>
+      </FeaturesSection>
 
       {/* ReFocused AI Section */}
+      <AISection>
       <section className="py-12 px-4 bg-[#10182B]">
         <div className="container mx-auto">
           <div className="text-center mb-10">
@@ -489,8 +482,10 @@ Is authenticated: ${authService.isAuthenticated()}`);
 
         </div>
       </section>
+      </AISection>
 
       {/* Final CTA Section */}
+      <CTASection>
       <section className="py-12 px-4 bg-gradient-to-b from-[#10182B] to-[#0c1324]">
         <div className="container mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
@@ -518,6 +513,7 @@ Is authenticated: ${authService.isAuthenticated()}`);
           </div>
         </div>
       </section>
+      </CTASection>
       
       {/* Auth Modal */}
       <AuthModal

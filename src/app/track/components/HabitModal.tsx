@@ -1,4 +1,10 @@
+"use client";
+
 import React from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { X, Pin, PinOff, Trash2 } from 'lucide-react';
+import { FireIcon } from '@/components/icons';
 import { UserHabit } from '../types';
 
 interface HabitModalProps {
@@ -10,85 +16,119 @@ interface HabitModalProps {
   onToggleFavorite: () => void;
 }
 
-export default function HabitModal({ 
-  isOpen, 
-  habit, 
-  habits, 
-  onClose, 
-  onDelete, 
-  onToggleFavorite 
+export default function HabitModal({
+  isOpen,
+  habit,
+  habits,
+  onClose,
+  onDelete,
+  onToggleFavorite
 }: HabitModalProps) {
-  if (!isOpen || !habit) return null;
+  if (!isOpen || !habit || typeof window === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50">
-      <div className="bg-gray-800 text-white rounded-lg p-6 w-96 shadow-lg">
-        <h3 className="text-lg font-semibold mb-4">Manage Habit</h3>
-        <div className="mb-6">
-          <p className="text-gray-300 text-center mb-2">
-            What would you like to do with <span className="text-white font-medium">"{habit.name}"</span>?
-          </p>
-          
-          {/* Streak Information */}
-          <div className="bg-gray-700/50 rounded-lg p-3 mb-3">
-            <div className="flex items-center justify-center gap-2">
-              {habit.streak > 0 ? (
-                <>
-                  <span className="text-orange-400">🔥</span>
-                  <span className="text-white font-medium">{habit.streak} day streak</span>
-                  <span className="text-orange-400">🔥</span>
-                </>
-              ) : (
-                <span className="text-gray-400">No current streak</span>
-              )}
-            </div>
-          </div>
-
-          {/* Simplified favorite status - no limit checking */}
-          <p className="text-xs text-gray-400 text-center">
-            {habit.isFavorite 
-              ? 'This habit is currently pinned to the top'
-              : 'Pin habit to appear at the top of your list'
-            }
-          </p>
-        </div>
-        <div className="flex justify-between">
-          {/* Delete button on the left */}
-          <button
-            onClick={onDelete}
-            className="flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-md active:scale-95 transform transition-all duration-75"
-            title="Delete habit"
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          onClick={onClose}
+        >
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[4px]" aria-hidden="true" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="relative w-full max-w-md bg-gradient-to-br from-gray-900/95 to-slate-900/95 backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Delete
-          </button>
-          
-          {/* Pin and Cancel buttons on the right */}
-          <div className="flex gap-2">
-            <button
-              onClick={onToggleFavorite}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md active:scale-95 transform transition-all duration-75 ${
-                habit.isFavorite
-                  ? 'text-blue-300 hover:text-blue-200 hover:bg-blue-900/20'
-                  : 'text-gray-300 hover:text-blue-300 hover:bg-blue-900/20'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-              </svg>
-              {habit.isFavorite ? 'Unpin' : 'Pin to Top'}
-            </button>
+            {/* Close button */}
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-md active:scale-95 transform transition-transform duration-75"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center transition-colors z-10"
+              aria-label="Close modal"
             >
-              Cancel
+              <X className="w-5 h-5 text-gray-300" />
             </button>
-          </div>
-        </div>
-      </div>
-    </div>
+
+            {/* Header */}
+            <div className="p-6 pb-4">
+              <h3 className="text-xl font-bold text-white text-center">Edit Habit</h3>
+              <p className="text-sm text-gray-400 text-center mt-1">
+                {`\"${habit.name}\"`}
+              </p>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 pb-6">
+              {/* Streak */}
+              <div className="bg-gray-800/40 border border-gray-700/40 rounded-xl p-3 mb-3">
+                <div className="flex items-center justify-center gap-2">
+                  {habit.streak > 0 ? (
+                    <>
+                      <FireIcon className="w-4 h-4 text-red-500" />
+                      <span className="text-white font-medium">{habit.streak} {habit.streak === 1 ? 'day' : 'days'} streak</span>
+                      <FireIcon className="w-4 h-4 text-red-500" />
+                    </>
+                  ) : (
+                    <span className="text-gray-400">No current streak</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Pinned status */}
+              <p className="text-xs text-gray-400 text-center mb-4">
+                {habit.isFavorite ? 'This habit is pinned to the top' : 'Pin this habit to appear at the top of your list'}
+              </p>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between gap-3">
+                {/* Left side: Pin/Unpin and Cancel */}
+                <div className="flex items-center gap-2">
+                  {/* Pin / Unpin */}
+                  <button
+                    onClick={onToggleFavorite}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-blue-300 hover:text-white border border-blue-500/30 hover:border-blue-500/60 bg-blue-500/10 hover:bg-blue-500/20 transition-colors active:scale-95"
+                  >
+                    {habit.isFavorite ? (
+                      <>
+                        <PinOff className="w-4 h-4" />
+                        Unpin
+                      </>
+                    ) : (
+                      <>
+                        <Pin className="w-4 h-4" />
+                        Pin
+                      </>
+                    )}
+                  </button>
+
+                  {/* Cancel */}
+                  <button
+                    onClick={onClose}
+                    className="px-4 py-2 text-gray-300 hover:text-white bg-gray-700/40 hover:bg-gray-600/50 border border-gray-600/40 rounded-xl transition-colors active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {/* Right side: Delete */}
+                <button
+                  onClick={onDelete}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-red-300 hover:text-white border border-red-500/30 hover:border-red-500/60 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors active:scale-95"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
-} 
+}

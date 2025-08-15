@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserHabit, SimpleFilter } from '../types';
-import { CheckIcon, FireIcon } from '@/components/icons';
+import { FireIcon } from '@/components/icons';
+import { motion } from 'framer-motion';
+import { CheckCircle } from 'lucide-react';
 import { Bookmark, Trash2 } from 'lucide-react';
 import ConfirmationDialog from '@/components/ConfirmationDialog';
 
@@ -277,15 +279,21 @@ export default function HabitTracking({
                       {/* Completion Checkbox */}
                       <button
                         onClick={() => handleToggleCompletion(habit.id)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted
-                            ? 'bg-green-500 border-green-500 text-white'
-                            : 'border-gray-400 hover:border-green-400 hover:bg-green-400/10'
-                        }`}
+                        className="w-6 h-6 flex items-center justify-center transition-colors"
+                        aria-label={isCompleted ? 'Completed' : 'Mark complete'}
                       >
-                        {isCompleted && (
-                          <CheckIcon className="w-4 h-4" />
-                        )}
+                        <motion.span
+                          key={isCompleted ? 'done' : 'todo'}
+                          initial={{ scale: 0.85, rotate: -8, opacity: 0.85 }}
+                          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                        >
+                          <CheckCircle
+                            className={`w-6 h-6 ${
+                              isCompleted ? 'text-[#06DF73]' : 'text-gray-400'
+                            }`}
+                          />
+                        </motion.span>
                       </button>
 
                       {/* Habit Name */}
@@ -347,73 +355,91 @@ export default function HabitTracking({
       {/* Edit Habit Dialog */}
       {editDialog.isOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50" onClick={() => setEditDialog({ isOpen: false, habit: null })}>
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[4px]" aria-hidden="true" />
           <div 
-            className="bg-gray-800 rounded-lg shadow-xl w-[400px] p-6 border border-gray-600 relative"
+            className="bg-[#1E2938] backdrop-blur-sm border border-gray-700/50 rounded-2xl shadow-2xl w-[400px] overflow-hidden relative"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">Edit Habit</h3>
-              <button
-                onClick={() => setEditDialog({ isOpen: false, habit: null })}
-                className="text-gray-400 hover:text-gray-300 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+            {/* Close button */}
+            <button
+              onClick={() => setEditDialog({ isOpen: false, habit: null })}
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center transition-colors z-10"
+              aria-label="Close modal"
+            >
+              <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Header */}
+            <div className="p-6 pb-4">
+              <h3 className="text-xl font-bold text-white text-center">Edit Habit</h3>
+              <div className="flex items-center justify-center gap-2 mt-2">
+                {editDialog.habit?.isFavorite && (
+                  <Bookmark 
+                    size={16} 
+                    className="text-blue-400" 
+                    fill="currentColor"
+                  />
+                )}
+                <p className="text-sm text-gray-400">
+                  {editDialog.habit?.name}
+                </p>
+              </div>
             </div>
             
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center gap-2">
-                  {editDialog.habit?.isFavorite && (
-                    <Bookmark 
-                      size={20} 
-                      className="text-blue-400" 
-                      fill="currentColor"
-                    />
-                  )}
-                  <h4 className="text-xl font-medium text-white">{editDialog.habit?.name}</h4>
-                </div>
-              </div>
-              
+            {/* Body */}
+            <div className="px-6 pb-6">
+              {/* Streak */}
               {editDialog.habit && editDialog.habit.streak > 0 && (
-                <div className="flex items-center gap-2 text-orange-400 mb-4">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8z"/>
-                  </svg>
-                  <span className="text-sm">{editDialog.habit.streak} day{editDialog.habit.streak !== 1 ? 's' : ''}</span>
+                <div className="bg-gray-800/40 border border-gray-700/40 rounded-xl p-3 mb-3">
+                  <div className="flex items-center justify-center gap-2">
+                    <FireIcon className="w-4 h-4 text-red-500" />
+                    <span className="text-white font-medium">{editDialog.habit.streak} {editDialog.habit.streak === 1 ? 'day' : 'days'} streak</span>
+                    <FireIcon className="w-4 h-4 text-red-500" />
+                  </div>
                 </div>
               )}
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={handlePinToggle}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-              >
-                <Bookmark 
-                  size={14} 
-                  fill={editDialog.habit?.isFavorite ? 'currentColor' : 'none'}
-                />
-                {editDialog.habit?.isFavorite ? 'Unpin' : 'Pin'}
-              </button>
-              
-              <button
-                onClick={handleDeleteFromEdit}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
-              >
-                <Trash2 size={14} />
-                Delete
-              </button>
-              
-              <button
-                onClick={() => setEditDialog({ isOpen: false, habit: null })}
-                className="w-full px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 border border-gray-600 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
+
+              {/* Pinned status */}
+              <p className="text-xs text-gray-400 text-center mb-4">
+                {editDialog.habit?.isFavorite ? 'This habit is pinned to the top' : 'Pin this habit to appear at the top of your list'}
+              </p>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between gap-3">
+                {/* Left side: Pin/Unpin and Cancel */}
+                <div className="flex items-center gap-2">
+                  {/* Pin / Unpin */}
+                  <button
+                    onClick={handlePinToggle}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-blue-300 hover:text-white border border-blue-500/30 hover:border-blue-500/60 bg-blue-500/10 hover:bg-blue-500/20 transition-colors active:scale-95"
+                  >
+                    <Bookmark 
+                      size={14} 
+                      fill={editDialog.habit?.isFavorite ? 'currentColor' : 'none'}
+                    />
+                    {editDialog.habit?.isFavorite ? 'Unpin' : 'Pin'}
+                  </button>
+
+                  {/* Cancel */}
+                  <button
+                    onClick={() => setEditDialog({ isOpen: false, habit: null })}
+                    className="px-4 py-2 text-gray-300 hover:text-white bg-gray-700/40 hover:bg-gray-600/50 border border-gray-600/40 rounded-xl transition-colors active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {/* Right side: Delete */}
+                <button
+                  onClick={handleDeleteFromEdit}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-red-300 hover:text-white border border-red-500/30 hover:border-red-500/60 bg-red-500/10 hover:bg-red-500/20 transition-colors active:scale-95"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>

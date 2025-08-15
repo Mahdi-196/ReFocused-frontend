@@ -31,28 +31,28 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'mind-fuel',
     name: 'Mind Fuel Generation',
-    endpoint: '/api/claude/mind-fuel',
+    endpoint: `/api/mind-fuel`,
     method: 'POST',
     description: 'Tests weekly focus, tips, productivity hacks, brain boost, and mindfulness moments'
   },
   {
     id: 'quote-of-day',
     name: 'Quote of the Day',
-    endpoint: '/api/claude/quote-of-day',
+    endpoint: `/api/quote-of-day`,
     method: 'POST',
     description: 'Tests inspirational quote generation with author attribution'
   },
   {
     id: 'word-of-day',
     name: 'Word of the Day',
-    endpoint: '/api/claude/word-of-day',
+    endpoint: `/api/word-of-day`,
     method: 'POST',
     description: 'Tests vocabulary word with pronunciation, definition, and example'
   },
   {
     id: 'ai-assistance-books',
     name: 'AI Book Recommendations',
-    endpoint: '/api/claude/chat',
+    endpoint: `/api/claude-chat`,
     method: 'POST',
     payload: {
       message: "Recommend 3 books about mindfulness, meditation, or personal growth that would help me develop a better meditation practice and reduce daily stress."
@@ -62,7 +62,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'ai-assistance-affirmations',
     name: 'AI Daily Affirmations',
-    endpoint: '/api/claude/chat',
+    endpoint: `/api/claude-chat`,
     method: 'POST',
     payload: {
       message: "Create 5 personalized daily affirmations that will help me stay calm, focused, and positive throughout my day, especially during stressful moments."
@@ -72,7 +72,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'ai-assistance-meditation',
     name: 'AI Meditation Guidance',
-    endpoint: '/api/claude/chat',
+    endpoint: `/api/claude-chat`,
     method: 'POST',
     payload: {
       message: "Guide me through a personalized 10-minute meditation session based on my current stress level and what I'm hoping to achieve from today's practice."
@@ -82,7 +82,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'ai-assistance-stress-relief',
     name: 'AI Stress Relief',
-    endpoint: '/api/claude/chat',
+    endpoint: `/api/claude-chat`,
     method: 'POST',
     payload: {
       message: "Suggest 5 quick stress relief techniques I can use during work breaks, including breathing exercises and mindfulness practices under 5 minutes."
@@ -92,7 +92,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'data-population-journal',
     name: 'Data Population - Journal Prompts',
-    endpoint: '/api/claude/populate-data',
+    endpoint: `/api/populate-data`,
     method: 'POST',
     payload: {
       dataType: 'journal-prompts',
@@ -103,7 +103,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'data-population-goals',
     name: 'Data Population - Goals',
-    endpoint: '/api/claude/populate-data',
+    endpoint: `/api/populate-data`,
     method: 'POST',
     payload: {
       dataType: 'goals',
@@ -114,7 +114,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'data-population-affirmations',
     name: 'Data Population - Affirmations',
-    endpoint: '/api/claude/populate-data',
+    endpoint: `/api/populate-data`,
     method: 'POST',
     payload: {
       dataType: 'affirmations',
@@ -125,7 +125,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'data-population-habits',
     name: 'Data Population - Habits',
-    endpoint: '/api/claude/populate-data',
+    endpoint: `/api/populate-data`,
     method: 'POST',
     payload: {
       dataType: 'habits',
@@ -136,7 +136,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'data-population-meditation',
     name: 'Data Population - Meditation Sessions',
-    endpoint: '/api/claude/populate-data',
+    endpoint: `/api/populate-data`,
     method: 'POST',
     payload: {
       dataType: 'meditation-sessions',

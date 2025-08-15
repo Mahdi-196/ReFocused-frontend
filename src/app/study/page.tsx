@@ -1,37 +1,43 @@
 "use client";
 
-import React from "react";
-import Pomodoro from "@/components/pomodoro";
-import QuickNotes from "@/components/QuickNotes";
+import React, { useState, useEffect } from "react";
+import dynamic from 'next/dynamic';
 import AuthGuard from '@/components/AuthGuard';
 import PageTransition from '@/components/PageTransition';
 import { StudyPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 
-// Import the new components
-import StudySetsPanel from './components/StudySetsPanel';
-import FlashcardDisplay from './components/FlashcardDisplay';
-import StatisticsSection from './components/StatisticsSection';
-import StatisticsDevTools from './components/StatisticsDevTools';
-import StudyModals from './components/StudyModals';
+// Priority 1: Critical above-the-fold components (immediate load)
+import Pomodoro from "@/components/pomodoro";
+
+// Secondary components without per-component loaders
+const QuickNotes = dynamic(() => import("@/components/QuickNotes"), { ssr: false });
+
+const StudySetsPanel = dynamic(() => import('./components/StudySetsPanel'), { ssr: false });
+
+const FlashcardDisplay = dynamic(() => import('./components/FlashcardDisplay'), { ssr: false });
+
+const StatisticsSection = dynamic(() => import('./components/StatisticsSection'), { ssr: false });
+
+const StatisticsDevTools = dynamic(() => import('./components/StatisticsDevTools'), { ssr: false });
+const StudyModals = dynamic(() => import('./components/StudyModals'), { ssr: false });
 
 // Import the custom hooks
 import { useStudyData } from './hooks/useStudyData';
 import { useStatistics } from './hooks/useStatistics';
 
 export default function StudyPage() {
+  // Remove staged reveals; render all together after skeleton delay
   
   // Use custom hooks for data management
   const studyData = useStudyData();
   const statistics = useStatistics();
 
+  useEffect(() => {}, []);
+
   return (
     <AuthGuard>
       <PageTransition>
-        <SkeletonDemo
-          skeleton={<StudyPageSkeleton />}
-          delay={100} // Minimal delay for smooth transition
-          enabled={false} // Disable forced demo mode
-        >
+        <SkeletonDemo skeleton={<StudyPageSkeleton />} enabled={false}>
           <div 
             className="min-h-screen py-8"
             style={{ backgroundColor: "#1A2537" }}
@@ -76,7 +82,6 @@ export default function StudyPage() {
                 stats={statistics.stats}
                 statsLoading={statistics.statsLoading}
                 onTimeFilterChange={statistics.setTimeFilter}
-                onRefresh={statistics.forceRefresh}
               />
 
               {/* Statistics Dev Tools - Development Only */}

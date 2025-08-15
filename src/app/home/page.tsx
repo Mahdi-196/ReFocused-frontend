@@ -4,21 +4,22 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
 
-import { HomePageSkeleton } from '@/components/skeletons';
+import { HomePageSkeleton, SkeletonDemo } from '@/components/skeletons';
 
-// Dynamically import heavy components without loading states to avoid double animation
+// Priority 1: Critical above-the-fold components with SSR enabled
 const DailyMomentum = dynamic(() => import('../homeComponents/DailyMomentum'), {
-  ssr: false,
+  ssr: true,
 });
 
 const QuoteOfTheDay = dynamic(() => import('../../components/QuoteOfTheDay'), {
-  ssr: false,
+  ssr: true,
 });
 
 const WordOfTheDay = dynamic(() => import('../homeComponents/WordOfTheDay'), {
-  ssr: false,
+  ssr: true,
 });
 
+// Secondary components
 const GoalTracker = dynamic(() => import('../homeComponents/GoalTracker'), {
   ssr: false,
 });
@@ -31,9 +32,7 @@ const ProductivityScore = dynamic(() => import('../homeComponents/ProductivitySc
   ssr: false,
 });
 
-const ApiTestingBox = dynamic(() => import('../homeComponents/ApiTestingBox'), {
-  ssr: false,
-});
+// Removed ApiTestingBox
 
 import { Task } from '../homeComponents/TaskList';
 
@@ -119,7 +118,7 @@ const Home = () => {
   const [newTask, setNewTask] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  // Removed progressive loading; page renders as a whole after skeleton delay
 
   // Clear tasks when user changes
   const clearTasks = () => {
@@ -139,15 +138,12 @@ const Home = () => {
     // Clean up old task entries to keep localStorage tidy
     cleanupOldTasks();
     
-    // Remove initial loading state immediately - no delays needed for production
-    setIsInitialLoading(false);
   }, []);
 
   // Handle authentication changes
   useEffect(() => {
     // Listen for user logout events
     const handleUserLogout = () => {
-      console.log('🔄 User logged out - clearing tasks');
       clearTasks();
     };
 
@@ -159,7 +155,6 @@ const Home = () => {
         
         // If user changed (logged in/out or switched users)
         if (newUserId !== oldUserId) {
-          console.log('🔄 User authentication changed - refreshing tasks');
           setCurrentUser(newUserId);
           
           if (newUserId) {
@@ -178,7 +173,6 @@ const Home = () => {
     const handleFocus = () => {
       const userId = getUserId();
       if (userId !== currentUser) {
-        console.log('🔄 User changed on focus - refreshing tasks');
         setCurrentUser(userId);
         
         if (userId) {
@@ -222,55 +216,37 @@ const Home = () => {
     setTasks(tasks.filter(task => task.id !== taskId));
   };
 
-  // Show skeleton during initial loading
-  if (isInitialLoading) {
-    return (
-      <PageTransition>
-        <main className="container mx-auto p-6 max-w-7xl">
-          <h1 className="sr-only">ReFocused Dashboard - Daily Productivity and Mindfulness</h1>
-          <HomePageSkeleton />
-        </main>
-      </PageTransition>
-    );
-  }
-
   return (
     <PageTransition>
       <main className="container mx-auto p-6 max-w-7xl">
         <h1 className="sr-only">ReFocused Dashboard - Daily Productivity and Mindfulness</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <DailyMomentum
-            tasks={tasks}
-            newTask={newTask}
-            setNewTask={setNewTask}
-            handleAddTask={handleAddTask}
-            handleDeleteTask={handleDeleteTask}
-            setTasks={setTasks}
-          />
+        <SkeletonDemo skeleton={<HomePageSkeleton />} enabled={false}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <DailyMomentum
+              tasks={tasks}
+              newTask={newTask}
+              setNewTask={setNewTask}
+              handleAddTask={handleAddTask}
+              handleDeleteTask={handleDeleteTask}
+              setTasks={setTasks}
+            />
 
-          <div className="lg:col-span-1">
-            <div className="flex flex-col gap-6">
-              <QuoteOfTheDay />
-              <WordOfTheDay />
+            <div className="lg:col-span-1">
+              <div className="flex flex-col gap-6">
+                <QuoteOfTheDay />
+                <WordOfTheDay />
+              </div>
             </div>
+
+            <GoalTracker />
+
+            <MindFuel />
+
+            <ProductivityScore />
           </div>
 
-          <GoalTracker />
-
-          <MindFuel />
-
-          <ProductivityScore />
-        </div>
-
-        {/* API Testing Section - Development Only */}
-                      {process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">API Testing</h2>
-            <ApiTestingBox />
-          </div>
-        )}
-
+          {/* API Testing section removed */}
+        </SkeletonDemo>
       </main>
     </PageTransition>
   );

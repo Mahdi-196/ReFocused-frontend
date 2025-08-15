@@ -496,10 +496,12 @@ Most useful: devTools.cache.clearAll() to reset everything.
     }
   };
   
-  // Show welcome message in console
-  console.log(`
+  // Show welcome message in console (only in development)
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
+    console.log(`
 🔧 ReFocused Dev Tools Loaded!
 💡 Type 'devTools.cache.help()' in console for cache utilities
 🗑️ Quick clear all: devTools.cache.clearAll()
-  `);
+    `);
+  }
 } 

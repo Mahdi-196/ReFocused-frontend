@@ -1,13 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Activity, Brain, Info, RotateCcw } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { ChevronLeft, ChevronRight, Activity, Brain, Info, BookOpen, Heart, Flower, Shield } from 'lucide-react';
+import { useAiAssistanceDaily, useWeeklyTheme } from '@/hooks/useDailyContentSimple';
 import { useRouter } from 'next/navigation';
 import PageTransition from '@/components/PageTransition';
+import { RelaxPageSkeleton, SkeletonDemo } from '@/components/skeletons';
+
+// Priority 1: Critical above-the-fold components (immediate load)
 import BreathworkExercises from '@/components/BreathworkExercises';
 import MeditationTimer from '@/components/MeditationTimer';
-import AmbientSounds from '@/components/AmbientSounds';
-import { RelaxPageSkeleton, SkeletonDemo } from '@/components/skeletons';
+
+// Audio component without inline loader; covered by page skeleton
+const AmbientSounds = dynamic(() => import('@/components/AmbientSounds'), { ssr: false });
 
 
 
@@ -16,70 +22,49 @@ import { RelaxPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 const STORAGE_KEY = 'relaxMode';
 const MEDITATION_DURATION = 300; // 5 minutes in seconds
 
-
-const WEEKLY_THEMES = [
-  {
-    name: 'Stoicism',
-    subtitle: 'Ancient wisdom for modern resilience',
-  },
-  {
-    name: 'Flow',
-    subtitle: 'The psychology of optimal experience',
-  },
-  {
-    name: 'Kaizen',
-    subtitle: 'Continuous improvement through small steps',
-  },
-  {
-    name: 'Ikigai',
-    subtitle: 'Finding your reason for being',
-  },
-] as const;
-
 type RelaxMode = 'breathing' | 'meditation';
 
 export default function RelaxPage() {
   const router = useRouter();
-  const [currentThemeIndex, setCurrentThemeIndex] = useState(0);
   const [activeMode, setActiveMode] = useState<RelaxMode>('breathing');
   const [showMeditationGuide, setShowMeditationGuide] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState([
-    {
-      id: 'books',
-      title: 'Book Recommendations',
-      prompt: "Recommend 3 books about mindfulness, meditation, or personal growth that would help me develop a better meditation practice and reduce daily stress.",
-      icon: Brain,
-      color: 'blue'
-    },
-    {
-      id: 'affirmations',
-      title: 'Daily Affirmations',
-      prompt: "Create 5 personalized daily affirmations that will help me stay calm, focused, and positive throughout my day, especially during stressful moments.",
-      icon: Activity,
-      color: 'purple'
-    },
-    {
-      id: 'meditation',
-      title: 'Meditation Guidance',
-      prompt: "Guide me through a personalized 10-minute meditation session based on my current stress level and what I'm hoping to achieve from today's practice.",
-      icon: Activity,
-      color: 'green'
-    },
-    {
-      id: 'stress',
-      title: 'Stress Relief',
-      prompt: "Suggest 5 quick stress relief techniques I can use during work breaks, including breathing exercises and mindfulness practices under 5 minutes.",
-      icon: Brain,
-      color: 'orange'
-    }
-  ]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Remove progressive reveals; page shows as a whole after skeleton delay
+  // Use cached AI suggestions
+  const { 
+    data: aiSuggestionsData, 
+    loading: isLoadingAiSuggestions, 
+    error: aiSuggestionsError, 
+    refresh: refreshAiSuggestions, 
+    isCached: aiSuggestionsCached 
+  } = useAiAssistanceDaily();
+
+  // Use cached weekly theme
+  const { 
+    data: weeklyThemeData, 
+    loading: isLoadingWeeklyTheme, 
+    error: weeklyThemeError, 
+    refresh: refreshWeeklyTheme, 
+    isCached: weeklyThemeCached 
+  } = useWeeklyTheme();
+  
+  const aiSuggestions = aiSuggestionsData?.suggestions ? aiSuggestionsData.suggestions.map((suggestion: any, index: number) => ({
+    id: `weekly-suggestion-${index}`,
+    title: suggestion.title,
+    prompt: suggestion.prompt,
+    icon: suggestion.title.toLowerCase().includes('book') ? BookOpen :
+          suggestion.title.toLowerCase().includes('affirmation') ? Heart :
+          suggestion.title.toLowerCase().includes('meditation') ? Flower :
+          Shield,
+    color: suggestion.color
+  })) : [];
 
   // Initialize client-side rendering flag
   useEffect(() => {
     setIsClient(true);
   }, []);
+
 
   // Load preference from localStorage on component mount
   useEffect(() => {
@@ -112,13 +97,8 @@ export default function RelaxPage() {
 
   // Removed unused handleSaveMantra function
 
-  const nextTheme = () => {
-    setCurrentThemeIndex((prev) => (prev + 1) % WEEKLY_THEMES.length);
-  };
-
-  const prevTheme = () => {
-    setCurrentThemeIndex((prev) => (prev - 1 + WEEKLY_THEMES.length) % WEEKLY_THEMES.length);
-  };
+  // Use API-provided weekly theme shape directly
+  const currentTheme = weeklyThemeData ?? null;
 
   const handleMeditationComplete = () => {
     // Future: Implement completion tracking
@@ -131,88 +111,10 @@ export default function RelaxPage() {
     router.push(`/ai?message=${encodedMessage}`);
   };
 
-  const refreshAISuggestions = async () => {
-    setIsRefreshing(true);
-    
-    try {
-      const response = await fetch('/api/claude/populate-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          dataType: 'custom',
-          customPrompt: {
-            "task": "Generate 4 unique AI assistance prompts for a relaxation and mindfulness app.",
-            "instructions": {
-              "tone": "Calming, helpful, and wellness-focused.",
-              "categories": ["Book/Resource Recommendations", "Affirmations/Mantras", "Meditation/Mindfulness Guidance", "Stress Relief/Coping Techniques"],
-              "length_limit": "Each prompt must be 15-25 words maximum, similar to these examples: 'Recommend 3 books about mindfulness that help develop meditation practice and reduce daily stress' or 'Suggest 5 quick stress relief techniques for work breaks under 5 minutes'",
-              "format": "Populate the 'content_payload' array with 4 different assistance prompts. Your response should only be the completed JSON object."
-            },
-            "content_payload": [
-              {
-                "title": "<2-3 word title for category 1>",
-                "category": "<string for category 1>",
-                "prompt": "<15-25 word prompt for category 1>",
-                "color": "blue"
-              },
-              {
-                "title": "<2-3 word title for category 2>",
-                "category": "<string for category 2>",
-                "prompt": "<15-25 word prompt for category 2>",
-                "color": "purple"
-              },
-              {
-                "title": "<2-3 word title for category 3>",
-                "category": "<string for category 3>",
-                "prompt": "<15-25 word prompt for category 3>",
-                "color": "green"
-              },
-              {
-                "title": "<2-3 word title for category 4>",
-                "category": "<string for category 4>",
-                "prompt": "<15-25 word prompt for category 4>",
-                "color": "orange"
-              }
-            ]
-          }
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.content && data.content[0] && data.content[0].text) {
-          const contentPayload = JSON.parse(data.content[0].text);
-          if (contentPayload.content_payload && Array.isArray(contentPayload.content_payload)) {
-            const newSuggestions = contentPayload.content_payload.map((item: any, index: number) => ({
-              id: `suggestion-${index}`,
-              title: item.title || `Suggestion ${index + 1}`,
-              prompt: item.prompt || "Get personalized wellness guidance",
-              icon: index % 2 === 0 ? Brain : Activity,
-              color: item.color || ['blue', 'purple', 'green', 'orange'][index % 4]
-            }));
-            
-            setAiSuggestions(newSuggestions);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to refresh AI suggestions:', error);
-      // Keep existing suggestions on error
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   return (
     <PageTransition>
-      <SkeletonDemo
-        skeleton={<RelaxPageSkeleton />}
-        delay={100} // Minimal delay for smooth transition
-        enabled={false} // Disable forced demo mode
-      >
+      <SkeletonDemo skeleton={<RelaxPageSkeleton />} enabled={false}>
         <div className="min-h-screen px-2 py-8">
         {/* Theme Header */}
         {/* <div className="w-full max-w-2xl mx-auto">
@@ -382,40 +284,64 @@ export default function RelaxPage() {
         <div className="w-full max-w-6xl mx-auto py-6 mb-8">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Ambient Sounds Section - Left & Bigger */}
-            <div className="flex-2 lg:w-[65%]">
+            <div className="flex-2 lg:w-[60%] h-[320px]">
               <AmbientSounds />
             </div>
 
             {/* Weekly Theme - Right & Smaller */}
-            <div className="flex-1 lg:w-[35%]">
-              <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 h-full">
+            <div className="flex-1 lg:w-[40%]">
+              <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 h-[400px] flex flex-col">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-white">Weekly Theme</h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={prevTheme}
-                      className="p-2 rounded-full hover:bg-gray-700/50 transition-colors"
-                      aria-label="Previous theme"
-                    >
-                      <ChevronLeft className="w-5 h-5 text-gray-300 hover:text-white" />
-                    </button>
-                    <button
-                      onClick={nextTheme}
-                      className="p-2 rounded-full hover:bg-gray-700/50 transition-colors"
-                      aria-label="Next theme"
-                    >
-                      <ChevronRight className="w-5 h-5 text-gray-300 hover:text-white" />
-                    </button>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-semibold text-white">Weekly Theme</h2>
+                    {weeklyThemeCached && process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+                      <span className="px-1.5 py-0.5 text-xs bg-green-500/20 text-green-400 rounded" title="Loaded from cache">
+                        📋
+                      </span>
+                    )}
                   </div>
+                  {/* Refresh removed */}
                 </div>
 
-                <div className="text-center">
-                  <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-violet-400 bg-clip-text text-transparent">
-                    {WEEKLY_THEMES[currentThemeIndex].name}
-                  </h3>
-                  <p className="text-gray-300 text-sm leading-relaxed">
-                    {WEEKLY_THEMES[currentThemeIndex].subtitle}
-                  </p>
+                <div className="flex-1 min-h-0">
+                  {isLoadingWeeklyTheme ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <div className="animate-spin h-8 w-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-3"></div>
+                        <p className="text-gray-400 text-sm">Generating your weekly theme...</p>
+                      </div>
+                    </div>
+                   ) : weeklyThemeError ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <p className="text-red-400 text-sm mb-2">Failed to load theme. Please try again.</p>
+                        <button
+                          onClick={refreshWeeklyTheme}
+                          className="text-xs text-blue-400 hover:text-blue-300 underline"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    currentTheme && (
+                      <div className="text-center">
+                        <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-violet-400 bg-clip-text text-transparent">
+                          {currentTheme.name}
+                        </h3>
+                        <p className="text-gray-400 text-sm mb-4 italic">
+                          {currentTheme.subtitle}
+                        </p>
+                        {currentTheme.sentences && currentTheme.sentences.length > 0 && (
+                          <div className="text-left bg-gradient-to-br from-gray-700/30 to-gray-800/30 rounded-lg p-4 border border-gray-600/20 max-h-48 overflow-y-auto custom-scrollbar">
+                            <p className="text-gray-300 text-sm leading-relaxed">
+                              {currentTheme.sentences.join(' ')}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             </div>
@@ -424,32 +350,43 @@ export default function RelaxPage() {
 
         {/* AI Prompt Boxes */}
         <div className="w-full max-w-7xl mx-auto mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-center flex-1">
-              <h2 className="text-xl font-bold text-white mb-2">AI Assistance</h2>
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <h2 className="text-xl font-bold text-white">AI Assistance</h2>
+                {aiSuggestionsCached && process.env.NEXT_PUBLIC_APP_ENV === 'development' && (
+                  <span className="px-1.5 py-0.5 text-xs bg-green-500/20 text-green-400 rounded" title="Loaded from cache">
+                    📋
+                  </span>
+                )}
+                {/* Refresh removed */}
+              </div>
               <p className="text-gray-300 text-sm">Get personalized recommendations and guidance</p>
-            </div>
-            <button
-              onClick={refreshAISuggestions}
-              disabled={isRefreshing}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium"
-            >
-              {isRefreshing ? (
-                <>
-                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="w-4 h-4" />
-                  Refresh
-                </>
+              {aiSuggestionsError && (
+                <p className="text-red-400 text-sm mt-2">Failed to load suggestions. Please try again.</p>
               )}
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {aiSuggestions.map((suggestion) => {
+            </div>
+            
+            {isLoadingAiSuggestions ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, index) => (
+                <div 
+                  key={`loading-${index}`}
+                  className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border border-gray-600/50 rounded-xl p-4 animate-pulse"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-gray-700/50 rounded-lg"></div>
+                    <div className="h-4 bg-gray-700/50 rounded flex-1"></div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-gray-700/50 rounded"></div>
+                    <div className="h-3 bg-gray-700/50 rounded w-3/4"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {aiSuggestions.map((suggestion) => {
               const IconComponent = suggestion.icon;
               const colorClasses = {
                 blue: {
@@ -506,8 +443,9 @@ export default function RelaxPage() {
                 </div>
               );
             })}
+            </div>
+          )}
           </div>
-        </div>
 
 {/* Pinned Mantra feature removed for optimization */}
       </div>
