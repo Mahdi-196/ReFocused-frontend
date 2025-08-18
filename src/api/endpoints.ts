@@ -103,3 +103,21 @@ export const STREAK = {
   INTERACTION_TYPES: '/streak/interaction-types',
   STATS: '/streak/stats',
 }; 
+
+// Email subscription endpoints
+export const EMAIL = {
+  STATUS: '/email/status',
+  SUBSCRIBE: '/email/refocusedSubscribe',
+  UNSUBSCRIBE: '/email/unsubscribe',
+};
+
+// Voting endpoints
+export const VOTING = {
+  VOTE: '/voting/vote',
+  STATS: '/voting/stats',
+};
+
+// Feedback endpoint
+export const FEEDBACK = {
+  SUBMIT: '/feedback',
+};

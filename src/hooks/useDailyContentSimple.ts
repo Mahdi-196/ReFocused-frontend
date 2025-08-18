@@ -105,11 +105,6 @@ export function useDailyContentSimple<T>(
       let token: string | null = null;
       if (wantsAuth) {
         token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
-        // In development, fall back to test token when auth is required and no user token exists
-        const isDev = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_APP_ENV === 'development';
-        if (!token && options?.auth === 'required' && isDev) {
-          token = process.env.NEXT_PUBLIC_API_TEST_TOKEN || 'test-token-for-cache-testing';
-        }
       }
       
       const method = options?.method || 'GET';

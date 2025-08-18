@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { FiZap, FiTarget, FiClock, FiBook, FiHeart, FiBarChart2, FiUsers, FiTrendingUp, FiCheckCircle } from '@/components/icons';
 import { FaBrain, FaRobot, FaMouse } from 'react-icons/fa';
-import { HiBeaker, HiUser, HiAcademicCap, HiSparkles } from 'react-icons/hi2';
+import { HiSparkles } from 'react-icons/hi2';
 // Lazy load non-critical components
 const AuthModal = dynamic(() => import('@/components/AuthModal'), { ssr: false });
 
@@ -13,11 +13,7 @@ const AuthModal = dynamic(() => import('@/components/AuthModal'), { ssr: false }
 const FeaturesSection = dynamic(() => Promise.resolve(({ children }: { children: React.ReactNode }) => <>{children}</>), { ssr: false });
 const AISection = dynamic(() => Promise.resolve(({ children }: { children: React.ReactNode }) => <>{children}</>), { ssr: false });
 const CTASection = dynamic(() => Promise.resolve(({ children }: { children: React.ReactNode }) => <>{children}</>), { ssr: false });
-import { getStudySets } from '@/services/studyService';
-import { authService } from '@/api/services/authService';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCurrentDate, useTime } from '@/contexts/TimeContext';
+import { useTime } from '@/contexts/TimeContext';
 import ProductivityScore from './homeComponents/ProductivityScore';
 import WordOfTheDay from './homeComponents/WordOfTheDay';
 import MindFuel from './homeComponents/MindFuel';
@@ -33,9 +29,7 @@ type Task = {
 };
 
 export default function HomePage() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const currentDate = useCurrentDate();
+  
   const { getCurrentDateTime } = useTime();
   
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -49,8 +43,7 @@ export default function HomePage() {
   
   
   // Cache testing state
-  const [cacheTestResult, setCacheTestResult] = useState<string>('');
-  const [isTestingCache, setIsTestingCache] = useState(false);
+  
   
   // Ensure client-side only execution
   useEffect(() => {
@@ -73,67 +66,7 @@ export default function HomePage() {
 
   
 
-  // Cache testing functions
-  const testStudySetsCache = async () => {
-    setIsTestingCache(true);
-    setCacheTestResult('');
-    
-    try {
-      // First call - should fetch from API
-      const start1 = Date.now();
-      const sets1 = await getStudySets();
-      const time1 = Date.now() - start1;
-      
-      // Second call - should use cache
-      const start2 = Date.now();
-      await getStudySets();
-      const time2 = Date.now() - start2;
-      
-      setCacheTestResult(`✅ Cache test completed!
-First call: ${time1}ms (API)
-Second call: ${time2}ms (Cache)
-Study sets found: ${sets1.length}
-${time2 < time1 / 2 ? 'Cache is working! 🎉' : 'Cache may not be working properly 🤔'}`);
-      
-    } catch (error) {
-      setCacheTestResult(`❌ Cache test failed: ${error}`);
-    } finally {
-      setIsTestingCache(false);
-    }
-  };
-
-  const testAuthCache = async () => {
-    setIsTestingCache(true);
-    setCacheTestResult('');
-    
-    try {
-      // Test cached user data
-      const cachedUser = authService.getCachedUser();
-      
-      setCacheTestResult(`👤 Auth cache test:
-Cached user: ${cachedUser ? JSON.stringify(cachedUser, null, 2) : 'No cached user found'}
-Is authenticated: ${authService.isAuthenticated()}`);
-      
-    } catch (error) {
-      setCacheTestResult(`❌ Auth cache test failed: ${error}`);
-    } finally {
-      setIsTestingCache(false);
-    }
-  };
-
-  const setupTestAuth = () => {
-    // Set up a test authentication for cache testing
-    localStorage.setItem('REF_TOKEN', 'test-token-for-cache-testing');
-    localStorage.setItem('REF_USER', JSON.stringify({
-      id: 1,
-      email: 'test@refocused.app',
-      name: 'Cache Test User',
-      username: 'cachetest',
-      createdAt: new Date().toISOString()
-    }));
-    
-    setCacheTestResult('🧪 Test authentication set up! You can now test the study sets cache.');
-  };
+  // Removed dev-only testing functions and state
 
   const addTask = (text: string, priority: 'high' | 'medium' | 'low' = 'medium') => {
     const newTask: Task = {

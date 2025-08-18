@@ -438,8 +438,12 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                         const token = localStorage.getItem('REF_TOKEN');
                         console.log('🧪 [RAW_API_TEST] Auth token:', token ? 'present' : 'missing');
                         
-                        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://your-backend-domain.com';
-                        const url = `${backendUrl}/api/v1/goals/history?days_back=90&limit=100`;
+                        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+                        if (!backendUrl) {
+                          console.error('🧪 [RAW_API_TEST] Missing NEXT_PUBLIC_BACKEND_URL');
+                          return;
+                        }
+                        const url = `${backendUrl.replace(/\/$/, '')}/api/v1/goals/history?days_back=90&limit=100`;
                         console.log('🧪 [RAW_API_TEST] Request URL:', url);
                         
                         const headers: HeadersInit = {
@@ -460,7 +464,6 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                         
                         console.log('🧪 [RAW_API_TEST] Response status:', response.status);
                         console.log('🧪 [RAW_API_TEST] Response ok:', response.ok);
-                        console.log('🧪 [RAW_API_TEST] Response headers:', Object.fromEntries(response.headers));
                         
                         if (!response.ok) {
                           const errorText = await response.text();
@@ -473,13 +476,7 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                         console.log('🧪 [RAW_API_TEST] Goals array length:', data?.goals?.length || 'N/A');
                         
                         // Show alert with results
-                        alert(`API Test Results:
-Status: ${response.status}
-Goals found: ${data?.goals?.length || 0}
-Total count: ${data?.total_count || 0}
-Date range: ${data?.date_range?.start || 'N/A'} to ${data?.date_range?.end || 'N/A'}
-
-Check console for full details.`);
+                        alert(`API Test Results:\nStatus: ${response.status}\nGoals found: ${data?.goals?.length || 0}\nTotal count: ${data?.total_count || 0}\nDate range: ${data?.date_range?.start || 'N/A'} to ${data?.date_range?.end || 'N/A'}\n\nCheck console for full details.`);
                         
                       } catch (error) {
                         console.error('🧪 [RAW_API_TEST] Error:', error);

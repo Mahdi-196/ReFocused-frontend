@@ -114,23 +114,20 @@ export const EntryGrid: React.FC<EntryGridProps> = ({
             key={entry.id} 
             className="relative p-6 rounded-xl shadow-lg border border-gray-600 flex flex-col justify-between transition-all duration-300 hover:shadow-xl transform origin-top-left hover:scale-105 hover:z-20 focus-within:z-20 cursor-pointer min-h-[200px]"
             style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
-            onClick={() => onEditEntry(entry.id)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onEditEntry(entry.id);
-              }
-            }}
-            role="button"
-            tabIndex={0}
-            aria-label={`Edit entry: ${entry.title || 'Untitled'}`}
           >
+            {/* Full-card click target (avoids nested interactive controls) */}
+            <button
+              type="button"
+              onClick={() => onEditEntry(entry.id)}
+              aria-label={`Edit entry: ${entry.title || 'Untitled'}`}
+              className="absolute inset-0 rounded-xl z-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
             <div>
               <div className="flex justify-between items-start mb-3">
                 <h3 className="text-lg font-semibold text-white break-words">
                   {entry.title || "Untitled"}
                 </h3>
-                <div className="relative">
+                <div className="relative z-20">
                   <button
                     onClick={(e) => handleEntryEditClick(e, entry)}
                     className="text-gray-400 hover:text-blue-400 transition-all duration-200 ease-in-out transform hover:scale-110"

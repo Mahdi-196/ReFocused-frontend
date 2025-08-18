@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { emailSubscriptionService } from '@/api/services/emailSubscriptionService';
 import { Settings, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { DeleteAccountModal } from './DeleteAccountModal';
@@ -32,6 +33,7 @@ export const AccountSettings = ({ userData, isSubscribed, onSubscriptionToggle, 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false);
   const [currentAvatar, setCurrentAvatar] = useState(userData?.profile_picture || userData?.avatar || '');
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
   // Load current avatar on component mount and when userData changes
   useEffect(() => {
@@ -47,6 +49,24 @@ export const AccountSettings = ({ userData, isSubscribed, onSubscriptionToggle, 
 
     loadCurrentAvatar();
   }, [userData]);
+
+  // Check email subscription status on mount for the provided email
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await emailSubscriptionService.status(userData?.email || 'cheaxx123@gmail.com');
+        if (typeof res?.isSubscribed === 'boolean' && res.isSubscribed !== isSubscribed) {
+          onSubscriptionToggle();
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    if (userData?.email) {
+      checkStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.email]);
 
   // Update local state when userData changes
   useEffect(() => {
@@ -125,6 +145,30 @@ export const AccountSettings = ({ userData, isSubscribed, onSubscriptionToggle, 
     } catch (error: unknown) {
       // Re-throw the error to be handled by the modal
       throw error;
+    }
+  };
+
+  const handleSubscribe = async () => {
+    setIsSubscribing(true);
+    try {
+      await emailSubscriptionService.subscribe(userData?.email || 'cheaxx123@gmail.com');
+      onSubscriptionToggle();
+    } catch (error: any) {
+      // Silently fail - don't show error
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    setIsSubscribing(true);
+    try {
+      await emailSubscriptionService.unsubscribe(userData?.email || 'cheaxx123@gmail.com');
+      onSubscriptionToggle();
+    } catch (error: any) {
+      // Silently fail - don't show error
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
@@ -223,17 +267,18 @@ export const AccountSettings = ({ userData, isSubscribed, onSubscriptionToggle, 
                 <p className="text-sm text-gray-300">
                   {isSubscribed ? 'You are currently subscribed to our newsletter' : 'You are not subscribed to our newsletter'}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">{userData?.email}</p>
+                <p className="text-xs text-gray-400 mt-1">{userData?.email || 'cheaxx123@gmail.com'}</p>
               </div>
               <button
-                onClick={onSubscriptionToggle}
+                onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}
+                disabled={isSubscribing}
                 className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
                   isSubscribed 
                     ? 'bg-red-600 hover:bg-red-700 text-white' 
                     : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
+                } ${isSubscribing ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
-                {isSubscribed ? 'Unsubscribe' : 'Subscribe'}
+                {isSubscribed ? (isSubscribing ? 'Unsubscribing...' : 'Unsubscribe') : (isSubscribing ? 'Subscribing...' : 'Subscribe')}
               </button>
             </div>
           </div>
