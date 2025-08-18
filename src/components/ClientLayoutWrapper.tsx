@@ -156,7 +156,7 @@ export default function ClientLayoutWrapper({
             {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}
             
             {/* Daily Cache Status - positioned at bottom-left for development */}
-            <DailyCacheStatus />
+            {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DailyCacheStatus />}
           </AudioProvider>
         </TimeProvider>
       </AuthProvider>

@@ -110,8 +110,12 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({ habitId, habitName }
       // ✅ Always use backend date for habit operations
       const completionDate = getCurrentDate();
       
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://your-backend-domain.com';
-      const response = await fetch(`${backendUrl}/api/v1/habits/${habitId}/complete`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        console.error('Missing NEXT_PUBLIC_BACKEND_URL');
+        return;
+      }
+      const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/v1/habits/${habitId}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

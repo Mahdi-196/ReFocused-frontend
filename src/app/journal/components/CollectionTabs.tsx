@@ -48,26 +48,21 @@ export const CollectionTabs: React.FC<CollectionTabsProps> = ({
         {collections.map(collection => (
           <div
             key={collection.id}
-            className={`relative flex items-center justify-between px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm cursor-pointer ${
+            className={`relative flex items-center justify-between px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm ${
               selectedCollectionId === collection.id.toString()
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
-            onClick={() => onCollectionSelect(collection.id.toString())}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onCollectionSelect(collection.id.toString());
-              }
-            }}
-            role="button"
-            tabIndex={0}
-            aria-label={`Select ${collection.name} collection`}
           >
-            <div className="flex items-center gap-2 pointer-events-none">
+            <button
+              type="button"
+              onClick={() => onCollectionSelect(collection.id.toString())}
+              className="flex items-center gap-2 cursor-pointer text-current"
+              aria-label={`Select ${collection.name} collection`}
+            >
               {collection.isPrivate ? <Lock size={18} /> : <FileText size={18} />}
               <span className="truncate max-w-[180px]">{collection.name}</span>
-            </div>
+            </button>
             {collection.name !== "My Notes" && (
               <div className="ml-2">
                 <button

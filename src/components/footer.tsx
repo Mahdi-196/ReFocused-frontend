@@ -3,21 +3,31 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Mail, ArrowUp, Heart, Send } from "./icons";
+import { emailSubscriptionService } from "@/api/services/emailSubscriptionService";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     // Component initialization
   }, []);
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
-      setSubscribed(true);
-      setEmail("");
-      setTimeout(() => setSubscribed(false), 3000);
+      setIsSubscribing(true);
+      try {
+        await emailSubscriptionService.subscribe(email);
+        setIsSubscribed(true);
+        setEmail("");
+        setTimeout(() => setIsSubscribed(false), 3000);
+      } catch (error: any) {
+        // Silently fail - don't show error
+      } finally {
+        setIsSubscribing(false);
+      }
     }
   };
 
@@ -96,18 +106,22 @@ const Footer = () => {
                   name="newsletter-email"
                   id="newsletter-email"
                   data-lpignore="true"
-                  disabled={subscribed}
+                  disabled={isSubscribing}
                 />
                 <button
                   type="submit"
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors hover:scale-110"
-                  disabled={subscribed}
+                  disabled={isSubscribing}
                 >
-                  <Send className="w-4 h-4" />
+                  {isSubscribing ? (
+                    <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </button>
               </div>
 
-              {subscribed && (
+              {isSubscribed && (
                 <p className="text-green-400 text-sm">
                   ✓ Successfully subscribed! Thank you.
                 </p>
