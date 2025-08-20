@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { initializeAuth } from '@/api/client';
 import { authService } from '@/api/services/authService';
 import AuthModal from './AuthModal';
@@ -14,6 +14,7 @@ const AuthButton = () => {
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const router = useRouter();
+  const pathname = usePathname();
 
   // Check if user is logged in on component mount
   useEffect(() => {
@@ -46,7 +47,7 @@ const AuthButton = () => {
         }
         setIsLoggedIn(true);
         
-        // First try to get cached user data or localStorage data
+        // First try to get cached user data or localStorage data (fast path)
         let userData = authService.getCachedUser();
         
         // If no cached data, try localStorage
@@ -96,7 +97,7 @@ const AuthButton = () => {
           setUserAvatar(avatarUrl);
           setUserName(userData.name || userData.email || 'User');
         } else {
-          // Only fetch from API if no cached/stored data exists
+          // Fetch from API if no cached/stored data exists (authoritative server path)
           try {
             const freshUserData = await authService.getCurrentUser();
             
@@ -212,6 +213,11 @@ const AuthButton = () => {
   }, []);
 
   const openAuthModal = () => {
+    const legalRoutes = ['/privacy', '/terms', '/cookies', '/data-protection', '/legal'];
+    if (legalRoutes.includes(pathname || '')) {
+      router.push('/');
+      return;
+    }
     setIsAuthModalOpen(true);
   };
 
@@ -228,6 +234,7 @@ const AuthButton = () => {
       <div className="relative">
         {isLoggedIn ? (
           <button 
+            id="profile-button"
             type="button"
             onClick={() => router.push('/profile')}
             className="w-10 h-10 rounded-full border-2 border-[#42b9e5]/30 hover:border-[#42b9e5]/50 transition-all duration-200 shadow-[0_0_10px_rgba(66,185,229,0.3)] hover:shadow-[0_0_15px_rgba(66,185,229,0.5)] flex items-center justify-center overflow-hidden"

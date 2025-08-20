@@ -12,6 +12,7 @@ import {
   getDurationDisplayName 
 } from '@/types/goal';
 import { goalsService } from '@/services/goalsService';
+import { useToast } from '@/contexts/ToastContext';
 
 interface GoalsHistoryModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
   isOpen,
   onClose
 }) => {
+  const toast = useToast();
   const [history, setHistory] = useState<GoalHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -475,12 +477,11 @@ const GoalsHistoryModal: React.FC<GoalsHistoryModalProps> = ({
                         console.log('🧪 [RAW_API_TEST] Response data:', data);
                         console.log('🧪 [RAW_API_TEST] Goals array length:', data?.goals?.length || 'N/A');
                         
-                        // Show alert with results
-                        alert(`API Test Results:\nStatus: ${response.status}\nGoals found: ${data?.goals?.length || 0}\nTotal count: ${data?.total_count || 0}\nDate range: ${data?.date_range?.start || 'N/A'} to ${data?.date_range?.end || 'N/A'}\n\nCheck console for full details.`);
+                        toast.showInfo(`API test: ${response.status}, goals: ${data?.goals?.length || 0}`);
                         
                       } catch (error) {
                         console.error('🧪 [RAW_API_TEST] Error:', error);
-                        alert(`API Test Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                        toast.showError(`API test error: ${error instanceof Error ? error.message : 'Unknown error'}`);
                       }
                     }}
                     className="px-3 py-1 bg-blue-600/20 text-blue-400 rounded-lg text-sm hover:bg-blue-600/30 transition-colors"

@@ -26,6 +26,7 @@ export const USER = {
   CLEAR_ACTIVITY: '/user/me/activity',
   DELETE_ACCOUNT: '/user/me',
   AVATAR: '/user/avatar',
+  TUTORIAL: '/user/tutorial',
 };
 
 // Goals endpoints

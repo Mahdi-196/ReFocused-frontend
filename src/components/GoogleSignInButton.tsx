@@ -7,12 +7,14 @@ interface GoogleSignInButtonProps {
   onSuccess?: (token: string) => void;
   onError?: (error: string) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   onSuccess,
   onError,
   className = '',
+  disabled = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,6 +24,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   });
 
   const handleGoogleSignIn = () => {
+    if (disabled) return;
     setIsLoading(true);
     try {
       signInWithGoogle();
@@ -53,7 +56,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   return (
     <button
       onClick={handleGoogleSignIn}
-      disabled={isLoading}
+      disabled={isLoading || disabled}
       className={`w-full h-12 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg flex items-center justify-center gap-3 text-white font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg ${className}`}
     >
       {isLoading ? (

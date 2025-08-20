@@ -8,7 +8,7 @@ import AnimatedLayout from './AnimatedLayout';
 import StatisticsInitializer from './StatisticsInitializer';
 import DevTools from './devTools';
 import { TokenExpiryNotification } from './TokenExpiryNotification';
-import RateLimitNotification from './RateLimitNotification';
+// import RateLimitNotification from './RateLimitNotification';
 import CacheManager from './CacheManager';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { TimeProvider } from '@/contexts/TimeContext';
@@ -17,6 +17,8 @@ import { NetworkProvider } from './NetworkProvider';
 import { initializeAuth } from '@/api/client';
 import DataPreloader from './DataPreloader';
 import DailyCacheStatus from './DailyCacheStatus';
+import TutorialManager from './TutorialManager';
+import { ToastProvider } from '@/contexts/ToastContext';
 
 export default function ClientLayoutWrapper({
   children,
@@ -31,6 +33,8 @@ export default function ClientLayoutWrapper({
   const isLandingPage = pathname === '/';
   const isProfilePage = pathname === '/profile';
   const shouldShowFooter = isLandingPage || isProfilePage;
+  const publicRoutes = ['/', '/privacy', '/terms', '/cookies', '/data-protection', '/legal'];
+  const isPublicRoute = publicRoutes.includes(pathname || '/');
   
   // Check authentication status
   useEffect(() => {
@@ -73,7 +77,7 @@ export default function ClientLayoutWrapper({
   // Handle authentication-based redirects
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated && !isLandingPage) {
+      if (!isAuthenticated && !isPublicRoute) {
         // Redirect unauthenticated users to landing page
         router.push('/');
       } else if (isAuthenticated && isLandingPage) {
@@ -81,14 +85,14 @@ export default function ClientLayoutWrapper({
         router.push('/home');
       }
     }
-  }, [isAuthenticated, isLoading, isLandingPage, router]);
+  }, [isAuthenticated, isLoading, isLandingPage, isPublicRoute, router]);
 
   useEffect(() => {
     initializeAuth();
   }, []);
 
   // Show loading skeleton for protected routes while checking auth
-  if (!isLandingPage && isLoading) {
+  if (!isPublicRoute && isLoading) {
     return (
       <div className="min-h-screen bg-[#10182B]">
         {/* Header skeleton */}
@@ -122,7 +126,7 @@ export default function ClientLayoutWrapper({
   }
 
   // Don't render protected content if not authenticated
-  if (!isLandingPage && !isAuthenticated) {
+  if (!isPublicRoute && !isAuthenticated) {
     return null; // Will redirect via useEffect
   }
 
@@ -131,6 +135,7 @@ export default function ClientLayoutWrapper({
       <AuthProvider>
         <TimeProvider>
           <AudioProvider>
+            <ToastProvider>
             <StatisticsInitializer />
             <CacheManager />
             <DataPreloader />
@@ -151,14 +156,17 @@ export default function ClientLayoutWrapper({
             
             {/* Token expiry notification - positioned at top-right globally */}
             {!isLandingPage && isAuthenticated && <TokenExpiryNotification />}
-            {/* Rate limit notification - global */}
-            <RateLimitNotification />
+            {/* Rate limit notification disabled per request */}
             
             {/* DevTools - positioned at bottom-right globally */}
             {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}
             
             {/* Daily Cache Status - positioned at bottom-left for development */}
             {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DailyCacheStatus />}
+
+            {/* First-time tutorial overlay manager */}
+            {isAuthenticated && <TutorialManager />}
+            </ToastProvider>
           </AudioProvider>
         </TimeProvider>
       </AuthProvider>

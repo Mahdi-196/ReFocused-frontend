@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { perAccountDailyStorage, getTodayDateString, cleanupOldDateEntries } from '@/utils/scopedStorage';
 import { Target } from 'lucide-react';
 import MoodStats from './MoodStats';
 import HabitStreaks from './HabitStreaks';
@@ -15,8 +16,8 @@ type DailyMomentumProps = {
   setTasks: (updateFn: (tasks: Task[]) => Task[]) => void;
 };
 
-const STORAGE_KEY_PREFIX = 'focus_goal_';
-const getTodayKey = () => `${STORAGE_KEY_PREFIX}${new Date().toISOString().split('T')[0]}`;
+const FOCUS_BASE_KEY = 'focus_goal';
+const getTodayKey = () => perAccountDailyStorage.key(FOCUS_BASE_KEY, getTodayDateString());
 
 const DailyMomentum: React.FC<DailyMomentumProps> = ({
   tasks,
@@ -28,22 +29,14 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
 }) => {
   const [focusGoal, setFocusGoal] = useState('');
 
-  // Load today's focus goal
+  // Load today's focus goal (per-account)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const key = getTodayKey();
-      const saved = localStorage.getItem(key);
+      const saved = perAccountDailyStorage.get<string>(FOCUS_BASE_KEY);
       if (saved) setFocusGoal(saved);
-
-      // Cleanup old focus_goal_* keys
-      const today = key;
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith(STORAGE_KEY_PREFIX) && k !== today) {
-          localStorage.removeItem(k);
-        }
-      }
+      // Keep last 7 days per account
+      cleanupOldDateEntries(FOCUS_BASE_KEY, 7);
     } catch {}
   }, []);
 
@@ -51,7 +44,7 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
   useEffect(() => {
     const id = setTimeout(() => {
       try {
-        localStorage.setItem(getTodayKey(), focusGoal.trim());
+        perAccountDailyStorage.set(FOCUS_BASE_KEY, focusGoal.trim());
       } catch {}
     }, 300);
     return () => clearTimeout(id);

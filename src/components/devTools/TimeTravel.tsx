@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTime } from '@/contexts/TimeContext';
+import { useToast } from '@/contexts/ToastContext';
 
 /**
  * TimeTravel Component - Development Tool for Testing Time-Sensitive Features
@@ -9,6 +10,7 @@ import { useTime } from '@/contexts/TimeContext';
  */
 const TimeTravel: React.FC = () => {
   const { setMockDateTime, isMockDate, timeData } = useTime();
+  const toast = useToast();
   const [dateInput, setDateInput] = useState('');
   const [timeInput, setTimeInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,14 +28,14 @@ const TimeTravel: React.FC = () => {
   // Handle setting mock date
   const handleSetMockDate = async () => {
     if (!dateInput || !timeInput) {
-      alert('⚠️ Please select both date and time');
+      toast.showInfo('Please select both date and time');
       return;
     }
 
     // Validate year is 2025
     const selectedYear = new Date(dateInput).getFullYear();
     if (selectedYear !== 2025) {
-      alert('⚠️ Date must be within the year 2025 for testing purposes');
+      toast.showInfo('Date must be within the year 2025 for testing purposes');
       return;
     }
 
@@ -50,7 +52,7 @@ const TimeTravel: React.FC = () => {
       
     } catch (error) {
       console.error('❌ Failed to set mock date:', error);
-      alert(`❌ Failed to set mock date: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.showError(`Failed to set mock date: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +70,7 @@ const TimeTravel: React.FC = () => {
       
     } catch (error) {
       console.error('❌ Failed to reset to real time:', error);
-      alert(`❌ Failed to reset to real time: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.showError(`Failed to reset to real time: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }

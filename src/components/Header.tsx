@@ -61,11 +61,17 @@ const Header = () => {
             </motion.button>
 
             {/* Desktop Logo */}
-            <motion.div className="hidden md:flex items-center space-x-2">
+            <motion.div id="header-logo-desktop" className="hidden md:flex items-center space-x-2 group">
               <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" width="40" height="40" />
-              <Link href="/ai">
-                <span className="text-xl font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">
-                  ReFocused
+              <Link href="/ai" className="group">
+                <span className="inline-flex items-center whitespace-nowrap text-xl font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">
+                  <span className="peer">ReFocused</span>
+                  <span
+                    id="logo-ai-desktop"
+                    className="inline-block origin-left scale-x-0 opacity-0 transition-all duration-300 delay-150 ease-out group-hover:scale-x-100 group-hover:opacity-100 peer-hover:scale-x-100 peer-hover:opacity-100 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent"
+                  >
+                    {' '} - AI
+                  </span>
                 </span>
               </Link>
             </motion.div>
@@ -74,11 +80,17 @@ const Header = () => {
           {/* Center - Logo and Name (Mobile) / Navigation (Desktop) */}
           <div className="flex items-center">
             {/* Mobile Logo - Centered */}
-            <motion.div className="md:hidden flex items-center space-x-2">
+            <motion.div id="header-logo-mobile" className="md:hidden flex items-center space-x-2 group">
               <img src="/favicon.svg" alt="Brain Logo" className="w-8 h-8" width="32" height="32" />
-              <Link href="/ai">
-                <span className="text-lg font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">
-                  ReFocused
+              <Link href="/ai" className="group">
+                <span className="inline-flex items-center whitespace-nowrap text-lg font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">
+                  <span className="peer">ReFocused</span>
+                  <span
+                    id="logo-ai-mobile"
+                    className="inline-block origin-left scale-x-0 opacity-0 transition-all duration-300 delay-150 ease-out group-hover:scale-x-100 group-hover:opacity-100 peer-hover:scale-x-100 peer-hover:opacity-100 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent"
+                  >
+                    {' '} - AI
+                  </span>
                 </span>
               </Link>
             </motion.div>
@@ -86,7 +98,7 @@ const Header = () => {
             {/* Desktop Navigation - Centered */}
             <nav className="hidden md:block">
               <LayoutGroup id="header-nav">
-                <ul className="flex space-x-6 relative">
+                <ul id="header-nav-list" className="flex space-x-6 relative">
                   {navItems.map((item, index) => (
                     <li key={item.href}>
                       <motion.div

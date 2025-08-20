@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { getCurrentUserScope } from '@/utils/scopedStorage';
 
 interface AudioContextType {
   isGloballyMuted: boolean;
@@ -16,7 +17,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   // Load global mute state from localStorage on mount
   useEffect(() => {
     try {
-      const savedMuteState = localStorage.getItem('refocused_global_mute');
+      const savedMuteState = localStorage.getItem(`refocused_global_mute:${getCurrentUserScope()}`);
       if (savedMuteState !== null) {
         setIsGloballyMuted(savedMuteState === 'true');
       }
@@ -28,7 +29,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   // Save global mute state to localStorage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem('refocused_global_mute', isGloballyMuted.toString());
+      localStorage.setItem(`refocused_global_mute:${getCurrentUserScope()}`, isGloballyMuted.toString());
       
       // Dispatch custom event to notify all components about mute state change
       window.dispatchEvent(new CustomEvent('globalMuteChanged', {

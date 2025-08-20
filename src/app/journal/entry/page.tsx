@@ -9,6 +9,8 @@ import { timeService } from '@/services/timeService';
 import PageTransition from '@/components/PageTransition';
 import { initializeAuth, collectionTokens } from '@/api/client';
 import { useConsistentDate } from '@/hooks/useConsistentDate';
+import { useToast } from '@/contexts/ToastContext';
+import ConfirmationDialog from '@/components/ConfirmationDialog';
 
 // Import types and hooks
 import type { Entry, Collection, PasswordPrompt } from "../types";
@@ -47,6 +49,8 @@ function EntryContent() {
   const { getCurrentDateTime } = useTime();
   const [passwordPrompt, setPasswordPrompt] = useState<PasswordPrompt | null>(null);
   const [enteredPassword, setEnteredPassword] = useState("");
+  const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false);
+  const toast = useToast();
   
   const MAX_CHARACTERS = 100000;
   const MAX_TITLE_CHARACTERS = 100;
@@ -150,7 +154,7 @@ function EntryContent() {
       setEnteredPassword("");
       setSelectedCollectionId(passwordPrompt.collectionId);
     } else {
-      alert('Invalid password for this collection');
+      toast.showError('Invalid password for this collection');
     }
   };
 
@@ -336,8 +340,8 @@ function EntryContent() {
 
   const handleBack = () => {
     if (hasUnsavedChanges) {
-      const confirmed = window.confirm("You have unsaved changes. Are you sure you want to leave?");
-      if (!confirmed) return;
+      setShowUnsavedConfirm(true);
+      return;
     }
     router.push("/journal");
   };
@@ -579,6 +583,15 @@ function EntryContent() {
         onPasswordChange={setEnteredPassword}
         onSubmit={handlePasswordSubmit}
         onClose={handleClosePasswordPrompt}
+      />
+      <ConfirmationDialog
+        isOpen={showUnsavedConfirm}
+        onClose={() => setShowUnsavedConfirm(false)}
+        onConfirm={() => router.push('/journal')}
+        title="Unsaved changes"
+        message="You have unsaved changes. Leave without saving?"
+        confirmText="Leave"
+        cancelText="Stay"
       />
     </PageTransition>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { getCurrentUserScope } from '@/utils/scopedStorage';
 
 export interface AiMessage {
   id: string;
@@ -29,18 +30,18 @@ export function AiConversationProvider({ children }: { children: React.ReactNode
     if (typeof window === 'undefined' || hasLoadedRef.current) return;
     hasLoadedRef.current = true;
     try {
-      const raw = localStorage.getItem(CONVO_STORAGE_KEY);
+      const raw = localStorage.getItem(`${CONVO_STORAGE_KEY}:${getCurrentUserScope()}`);
       if (raw) {
         const parsed = JSON.parse(raw) as { date: string; messages: Array<Omit<AiMessage, 'timestamp'> & { timestamp: string }> };
         const todayStr = new Date().toDateString();
         if (parsed.date === todayStr && Array.isArray(parsed.messages)) {
           setMessages(parsed.messages.map(m => ({ ...m, timestamp: new Date(m.timestamp) })));
         } else {
-          localStorage.removeItem(CONVO_STORAGE_KEY);
+          localStorage.removeItem(`${CONVO_STORAGE_KEY}:${getCurrentUserScope()}`);
         }
       }
     } catch {
-      localStorage.removeItem(CONVO_STORAGE_KEY);
+      localStorage.removeItem(`${CONVO_STORAGE_KEY}:${getCurrentUserScope()}`);
     }
   }, []);
 
@@ -48,12 +49,12 @@ export function AiConversationProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (messages.length === 0) {
-      localStorage.removeItem(CONVO_STORAGE_KEY);
+      localStorage.removeItem(`${CONVO_STORAGE_KEY}:${getCurrentUserScope()}`);
       return;
     }
     const todayStr = new Date().toDateString();
     const serializable = messages.map(m => ({ ...m, timestamp: m.timestamp.toISOString() }));
-    localStorage.setItem(CONVO_STORAGE_KEY, JSON.stringify({ date: todayStr, messages: serializable }));
+    localStorage.setItem(`${CONVO_STORAGE_KEY}:${getCurrentUserScope()}`, JSON.stringify({ date: todayStr, messages: serializable }));
   }, [messages]);
 
   // Auto-clear at midnight
@@ -66,7 +67,7 @@ export function AiConversationProvider({ children }: { children: React.ReactNode
     const id = setTimeout(() => {
       setMessages([]);
       if (typeof window !== 'undefined') {
-        localStorage.removeItem(CONVO_STORAGE_KEY);
+        localStorage.removeItem(`${CONVO_STORAGE_KEY}:${getCurrentUserScope()}`);
       }
     }, timeoutMs);
     return () => clearTimeout(id);

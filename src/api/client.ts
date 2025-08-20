@@ -88,6 +88,15 @@ client.interceptors.request.use(
         const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         config.headers = config.headers || {};
         config.headers['X-User-Timezone'] = userTimezone;
+        // Add app metadata headers for observability
+        const appEnv = process.env.NEXT_PUBLIC_APP_ENV;
+        const appVersion = process.env.NEXT_PUBLIC_APP_VERSION;
+        if (appEnv) {
+          config.headers['X-App-Env'] = appEnv;
+        }
+        if (appVersion) {
+          config.headers['X-Client-Version'] = appVersion;
+        }
       } catch (error) {
         console.warn('Failed to get user timezone:', error);
       }
@@ -224,11 +233,8 @@ client.interceptors.response.use(
           const originalRequest = error.config;
           if (!originalRequest._retry) {
             originalRequest._retry = true;
-            const refreshResp = await axios.post(
-              (process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1') + '/auth/refresh',
-              {},
-              { withCredentials: true }
-            );
+            // Use root-level refresh alias to ensure HttpOnly cookies are sent from the same origin
+            const refreshResp = await axios.post('/auth/refresh', {}, { withCredentials: true });
             const newAccess = refreshResp.data?.access_token;
             if (newAccess) {
               localStorage.setItem('REF_TOKEN', newAccess);

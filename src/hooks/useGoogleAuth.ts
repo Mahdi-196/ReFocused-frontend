@@ -25,6 +25,22 @@ export const useGoogleAuth = ({ onSuccess, onError }: UseGoogleAuthProps) => {
       authService.saveAuthData(authData);
       
       console.log('✅ Google OAuth successful, token stored');
+
+      // If this is the user's first Google login, ensure a default Open Peeps avatar exists
+      try {
+        const storedUser = authService.getCachedUser();
+        const scope = String(storedUser?.id || storedUser?.email || 'user');
+        const googleSeenKey = `REF_TUTORIAL_GOOGLE_SEEN:${scope}`;
+        if (!storedUser?.avatar && !storedUser?.profile_picture && localStorage.getItem(googleSeenKey) !== 'true') {
+          const { avatarService } = await import('@/api/services/avatarService');
+          const seed = String(storedUser?.name || storedUser?.email || 'User');
+          await avatarService.updateAvatar({
+            style: 'open-peeps',
+            seed,
+            options: { backgroundColor: 'transparent' }
+          });
+        }
+      } catch {}
       if (onSuccess) {
         onSuccess(authData.access_token);
       }

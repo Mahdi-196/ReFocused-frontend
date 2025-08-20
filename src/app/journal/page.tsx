@@ -7,6 +7,7 @@ import PageTransition from '@/components/PageTransition';
 import { Loader2, AlertCircle } from "lucide-react";
 import { JournalPageSkeleton, SkeletonDemo } from '@/components/skeletons';
 import { initializeAuth } from '@/api/client';
+import { useToast } from '@/contexts/ToastContext';
 import { timeService } from '@/services/timeService';
 
 // Priority 1: Critical components (immediate load)
@@ -34,6 +35,7 @@ import { useConsistentDate } from "@/hooks/useConsistentDate";
  */
 const Journal: React.FC = () => {
   const router = useRouter();
+  const toast = useToast();
   
   // Remove progressive reveal; render all at once after skeleton delay
   
@@ -115,7 +117,7 @@ const Journal: React.FC = () => {
   const handleCreateEntryWithTitle = (title: string) => {
     const collectionId = selectedCollectionId || (collections.find((c) => c.name === "My Notes") || collections[0])?.id.toString();
     if (!collectionId) {
-      alert("Please create a collection first");
+      toast.showInfo("Create a collection first");
       return;
     }
     router.push(`/journal/entry?collection=${collectionId}&title=${encodeURIComponent(title)}`);
