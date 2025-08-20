@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { getCurrentUserScope } from '@/utils/scopedStorage';
+import { perAccountDailyStorage, cleanupOldDateEntries } from '@/utils/scopedStorage';
+import { useCurrentDate } from '@/contexts/TimeContext';
 import { Trash2, Plus, Check } from "lucide-react";
 import { incrementTasksDone } from "@/services/statisticsService";
 
@@ -11,6 +12,8 @@ type UserNotesData = {
   lastUpdated: number;
 };
 
+const QUICK_NOTES_BASE_KEY = 'user_quick_notes';
+
 export default function QuickNotes() {
   const [notes, setNotes] = useState("");
   const [todos, setTodos] = useState<string[]>([]);
@@ -18,6 +21,7 @@ export default function QuickNotes() {
   const [isClient, setIsClient] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean | null>(null);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const userDate = useCurrentDate();
 
   // Initialize client-side rendering flag
   useEffect(() => {
@@ -34,30 +38,26 @@ export default function QuickNotes() {
     }
   }, [saveSuccess]);
 
+  // Load for the current backend date; cleanup older daily entries
   useEffect(() => {
     if (!isClient) return;
-    
     try {
-      // Load from localStorage
-      const storedDataString = localStorage.getItem(`userQuickNotes:${getCurrentUserScope()}`);
-      
-      if (storedDataString) {
-        const storedData: UserNotesData = JSON.parse(storedDataString);
-        
-        // Check if data is less than 24 hours old
-        const now = Date.now();
-        const isExpired = now - storedData.lastUpdated > 24 * 60 * 60 * 1000;
-        
-        if (!isExpired) {
-          setNotes(storedData.notes);
-          setTodos(storedData.todos);
-          return;
-        }
+      const data = perAccountDailyStorage.getJSON<UserNotesData>(QUICK_NOTES_BASE_KEY, userDate);
+      if (data) {
+        setNotes(data.notes || "");
+        setTodos(Array.isArray(data.todos) ? data.todos : []);
+      } else {
+        setNotes("");
+        setTodos([]);
       }
+      // Remove any older-day entries so data is deleted after day change
+      cleanupOldDateEntries(QUICK_NOTES_BASE_KEY, 0);
     } catch (error) {
       console.error('Failed to load notes data:', error);
+      setNotes("");
+      setTodos([]);
     }
-  }, [isClient]);
+  }, [isClient, userDate]);
 
   const saveToLocalStorage = useCallback((notesData = notes, todosData = todos) => {
     if (!isClient) return false;
@@ -68,8 +68,8 @@ export default function QuickNotes() {
         todos: todosData,
         lastUpdated: Date.now()
       };
-      
-      localStorage.setItem(`userQuickNotes:${getCurrentUserScope()}`, JSON.stringify(userData));
+      // Save under per-account daily key for backend date
+      perAccountDailyStorage.setJSON<UserNotesData>(QUICK_NOTES_BASE_KEY, userData, userDate);
       setSaveSuccess(true);
       return true;
     } catch (error) {
@@ -77,7 +77,7 @@ export default function QuickNotes() {
       setSaveSuccess(false);
       return false;
     }
-  }, [isClient, notes, todos]);
+  }, [isClient, notes, todos, userDate]);
 
   // Debounced save function - save after user stops typing
   const debouncedSave = useCallback((notesContent: string, todosContent: string[]) => {
@@ -101,8 +101,10 @@ export default function QuickNotes() {
     setTodos([]);
     
     try {
-      // Clear from localStorage
-      localStorage.removeItem(`userQuickNotes:${getCurrentUserScope()}`);
+      // Clear for current backend date
+      perAccountDailyStorage.remove(QUICK_NOTES_BASE_KEY, userDate);
+      // Ensure cleanup runs for any stray older entries as well
+      cleanupOldDateEntries(QUICK_NOTES_BASE_KEY, 0);
       setSaveSuccess(true);
     } catch (error) {
       console.error('Failed to clear notes:', error);
@@ -215,7 +217,7 @@ export default function QuickNotes() {
             )}
           </div>
           <div className="text-xs text-gray-400 mt-1">
-            Notes save automatically and expire after 24hrs
+            Notes and todos are saved per account per day and reset at midnight
           </div>
         </div>
       </div>

@@ -47,6 +47,11 @@ const nextConfig = {
           source: '/api/v1/:path*',
           destination: 'http://localhost:8000/api/v1/:path*',
         },
+        // Development: proxy auth refresh and related endpoints
+        {
+          source: '/auth/:path*',
+          destination: 'http://localhost:8000/auth/:path*',
+        },
       ];
     }
     // Production: no rewrites; frontend calls backend directly via NEXT_PUBLIC_API_BASE_URL

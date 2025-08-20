@@ -7,7 +7,6 @@ import Footer from './footer';
 import AnimatedLayout from './AnimatedLayout';
 import StatisticsInitializer from './StatisticsInitializer';
 import DevTools from './devTools';
-import { TokenExpiryNotification } from './TokenExpiryNotification';
 // import RateLimitNotification from './RateLimitNotification';
 import CacheManager from './CacheManager';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -33,7 +32,7 @@ export default function ClientLayoutWrapper({
   const isLandingPage = pathname === '/';
   const isProfilePage = pathname === '/profile';
   const shouldShowFooter = isLandingPage || isProfilePage;
-  const publicRoutes = ['/', '/privacy', '/terms', '/cookies', '/data-protection', '/legal'];
+  const publicRoutes = ['/', '/privacy', '/terms', '/cookies', '/data-protection', '/legal', '/console-test'];
   const isPublicRoute = publicRoutes.includes(pathname || '/');
   
   // Check authentication status
@@ -89,6 +88,73 @@ export default function ClientLayoutWrapper({
 
   useEffect(() => {
     initializeAuth();
+  }, []);
+
+  // Global day-change cleanup for AI conversation/count storage (works even if AI page isn't open)
+  useEffect(() => {
+    const getScope = () => {
+      try {
+        const raw = localStorage.getItem('REF_USER');
+        if (!raw) return 'guest';
+        const user = JSON.parse(raw);
+        return String(user?.id || user?.email || 'guest');
+      } catch {
+        return 'guest';
+      }
+    };
+
+    const cleanupAIDailyStorage = (mode: 'all' | 'staleOnly' = 'staleOnly') => {
+      const todayLabel = new Date().toDateString();
+      const scope = getScope();
+      // Collect keys first to avoid skipping during iteration
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith(`ai-conversation:${scope}:`) || key.startsWith(`ai-conversation-history:${scope}`))) {
+          if (mode === 'all') {
+            keysToRemove.push(key);
+          } else {
+            const parts = key.split(':');
+            const datePart = parts[parts.length - 1];
+            if (datePart !== todayLabel) {
+              keysToRemove.push(key);
+            }
+          }
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+
+      // Reset daily count
+      const countKey = `ai-daily-count:${scope}`;
+      try {
+        if (mode === 'all') {
+          localStorage.setItem(countKey, JSON.stringify({ date: todayLabel, count: 0 }));
+        } else {
+          const raw = localStorage.getItem(countKey);
+          const obj = raw ? JSON.parse(raw) as { date?: string; count?: number } : null;
+          if (!obj || obj.date !== todayLabel) {
+            localStorage.setItem(countKey, JSON.stringify({ date: todayLabel, count: 0 }));
+          }
+        }
+      } catch {
+        localStorage.setItem(countKey, JSON.stringify({ date: todayLabel, count: 0 }));
+      }
+    };
+
+    // Initial cleanup on mount (stale entries)
+    cleanupAIDailyStorage('staleOnly');
+    // React to day/user changes
+    const onDayChanged = () => cleanupAIDailyStorage('all');
+    const onUserChanged = () => cleanupAIDailyStorage('staleOnly');
+    const onUserLoggedOut = () => cleanupAIDailyStorage('all');
+    window.addEventListener('dayChanged', onDayChanged as EventListener);
+    window.addEventListener('userChanged', onUserChanged as EventListener);
+    window.addEventListener('userLoggedOut', onUserLoggedOut as EventListener);
+    return () => {
+      window.removeEventListener('dayChanged', onDayChanged as EventListener);
+      window.removeEventListener('userChanged', onUserChanged as EventListener);
+      window.removeEventListener('userLoggedOut', onUserLoggedOut as EventListener);
+    };
   }, []);
 
   // Show loading skeleton for protected routes while checking auth
@@ -154,8 +220,7 @@ export default function ClientLayoutWrapper({
               {shouldShowFooter && <Footer />}
             </div>
             
-            {/* Token expiry notification - positioned at top-right globally */}
-            {!isLandingPage && isAuthenticated && <TokenExpiryNotification />}
+            {/* Token expiry notification intentionally disabled for fully silent refresh */}
             {/* Rate limit notification disabled per request */}
             
             {/* DevTools - positioned at bottom-right globally */}
