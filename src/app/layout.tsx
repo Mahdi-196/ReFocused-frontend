@@ -180,7 +180,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen" suppressHydrationWarning={true}>
+      <body className="min-h-screen bg-[#1A2537] overflow-x-hidden overflow-y-scroll" suppressHydrationWarning={true}>
         <PerformanceMonitor />
         <ClientLayoutWrapper>
           {children}

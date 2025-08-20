@@ -119,6 +119,15 @@ client.interceptors.response.use(
     // Mark network success for successful responses
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('networkSuccess'));
+
+      // If backend rotates a fresh access token via header/cookie, capture it
+      const newToken = response.headers?.['x-access-token'] || response.data?.access_token;
+      if (newToken && newToken !== localStorage.getItem('REF_TOKEN')) {
+        try {
+          localStorage.setItem('REF_TOKEN', newToken);
+          client.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        } catch {}
+      }
     }
     return response;
   },
@@ -144,6 +153,24 @@ client.interceptors.response.use(
     if (error.code === 'ERR_NETWORK' && error.message === 'Network Error') {
       logger.warn('Network/CORS error - backend may be unavailable', { url: error.config?.url }, 'API');
       error.isNetworkError = true;
+    }
+
+    // Fire global rate-limit event as early as possible (before any early returns)
+    const status = error.response?.status;
+    if (status === 429 && typeof window !== 'undefined') {
+      const retryAfterHeader =
+        error.response.headers?.['retry-after'] || error.response.headers?.['Retry-After'];
+      const retryAfter = parseInt(retryAfterHeader ?? '0', 10);
+      try {
+        window.dispatchEvent(
+          new CustomEvent('rateLimit', {
+            detail: {
+              retryAfter: Number.isFinite(retryAfter) ? retryAfter : undefined,
+              path: error.config?.url,
+            },
+          })
+        );
+      } catch {}
     }
     
     // Extract backend error messages for proper frontend display
@@ -192,6 +219,27 @@ client.interceptors.response.use(
       }, 'API');
       
       if (typeof window !== 'undefined') {
+        // Attempt a silent refresh once using refresh cookie
+        try {
+          const originalRequest = error.config;
+          if (!originalRequest._retry) {
+            originalRequest._retry = true;
+            const refreshResp = await axios.post(
+              (process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1') + '/auth/refresh',
+              {},
+              { withCredentials: true }
+            );
+            const newAccess = refreshResp.data?.access_token;
+            if (newAccess) {
+              localStorage.setItem('REF_TOKEN', newAccess);
+              client.defaults.headers.common['Authorization'] = `Bearer ${newAccess}`;
+              originalRequest.headers = originalRequest.headers || {};
+              originalRequest.headers['Authorization'] = `Bearer ${newAccess}`;
+              return client(originalRequest);
+            }
+          }
+        } catch {}
+
         // Clear all authentication data
         localStorage.removeItem('REF_TOKEN');
         localStorage.removeItem('REF_USER');

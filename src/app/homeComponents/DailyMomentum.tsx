@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Target } from 'lucide-react';
 import MoodStats from './MoodStats';
 import HabitStreaks from './HabitStreaks';
@@ -15,6 +15,9 @@ type DailyMomentumProps = {
   setTasks: (updateFn: (tasks: Task[]) => Task[]) => void;
 };
 
+const STORAGE_KEY_PREFIX = 'focus_goal_';
+const getTodayKey = () => `${STORAGE_KEY_PREFIX}${new Date().toISOString().split('T')[0]}`;
+
 const DailyMomentum: React.FC<DailyMomentumProps> = ({
   tasks,
   newTask,
@@ -22,7 +25,39 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
   handleAddTask,
   handleDeleteTask,
   setTasks,
-}) => (
+}) => {
+  const [focusGoal, setFocusGoal] = useState('');
+
+  // Load today's focus goal
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const key = getTodayKey();
+      const saved = localStorage.getItem(key);
+      if (saved) setFocusGoal(saved);
+
+      // Cleanup old focus_goal_* keys
+      const today = key;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(STORAGE_KEY_PREFIX) && k !== today) {
+          localStorage.removeItem(k);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Persist on change (debounced)
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(getTodayKey(), focusGoal.trim());
+      } catch {}
+    }, 300);
+    return () => clearTimeout(id);
+  }, [focusGoal]);
+
+  return (
   <section 
     className="lg:col-span-2" 
     aria-labelledby="daily-momentum"
@@ -43,6 +78,8 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
           placeholder="Set your main goal for today..."
           className="w-full p-2 bg-transparent text-lg font-semibold text-white placeholder-gray-400 focus:outline-none focus:border-b-2 focus:border-blue-400"
           aria-label="Enter your daily mantra or focus goal"
+          value={focusGoal}
+          onChange={(e) => setFocusGoal(e.target.value)}
         />
       </div>
 
@@ -58,6 +95,7 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
       />
     </div>
   </section>
-);
+  );
+};
 
 export default DailyMomentum; 

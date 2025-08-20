@@ -23,6 +23,10 @@ export interface VotingStatsResponse {
   items: VotingStatsItem[];
 }
 
+export interface VotingMeResponse {
+  voted: boolean;
+}
+
 /**
  * Voting API Service
  * Calls backend endpoints which forward to AWS API Gateway.
@@ -39,8 +43,29 @@ export const votingService = {
   },
 
   async getStats(): Promise<VotingStatsResponse> {
-    const response = await client.get<VotingStatsResponse>(VOTING.STATS);
-    return response.data;
+    try {
+      const response = await client.get<VotingStatsResponse>(VOTING.STATS);
+      return response.data;
+    } catch (error) {
+      // Silence UI-facing errors; let caller decide how to render
+      console.error('Failed to fetch voting stats:', error);
+      return { total: 0, items: [] };
+    }
+  },
+
+  async hasVoted(): Promise<boolean> {
+    try {
+      const response = await client.get<VotingMeResponse>(VOTING.ME, { validateStatus: () => true });
+      if (response.status >= 200 && response.status < 300) {
+        return Boolean((response.data as VotingMeResponse)?.voted);
+      }
+      // Fallback: treat 409 as already voted
+      if (response.status === 409) return true;
+      return false;
+    } catch (error) {
+      console.error('Failed to check voting status:', error);
+      return false;
+    }
   },
 };
 

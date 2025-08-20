@@ -8,6 +8,7 @@ import AnimatedLayout from './AnimatedLayout';
 import StatisticsInitializer from './StatisticsInitializer';
 import DevTools from './devTools';
 import { TokenExpiryNotification } from './TokenExpiryNotification';
+import RateLimitNotification from './RateLimitNotification';
 import CacheManager from './CacheManager';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { TimeProvider } from '@/contexts/TimeContext';
@@ -24,7 +25,7 @@ export default function ClientLayoutWrapper({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isAiPage = pathname === '/ai';
+  const isAiPage = pathname?.startsWith('/ai');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const isLandingPage = pathname === '/';
@@ -133,17 +134,16 @@ export default function ClientLayoutWrapper({
             <StatisticsInitializer />
             <CacheManager />
             <DataPreloader />
-            {isAiPage && (
-              <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900">
-                <div className="absolute inset-0 opacity-45 bg-[radial-gradient(800px_400px_at_15%_10%,rgba(59,130,246,0.10),transparent_60%)]" />
-                <div className="absolute inset-0 opacity-45 bg-[radial-gradient(700px_350px_at_85%_90%,rgba(59,130,246,0.10),transparent_60%)]" />
-              </div>
-            )}
+            {/* AI page now provides its own background; no global backdrop here */}
             <div className={isLandingPage ? '' : 'pt-20'}>
               {!isLandingPage && <Header />}
               <AnimatedLayout>
-                <main className={`${!isLandingPage ? (isAiPage ? 'min-h-screen w-full p-0 m-0' : 'container mx-auto px-4 py-8') : ''}`}>
-                  {children}
+                <main className={`${isAiPage ? 'min-h-screen w-full p-0 m-0' : ''}`}>
+                  {isLandingPage
+                    ? children
+                    : isAiPage
+                      ? children
+                      : <div className="container mx-auto px-4 py-8">{children}</div>}
                 </main>
               </AnimatedLayout>
               {shouldShowFooter && <Footer />}
@@ -151,6 +151,8 @@ export default function ClientLayoutWrapper({
             
             {/* Token expiry notification - positioned at top-right globally */}
             {!isLandingPage && isAuthenticated && <TokenExpiryNotification />}
+            {/* Rate limit notification - global */}
+            <RateLimitNotification />
             
             {/* DevTools - positioned at bottom-right globally */}
             {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}

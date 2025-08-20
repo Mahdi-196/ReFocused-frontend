@@ -20,11 +20,6 @@ export const NetworkDisconnectWarning: React.FC<NetworkDisconnectWarningProps> =
     }
   };
 
-  const handleContactSupport = () => {
-    // You can customize this to your preferred support method
-    window.open('mailto:support@yourapp.com?subject=Network Connection Issues', '_blank');
-  };
-
   if (!isVisible) return null;
 
   return (
@@ -57,18 +52,17 @@ export const NetworkDisconnectWarning: React.FC<NetworkDisconnectWarningProps> =
             Refresh Page
           </button>
           
-          <button
-            onClick={handleContactSupport}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-xl font-medium transition-colors duration-200"
+          <div
+            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gray-800 text-gray-200 rounded-xl font-medium select-text"
           >
             <Mail className="w-5 h-5" />
-            Contact Support
-          </button>
+            <span className="font-mono">support@refocused.app</span>
+          </div>
         </div>
 
         {/* Footer Text */}
         <p className="text-xs text-gray-500 mt-6">
-          We're working to restore your connection
+          Contact us if this lasts longer than 5 minutes
         </p>
       </div>
     </div>

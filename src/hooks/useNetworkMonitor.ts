@@ -116,12 +116,20 @@ export const useNetworkMonitor = (config: NetworkMonitorConfig = {}): NetworkMon
     window.addEventListener('offline', handleOffline);
     window.addEventListener('networkFailure', handleNetworkFailure);
     window.addEventListener('networkSuccess', handleNetworkSuccess);
+    // When rate limit occurs, do not show disconnect UI; reset counters
+    const handleRateLimit = () => {
+      setShowDisconnectWarning(false);
+      setConsecutiveFailures(0);
+      setIsConnected(true);
+    };
+    window.addEventListener('rateLimit', handleRateLimit as EventListener);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('networkFailure', handleNetworkFailure);
       window.removeEventListener('networkSuccess', handleNetworkSuccess);
+      window.removeEventListener('rateLimit', handleRateLimit as EventListener);
     };
   }, [markNetworkFailure, markNetworkSuccess]);
 

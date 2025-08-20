@@ -97,14 +97,14 @@ const TextEditor: React.FC<Props> = ({
             position: sticky;
             top: 0; /* stick to very top of the scroll container */
             z-index: 30;
-            background: #0E172B; /* fully opaque to prevent text showing through */
+            background: #1A2537; /* opaque; no see-through */
             -webkit-backdrop-filter: none;
             backdrop-filter: none;
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.38); /* slightly brighter separation */
-            border-top-left-radius: 0.75rem;
-            border-top-right-radius: 0.75rem;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+            border: 0; /* remove top/side lines so nothing shows behind corners */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.38); /* subtle separator only */
+            border-top-left-radius: 0; /* square corners per request */
+            border-top-right-radius: 0; /* square corners per request */
+            box-shadow: none;
           }
 
           .ql-container.ql-snow {
@@ -113,6 +113,8 @@ const TextEditor: React.FC<Props> = ({
             margin-top: 0; /* container sits right under toolbar */
             border-bottom-left-radius: 0.75rem;
             border-bottom-right-radius: 0.75rem;
+            border-top-left-radius: 0; /* keep top squared to align with toolbar */
+            border-top-right-radius: 0; /* keep top squared to align with toolbar */
           }
 
           .ql-container.ql-snow:focus-within {

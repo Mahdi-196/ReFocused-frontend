@@ -94,8 +94,37 @@ class ApiService {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      // Try to extract structured error; fallback to text
+      let message = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        message = errorData?.error || errorData?.detail || message;
+      } catch {
+        try {
+          const text = await response.text();
+          if (text) message = text;
+        } catch {}
+      }
+      const error: any = new Error(message);
+      error.status = response.status;
+      const retryAfter = response.headers.get('Retry-After');
+      if (retryAfter) {
+        const seconds = parseInt(retryAfter, 10);
+        if (Number.isFinite(seconds)) error.retryAfter = seconds;
+      }
+
+      // Fire global rate-limit event for fetch-based paths as well
+      if (response.status === 429 && typeof window !== 'undefined') {
+        try {
+          window.dispatchEvent(
+            new CustomEvent('rateLimit', {
+              detail: { retryAfter: error.retryAfter, path: endpoint },
+            })
+          );
+        } catch {}
+      }
+
+      throw error;
     }
 
     return response.json();
