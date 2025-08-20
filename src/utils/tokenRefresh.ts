@@ -98,24 +98,9 @@ class TokenRefreshManager {
   /**
    * Show a warning to the user about token expiry
    */
-  private showExpiryWarning(timeLeft: number): void {
-    const minutes = Math.floor(timeLeft / 60);
-    const message = `Your session will expire in ${minutes} minute${minutes !== 1 ? 's' : ''}. Please save your work and refresh the page to continue.`;
-    
-    console.warn('⚠️ [TOKEN EXPIRY WARNING]', message);
-    
-    // Show browser notification if available
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('ReFocused - Session Expiring', {
-        body: message,
-        icon: '/favicon.ico'
-      });
-    }
-
-    // Also dispatch a custom event for components to listen to
-    window.dispatchEvent(new CustomEvent('tokenExpiryWarning', {
-      detail: { timeLeft, message }
-    }));
+  private showExpiryWarning(_timeLeft: number): void {
+    // Disable all user-facing warnings; rely on silent auto-refresh in axios client
+    return;
   }
 
   /**

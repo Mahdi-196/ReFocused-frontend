@@ -129,6 +129,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       
       // Also store user data in localStorage for quick access
       localStorage.setItem('REF_USER', JSON.stringify(response.data));
+      // Notify rest of app that user changed (same-tab event)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('userChanged'));
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
       throw error;

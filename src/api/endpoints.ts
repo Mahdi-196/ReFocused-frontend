@@ -115,6 +115,7 @@ export const EMAIL = {
 export const VOTING = {
   VOTE: '/voting/vote',
   STATS: '/voting/stats',
+  ME: '/voting/me',
 };
 
 // Feedback endpoint

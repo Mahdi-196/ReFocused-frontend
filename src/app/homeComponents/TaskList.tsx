@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from 'react';
+import logger from '@/utils/logger';
 import { CheckIcon } from '@/components/icons';
 import { incrementTasksDone } from "@/services/statisticsService";
 
@@ -45,6 +46,7 @@ const TaskList: React.FC<TaskListProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      logger.debug('toggleTask', { id: task.id, from: task.completed, to: !task.completed }, 'TASKS');
                       const wasCompleted = task.completed;
                       
                       // Use functional update for setting tasks
@@ -96,7 +98,10 @@ const TaskList: React.FC<TaskListProps> = ({
                   </span>
                 </div>
                 <button
-                  onClick={() => handleDeleteTask(task.id)}
+                  onClick={() => {
+                    logger.debug('deleteTask', { id: task.id }, 'TASKS');
+                    handleDeleteTask(task.id);
+                  }}
                   className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-gray-600/50"
                   aria-label="Delete task"
                 >

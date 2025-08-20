@@ -22,6 +22,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     name: '',
   });
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +84,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
 
     try {
       const endpoint = activeTab === 'login' ? AUTH.LOGIN : AUTH.REGISTER;
-      const response = await client.post(endpoint, formData);
+      const response = await client.post(endpoint, { ...formData, remember_me: rememberMe });
       
       const token = response.data.access_token;
       
@@ -303,17 +304,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                   </label>
                   <div className="relative">
                     <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      autoComplete={activeTab === 'login' ? 'current-password' : 'new-password'}
-                      className="w-full pl-10 pr-16 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
-                      style={{ backgroundImage: 'none' }}
-                      placeholder="Enter your password"
-                      required
-                    />
+                    {activeTab === 'login' ? (
+                      <input
+                        key="login-pw"
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        autoComplete="current-password"
+                        className="w-full pl-10 pr-16 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                        style={{ backgroundImage: 'none' }}
+                        placeholder="Enter your password"
+                        required
+                      />
+                    ) : (
+                      <input
+                        key="register-pw"
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        autoComplete="new-password"
+                        className="w-full pl-10 pr-16 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                        style={{ backgroundImage: 'none' }}
+                        placeholder="Enter your password"
+                        required
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -322,6 +339,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                       {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                     </button>
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="peer sr-only"
+                      aria-label="Remember me"
+                    />
+                    <span className="flex h-5 w-5 items-center justify-center rounded-md border border-gray-600/50 bg-gray-800/60 transition-all duration-200 peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#42b9e5] peer-checked:border-transparent peer-checked:bg-gradient-to-r peer-checked:from-[#42b9e5] peer-checked:to-[#4f83ed] peer-checked:[&>svg]:opacity-100 peer-checked:[&>svg]:scale-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+                      <svg
+                        className="h-3.5 w-3.5 text-white opacity-0 scale-95 transition-all duration-150"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                    </span>
+                    <span className="text-sm text-gray-300 hover:text-white transition-colors">Remember me</span>
+                  </label>
                 </div>
 
                 <button

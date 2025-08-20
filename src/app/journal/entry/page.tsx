@@ -345,7 +345,7 @@ function EntryContent() {
   // Show loading state while collections are loading or time service is not ready
   if (collectionsLoading || timeLoading || !dateReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900" style={{ backgroundColor: '#0E172B' }}>
+      <div className="min-h-screen flex items-center justify-center bg-[#1A2537]">
         <div className="text-center">
           <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <BookOpen className="w-8 h-8 text-white" />
@@ -392,7 +392,7 @@ function EntryContent() {
   return (
     <PageTransition>
       {/* Full-page layout without gradients */}
-      <div className="min-h-screen flex flex-col bg-[#0E172B]">
+      <div className="min-h-screen flex flex-col bg-[#1A2537]">
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -401,7 +401,7 @@ function EntryContent() {
             <div className="flex items-center justify-between mb-6">
               <button
                 onClick={handleBack}
-                className="group inline-flex items-center gap-3 px-4 py-3 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 text-gray-300 hover:text-white rounded-xl transition-all duration-200 hover:bg-gray-700/50 hover:border-gray-600/50 transform hover:scale-105"
+                className="group inline-flex items-center gap-3 px-4 py-3 bg-[#293344] border border-[#293344] text-gray-200 hover:text-white rounded-xl transition-all duration-200 hover:bg-[#293344] transform hover:scale-105"
                 aria-label="Return to journal"
               >
                 <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
@@ -414,7 +414,7 @@ function EntryContent() {
                   <select
                     value={selectedCollectionId || ""}
                     onChange={(e) => handleCollectionChange(e.target.value)}
-                    className="appearance-none px-4 py-3 pr-10 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-700/50"
+                    className="appearance-none px-4 py-3 pr-10 bg-[#293344] border border-[#293344] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 hover:bg-[#293344]"
                     aria-label="Select collection for this entry"
                     disabled={isSaving || isLoadingEntry}
                   >
@@ -468,9 +468,9 @@ function EntryContent() {
           </div>
 
             {/* Editor Surface - full-width translucent panel with internal scroll */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[calc(100vh-160px)]">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[calc(100vh-160px)] relative">
             {/* Editor Header */}
-              <div className="p-6 sm:p-8 border-b border-white/10 bg-white/5">
+              <div className="p-6 sm:p-8 bg-transparent rounded-t-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/15 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
@@ -535,7 +535,7 @@ function EntryContent() {
             </div>
 
             {/* Content Editor (scrollable) */}
-              <div className="flex-1 overflow-y-auto pt-0 pb-8 px-6 sm:px-8">
+              <div className="flex-1 overflow-y-auto pt-0 pb-8 px-6 sm:px-8 bg-transparent">
                 {/* Spacer to keep content clear of sticky toolbar while scrolling */}
                 <div className="h-3"></div>
               {/* Character limit warning */}

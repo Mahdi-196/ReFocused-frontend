@@ -888,8 +888,7 @@ const Pomodoro: React.FC = () => {
                         }}
                         className="sr-only peer"
                       />
-                      <div className="w-4 h-4 bg-gray-600 border-2 border-gray-500 rounded-full peer-checked:bg-blue-600 peer-checked:border-blue-500 transition-all duration-200"></div>
-                      <div className="absolute inset-0 w-4 h-4 rounded-full peer-checked:after:content-[''] peer-checked:after:absolute peer-checked:after:top-1/2 peer-checked:after:left-1/2 peer-checked:after:transform peer-checked:after:-translate-x-1/2 peer-checked:after:-translate-y-1/2 peer-checked:after:w-1.5 peer-checked:after:h-1.5 peer-checked:after:bg-white peer-checked:after:rounded-full"></div>
+                      <div className="w-4 h-4 rounded-full border-2 border-gray-500 bg-transparent transition-all duration-200 peer-checked:border-blue-500 peer-focus:ring-2 peer-focus:ring-blue-400/40 relative after:content-[''] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:w-2 after:h-2 after:rounded-full after:bg-blue-500 after:opacity-0 peer-checked:after:opacity-100"></div>
                     </div>
                     <span className="ml-2.5 text-sm font-medium">{sound.name}</span>
                   </label>

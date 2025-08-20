@@ -75,13 +75,21 @@ const FeedbackModal = memo(({
   onClose, 
   feedbackData, 
   setFeedbackData, 
-  onSubmit 
+  onSubmit,
+  isSubmitting,
+  cooldownSeconds,
+  submittedToday,
+  inlineError,
 }: {
   isOpen: boolean;
   onClose: () => void;
   feedbackData: FeedbackData;
   setFeedbackData: React.Dispatch<React.SetStateAction<FeedbackData>>;
   onSubmit: () => void;
+  isSubmitting: boolean;
+  cooldownSeconds: number;
+  submittedToday: boolean;
+  inlineError?: string;
 }) => {
   // Prevent background scroll when modal is open (call hook unconditionally)
   useEffect(() => {
@@ -120,77 +128,92 @@ const FeedbackModal = memo(({
           <p className="text-gray-300 text-sm">Help us improve ReFocused by sharing your thoughts and suggestions</p>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-3">
-            Overall Experience
-          </label>
-          <div className="flex justify-center gap-2">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                onClick={() => startTransition(() => setFeedbackData(prev => ({ ...prev, rating: star })))}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform duration-150 ease-out hover:scale-105 active:scale-95 ${
-                  star <= feedbackData.rating
-                    ? 'bg-yellow-500 text-white shadow'
-                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50'
-                }`}
-              >
-                <Star className={`w-5 h-5 ${star <= feedbackData.rating ? 'fill-current' : ''}`} />
-              </button>
-            ))}
+        {submittedToday ? (
+          <div className="mb-2 p-4 bg-green-900/30 border border-green-800/50 rounded-lg text-green-300 text-center">
+            Thank you! You can submit feedback once per day.
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Overall Experience
+              </label>
+              <div className="flex justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => startTransition(() => setFeedbackData(prev => ({ ...prev, rating: star })))}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform duration-150 ease-out hover:scale-105 active:scale-95 ${
+                      star <= feedbackData.rating
+                        ? 'bg-yellow-500 text-white shadow'
+                        : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50'
+                    }`}
+                  >
+                    <Star className={`w-5 h-5 ${star <= feedbackData.rating ? 'fill-current' : ''}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-3">
-            Feedback Category
-          </label>
-          <select
-            value={feedbackData.category}
-            onChange={(e) => setFeedbackData(prev => ({ ...prev, category: e.target.value }))}
-            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          >
-            <option value="">Select a category...</option>
-            {feedbackCategories.map((category) => (
-              <option key={category} value={category} className="bg-gray-800">
-                {category}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Feedback Category
+              </label>
+              <select
+                value={feedbackData.category}
+                onChange={(e) => setFeedbackData(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              >
+                <option value="">Select a category...</option>
+                {feedbackCategories.map((category) => (
+                  <option key={category} value={category} className="bg-gray-800">
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-3">
-            Your Message
-          </label>
-          <textarea
-            value={feedbackData.message}
-            onChange={(e) => setFeedbackData(prev => ({ ...prev, message: e.target.value }))}
-            placeholder="Tell us what you think, report a bug, or suggest a new feature..."
-            rows={5}
-            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
-          />
-        </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Your Message
+              </label>
+              <textarea
+                value={feedbackData.message}
+                onChange={(e) => setFeedbackData(prev => ({ ...prev, message: e.target.value }))}
+                placeholder="Tell us what you think, report a bug, or suggest a new feature..."
+                rows={5}
+                className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+              />
+            </div>
 
-        
+            {/* Hide inline error message per request */}
 
-        <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg transition-colors font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-          >
-            Submit Feedback
-          </button>
-        </div>
+            {cooldownSeconds > 0 && (
+              <div className="mb-4 p-3 bg-amber-900/30 border border-amber-800/50 rounded-lg text-amber-300 text-sm text-center">
+                You can submit feedback once every 24 hours.
+              </div>
+            )}
+
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={isSubmitting || cooldownSeconds > 0}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+              </button>
+            </div>
+          </>
+        )}
       </motion.div>
     </div>
   );
@@ -213,6 +236,7 @@ const Profile = () => {
   const [currentAvatar, setCurrentAvatar] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(true);
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [emailWarning, setEmailWarning] = useState<string | null>(null);
   const [feedbackData, setFeedbackData] = useState<FeedbackData>({
     rating: 0,
     category: '',
@@ -227,6 +251,7 @@ const Profile = () => {
   const [voteSuccessMessage, setVoteSuccessMessage] = useState('');
   const [voteErrorMessage, setVoteErrorMessage] = useState('');
   const [voteCooldownSeconds, setVoteCooldownSeconds] = useState(0);
+  const [hasVoted, setHasVoted] = useState(false);
   // Removed unused state: appSettingsActiveSection
   
   // User data state
@@ -280,6 +305,16 @@ const Profile = () => {
     // Load tab content on demand
     if (!loadedTabs.has(tabName)) {
       setLoadedTabs(prev => new Set([...prev, tabName]));
+    }
+
+    // When opening voting, pre-check if user has already voted
+    if (tabName === 'voting') {
+      (async () => {
+        try {
+          const voted = await votingService.hasVoted();
+          setHasVoted(Boolean(voted));
+        } catch {}
+      })();
     }
   };
 
@@ -442,16 +477,22 @@ const Profile = () => {
       setVoteSuccessMessage('Thanks for your vote!');
       setCustomVote('');
       setSelectedVotingOption(null);
+      setHasVoted(true);
     } catch (err: any) {
+      console.error('Voting error:', err);
       const status = (err?.status as number | undefined) ?? err?.response?.status;
       if (status === 429) {
         const retryAfterHeader = err?.response?.headers?.['retry-after'] ?? err?.response?.headers?.['Retry-After'] ?? err?.headers?.['retry-after'] ?? err?.headers?.['Retry-After'];
         const retryAfter = Number.parseInt(retryAfterHeader ?? '60', 10);
         setVoteCooldownSeconds(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60);
-        setVoteErrorMessage('Rate limit reached. Please try again later.');
+        setVoteErrorMessage('Too many votes. Please try again later.');
+      } else if (status === 409) {
+        // Already voted for this account
+        setHasVoted(true);
+        setVoteSuccessMessage('');
+        setVoteErrorMessage('');
       } else {
-        const detail = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Voting failed';
-        setVoteErrorMessage(typeof detail === 'string' ? detail : 'Voting failed');
+        setVoteErrorMessage('Voting is temporarily unavailable. Please try again soon.');
       }
     } finally {
       setIsSubmittingVote(false);
@@ -542,11 +583,17 @@ const Profile = () => {
 
   const handleSubscribe = async () => {
     setIsSubscribing(true);
+    setEmailWarning(null);
     try {
       await emailSubscriptionService.subscribe(userData?.email || 'cheaxx123@gmail.com');
       setIsSubscribed(true);
     } catch (error: any) {
-      // Silently fail - don't show error
+      const status = (error?.status as number | undefined) ?? error?.response?.status;
+      if (status === 429) {
+        setEmailWarning('Daily limit reached.');
+      } else {
+        setEmailWarning('Subscription service is temporarily unavailable.');
+      }
     } finally {
       setIsSubscribing(false);
     }
@@ -554,11 +601,17 @@ const Profile = () => {
 
   const handleUnsubscribe = async () => {
     setIsSubscribing(true);
+    setEmailWarning(null);
     try {
       await emailSubscriptionService.unsubscribe(userData?.email || 'cheaxx123@gmail.com');
       setIsSubscribed(false);
     } catch (error: any) {
-      // Silently fail - don't show error
+      const status = (error?.status as number | undefined) ?? error?.response?.status;
+      if (status === 429) {
+        setEmailWarning('Daily limit reached.');
+      } else {
+        setEmailWarning('Subscription service is temporarily unavailable.');
+      }
     } finally {
       setIsSubscribing(false);
     }
@@ -812,6 +865,9 @@ const Profile = () => {
   ];
 
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackCooldown, setFeedbackCooldown] = useState(0);
+  const [feedbackSubmittedToday, setFeedbackSubmittedToday] = useState(false);
+  const [feedbackInlineError, setFeedbackInlineError] = useState<string | undefined>(undefined);
   const handleFeedbackSubmit = async () => {
     if (feedbackData.rating < 1 || feedbackData.rating > 5 || !feedbackData.category || !feedbackData.message.trim()) {
       alert('Please provide rating (1-5), category, and message.');
@@ -826,15 +882,17 @@ const Profile = () => {
         email: userData?.email || undefined,
       });
       setFeedbackData({ rating: 0, category: '', message: '', contact: '' });
-      setIsFeedbackModalOpen(false);
-      alert('Thank you for your feedback!');
+      setFeedbackSubmittedToday(true);
+      setFeedbackInlineError(undefined);
     } catch (err: any) {
+      console.error('Feedback error:', err);
       const status = (err?.status as number | undefined) ?? err?.response?.status;
       if (status === 429) {
         const seconds = err?.retryAfter ?? 60;
-        alert(`You are sending feedback too quickly. Please try again in ${seconds} seconds.`);
+        setFeedbackCooldown(Number.isFinite(seconds) ? seconds : 60);
+        setFeedbackInlineError(undefined);
       } else {
-        alert(err?.message || 'Feedback failed. Please try again later.');
+        setFeedbackInlineError('Feedback is temporarily unavailable. Please try again later.');
       }
     } finally {
       setIsSubmittingFeedback(false);
@@ -1202,6 +1260,11 @@ const Profile = () => {
                         {isSubscribed ? 'You are currently subscribed to our newsletter' : 'You are not subscribed to our newsletter'}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">{userData?.email || 'cheaxx123@gmail.com'}</p>
+                      {emailWarning && (
+                        <div className="mt-2 text-xs text-amber-300 bg-amber-900/30 border border-amber-800/50 rounded px-2 py-1 inline-block">
+                          {emailWarning}
+                        </div>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -1279,7 +1342,7 @@ const Profile = () => {
       case 'voting':
         return loadedTabs.has('voting') ? (
           <div className="space-y-8">
-            <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-blue-700/50 rounded-xl p-6">
+            <div className="relative bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-blue-700/50 rounded-xl p-6">
               <h3 className="text-xl font-semibold text-blue-300 mb-4">Feature Voting</h3>
               <p className="text-gray-400 text-sm mb-6">Vote on upcoming features or suggest your own!</p>
               
@@ -1324,18 +1387,29 @@ const Profile = () => {
                 type="button"
                 className="mt-6 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-lg transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 onClick={handleSubmitVote}
-                disabled={isSubmittingVote || voteCooldownSeconds > 0}
+                disabled={isSubmittingVote || voteCooldownSeconds > 0 || hasVoted}
               >
                 {isSubmittingVote ? 'Submitting...' : 'Submit Vote'}
               </button>
               {(voteSuccessMessage || voteErrorMessage) && (
                 <div className="mt-4 text-sm">
-                  {voteSuccessMessage && (
-                    <div className="text-green-400">{voteSuccessMessage}</div>
-                  )}
+                  {voteSuccessMessage && <div className="text-green-400">{voteSuccessMessage}</div>}
                   {voteErrorMessage && (
                     <div className="text-red-400">{voteCooldownSeconds > 0 ? `Too many requests. Try again in ${voteCooldownSeconds}s.` : voteErrorMessage}</div>
                   )}
+                </div>
+              )}
+              {hasVoted && (
+                <div className="absolute inset-0 rounded-xl overflow-hidden z-20">
+                  <div className="absolute inset-0 backdrop-blur-md bg-slate-900/40" />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="-rotate-12">
+                      <div className="flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-2xl ring-1 ring-white/20">
+                        <GiVote className="w-5 h-5" />
+                        <span className="font-semibold tracking-wide">Thank you for your vote</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1518,6 +1592,10 @@ const Profile = () => {
           feedbackData={feedbackData}
           setFeedbackData={setFeedbackData}
           onSubmit={handleFeedbackSubmit}
+          isSubmitting={isSubmittingFeedback}
+          cooldownSeconds={feedbackCooldown}
+          submittedToday={feedbackSubmittedToday}
+          inlineError={feedbackInlineError}
         />
         
         <AvatarSelector

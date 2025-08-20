@@ -37,7 +37,10 @@ const Header = () => {
   return (
     <>
       <motion.header 
-        className="fixed top-0 left-0 right-0 bg-[#10182B]/80 backdrop-blur-md shadow py-4 border-b border-gray-400/20 z-50"
+        className="fixed top-0 left-0 right-0 bg-[#1A2537]/90 backdrop-blur-md shadow py-4 border-b border-gray-400/20 z-50"
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
       >
         <div className="w-full flex items-center justify-between px-4 md:px-6">
           {/* Left Side - Hamburger Menu (Mobile) / Logo (Desktop) */}
@@ -58,40 +61,12 @@ const Header = () => {
             </motion.button>
 
             {/* Desktop Logo */}
-            <motion.div 
-              className="hidden md:flex items-center space-x-2"
-            >
+            <motion.div className="hidden md:flex items-center space-x-2">
               <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" width="40" height="40" />
               <Link href="/ai">
-                <motion.span 
-                  className="text-xl font-bold cursor-pointer relative group inline-block"
-                  whileHover={{ 
-                    scale: 1.05,
-                    filter: "drop-shadow(0 0 15px rgba(66,185,229,0.5))"
-                  }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 300, 
-                    damping: 20 
-                  }}
-                >
-                  <motion.span 
-                    className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ opacity: 0, y: -3 }}
-                    transition={{ duration: 0.15, ease: "easeInOut" }}
-                  >
-                    ReFocused
-                  </motion.span>
-                  <motion.span 
-                    className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
-                    initial={{ opacity: 0, y: 3 }}
-                    whileHover={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15, ease: "easeInOut" }}
-                  >
-                    ReFocused-AI
-                  </motion.span>
-                </motion.span>
+                <span className="text-xl font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">
+                  ReFocused
+                </span>
               </Link>
             </motion.div>
           </div>
@@ -99,40 +74,12 @@ const Header = () => {
           {/* Center - Logo and Name (Mobile) / Navigation (Desktop) */}
           <div className="flex items-center">
             {/* Mobile Logo - Centered */}
-            <motion.div 
-              className="md:hidden flex items-center space-x-2"
-            >
+            <motion.div className="md:hidden flex items-center space-x-2">
               <img src="/favicon.svg" alt="Brain Logo" className="w-8 h-8" width="32" height="32" />
               <Link href="/ai">
-                <motion.span 
-                  className="text-lg font-bold cursor-pointer relative group inline-block"
-                  whileHover={{ 
-                    scale: 1.05,
-                    filter: "drop-shadow(0 0 15px rgba(66,185,229,0.5))"
-                  }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 300, 
-                    damping: 20 
-                  }}
-                >
-                  <motion.span 
-                    className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block"
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ opacity: 0, y: -3 }}
-                    transition={{ duration: 0.15, ease: "easeInOut" }}
-                  >
-                    ReFocused
-                  </motion.span>
-                  <motion.span 
-                    className="absolute top-0 left-0 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(66,185,229,0.3)] inline-block whitespace-nowrap"
-                    initial={{ opacity: 0, y: 3 }}
-                    whileHover={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15, ease: "easeInOut" }}
-                  >
-                    ReFocused-AI
-                  </motion.span>
-                </motion.span>
+                <span className="text-lg font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">
+                  ReFocused
+                </span>
               </Link>
             </motion.div>
 
@@ -220,7 +167,7 @@ const Header = () => {
             exit={{ opacity: 0, transform: "translateX(-300px)" }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
             style={{ willChange: 'transform, opacity' }}
-            className="fixed top-[88px] left-0 right-0 bg-[#10182B]/95 backdrop-blur-md border-b border-gray-400/20 z-40 md:hidden"
+            className="fixed top-[88px] left-0 right-0 bg-[#1A2537]/95 backdrop-blur-md border-b border-gray-400/20 z-40 md:hidden"
           >
             <nav className="px-4 py-6">
               <ul className="space-y-4">

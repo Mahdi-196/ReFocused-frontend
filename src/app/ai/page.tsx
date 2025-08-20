@@ -113,9 +113,26 @@ const AiPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Auto-scroll when conversation starts or new messages arrive
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0) {
+      // Small delay to ensure DOM is updated
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
   }, [messages]);
+
+  // Auto-scroll when thinking starts
+  useEffect(() => {
+    if (isThinking) {
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isThinking]);
 
   // Check for pre-filled message from URL params
   useEffect(() => {
@@ -132,10 +149,14 @@ const AiPage = () => {
           inputRef.current.focus();
           // Move cursor to end
           inputRef.current.setSelectionRange(decodedMessage.length, decodedMessage.length);
+          // Auto-scroll to input area
+          scrollToBottom();
         }
       }, 100);
     }
   }, [searchParams]);
+
+  // Debug instrumentation removed
 
   // Background suggestion refresh - preload new suggestions while user is typing
   useEffect(() => {
@@ -240,16 +261,20 @@ const AiPage = () => {
           count: messageLimit - result.messages_remaining 
         }));
       }
-    } catch (error) {
+    } catch (error: any) {
       setIsThinking(false);
       if (wordIntervalRef.current) {
         clearInterval(wordIntervalRef.current);
         wordIntervalRef.current = null;
       }
       setThinkingWord('thinking');
+      const is429 = (error?.status as number | undefined) === 429;
+      const content = is429
+        ? "Sorry, you've reached the daily limit."
+        : 'I apologize, but I encountered an error. Please try again.';
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: 'I apologize, but I encountered an error. Please try again.',
+        content,
         role: 'assistant',
         timestamp: new Date(),
       };
@@ -349,18 +374,14 @@ const AiPage = () => {
 
   return (
     <PageTransition>
-      <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 flex flex-col overflow-hidden relative">
-        {/* Subtle radial overlays to soften the background, matching app blues/indigos */}
-        <div className="pointer-events-none absolute inset-0 opacity-45">
-          <div className="absolute inset-0 bg-[radial-gradient(800px_400px_at_15%_10%,rgba(59,130,246,0.10),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(700px_350px_at_85%_90%,rgba(59,130,246,0.10),transparent_60%)]" />
-        </div>
+      <div className="relative min-h-screen w-screen max-w-none ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] bg-gradient-to-b from-slate-950 via-slate-950 to-blue-900/40 flex flex-col overflow-hidden">
+        {/* Background overlays removed to ensure full-width uniform gradient without edge contrast */}
         {/* No in-page header; global header remains above. */}
 
         {/* Messages Container */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto bg-slate-900/30 pb-32">
-            <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <div className="flex-1 bg-transparent pb-32">
+            <div className="w-full px-6">
               {/* Centered intro that animates away when typing or after first message */}
               <AnimatePresence mode="wait">
                 {messages.length === 0 && (
@@ -551,9 +572,12 @@ const AiPage = () => {
           </div>
         </div>
 
+        {/* Debug HUD */}
+        {/* Debug HUD removed */}
+
         {/* Input Area - Fixed at bottom */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-gradient-to-r from-slate-900/95 to-gray-900/95 backdrop-blur-xl shadow-2xl">
-            <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0f172a]/90 backdrop-blur-xl shadow-2xl">
+            <div className="w-full px-6 py-6">
               {/* Message limit warning */}
               {dailyMessageCount >= messageLimit * 0.8 && dailyMessageCount < messageLimit && (
                 <motion.div
