@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { perAccountDailyStorage, getTodayDateString, cleanupOldDateEntries } from '@/utils/scopedStorage';
+import { perAccountDailyStorage, cleanupOldDateEntries } from '@/utils/scopedStorage';
+import { useCurrentDate } from '@/contexts/TimeContext';
 import { Target } from 'lucide-react';
 import MoodStats from './MoodStats';
 import HabitStreaks from './HabitStreaks';
@@ -17,7 +18,6 @@ type DailyMomentumProps = {
 };
 
 const FOCUS_BASE_KEY = 'focus_goal';
-const getTodayKey = () => perAccountDailyStorage.key(FOCUS_BASE_KEY, getTodayDateString());
 
 const DailyMomentum: React.FC<DailyMomentumProps> = ({
   tasks,
@@ -28,27 +28,27 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
   setTasks,
 }) => {
   const [focusGoal, setFocusGoal] = useState('');
+  const userDate = useCurrentDate();
 
-  // Load today's focus goal (per-account)
+  // Load today's focus goal (per-account, backend date)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const saved = perAccountDailyStorage.get<string>(FOCUS_BASE_KEY);
-      if (saved) setFocusGoal(saved);
-      // Keep last 7 days per account
+      const saved = perAccountDailyStorage.get<string>(FOCUS_BASE_KEY, userDate);
+      setFocusGoal(saved || '');
       cleanupOldDateEntries(FOCUS_BASE_KEY, 7);
     } catch {}
-  }, []);
+  }, [userDate]);
 
-  // Persist on change (debounced)
+  // Persist on change (debounced) under backend date key
   useEffect(() => {
     const id = setTimeout(() => {
       try {
-        perAccountDailyStorage.set(FOCUS_BASE_KEY, focusGoal.trim());
+        perAccountDailyStorage.set(FOCUS_BASE_KEY, focusGoal.trim(), userDate);
       } catch {}
     }, 300);
     return () => clearTimeout(id);
-  }, [focusGoal]);
+  }, [focusGoal, userDate]);
 
   return (
   <section 

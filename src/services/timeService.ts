@@ -724,11 +724,17 @@ export class TimeService implements ITimeService {
     // Only clear caches in browser environment
     if (typeof window === 'undefined') return;
     
-    // Clear habit completion cache
+    // Clear habit/statistics/mood caches and AI daily caches
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('habit-completions-') || 
-          key.startsWith('statistics-') ||
-          key.startsWith('mood-entries-')) {
+      if (
+        key.startsWith('habit-completions-') ||
+        key.startsWith('statistics-') ||
+        key.startsWith('mood-entries-') ||
+        key.startsWith('ai_daily_') ||
+        key.startsWith('ai-conversation:') ||
+        key.startsWith('ai-daily-count:') ||
+        key.startsWith('ai-conversation-history:')
+      ) {
         localStorage.removeItem(key);
       }
     });

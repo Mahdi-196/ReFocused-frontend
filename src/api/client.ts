@@ -27,12 +27,9 @@ client.interceptors.request.use(
           config.headers = config.headers || {};
           config.headers.Authorization = `Bearer ${token}`;
           
-          // Check if token needs refresh (reuse validation result)
+          // Silent mode: avoid near-expiry UI events
           if (validation.payload?.exp && validation.payload.exp - Math.floor(Date.now() / 1000) < 300) {
-            // Dispatch event to notify auth context about upcoming expiry
-            window.dispatchEvent(new CustomEvent('tokenNearExpiry', { 
-              detail: { timeLeft: validation.payload.exp - Math.floor(Date.now() / 1000) }
-            }));
+            // no-op
           }
         } else {
           if (validation.isExpired) {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCurrentDate } from '@/contexts/TimeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
@@ -39,8 +40,28 @@ const AiPage = () => {
   const CONVO_BASE_KEY = 'ai-conversation';
   const COUNT_BASE_KEY = 'ai-daily-count';
   const getUserScope = () => String(user?.id || user?.email || 'guest');
-  const getTodayKey = () => `${CONVO_BASE_KEY}:${getUserScope()}:${new Date().toDateString()}`;
+  const userDate = useCurrentDate(); // YYYY-MM-DD from backend time
+  const getTodayKey = () => `${CONVO_BASE_KEY}:${getUserScope()}:${userDate}`;
   const hasLoadedConvoRef = useRef(false);
+
+  // Reset conversation storage for a new day or on explicit day-change events
+  const resetConversationForNewDay = useCallback(() => {
+    setMessages([]);
+    if (typeof window !== 'undefined') {
+      const scope = getUserScope();
+      // Clean out all prior conversation keys for this user
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`${CONVO_BASE_KEY}:${scope}:`)) {
+          localStorage.removeItem(key);
+        }
+      }
+      localStorage.setItem(
+        `${COUNT_BASE_KEY}:${scope}`,
+        JSON.stringify({ date: userDate, count: 0 })
+      );
+    }
+  }, [user, userDate]);
 
   const DEFAULT_SYSTEM_PROMPT = "You are ReFocused AI, a helpful assistant focused on productivity, mindfulness, wellness, and personal growth. Provide practical, actionable advice that helps users stay focused, reduce stress, and achieve their goals. Be encouraging, supportive, and concise in your responses.";
 
@@ -305,6 +326,22 @@ const AiPage = () => {
   // Load conversation (once per user) and daily message count
   useEffect(() => {
     if (typeof window !== 'undefined' && !authLoading) {
+      // Clean up stale conversation keys from previous days for this scope
+      try {
+        const todayLabel = new Date().toDateString();
+        const scope = getUserScope();
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(`${CONVO_BASE_KEY}:${scope}:`)) {
+            const parts = key.split(':');
+            const datePart = parts[parts.length - 1];
+            if (datePart !== todayLabel) {
+              localStorage.removeItem(key);
+            }
+          }
+        }
+      } catch {}
+
       // Load conversation history for today
       try {
         const raw = localStorage.getItem(getTodayKey());
@@ -322,7 +359,7 @@ const AiPage = () => {
 
       // Load daily message count
       const dailyData = localStorage.getItem(`${COUNT_BASE_KEY}:${getUserScope()}`);
-      const today = new Date().toDateString();
+      const today = userDate;
       
       if (dailyData) {
         const parsed = JSON.parse(dailyData);
@@ -337,7 +374,7 @@ const AiPage = () => {
         localStorage.setItem(`${COUNT_BASE_KEY}:${getUserScope()}`, JSON.stringify({ date: today, count: 0 }));
       }
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, userDate]);
 
   // Persist conversation history whenever messages change (skip initial mount before load)
   useEffect(() => {
@@ -346,30 +383,16 @@ const AiPage = () => {
     if (messages.length === 0) return;
     const serializable = messages.map(m => ({ ...m, timestamp: m.timestamp.toISOString() }));
     localStorage.setItem(getTodayKey(), JSON.stringify({ messages: serializable }));
-  }, [messages, user]);
+  }, [messages, user, userDate]);
 
-  // Auto-clear at midnight
+  // No local midnight timer; rely on backend-driven dayChanged event
+
+  // Also clear immediately on backend-signaled day change (timezone-aware)
   useEffect(() => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 100);
-    const timeoutMs = tomorrow.getTime() - now.getTime();
-    const id = setTimeout(() => {
-      setMessages([]);
-      if (typeof window !== 'undefined') {
-        // Clean out all prior conversation keys for this user
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith(`${CONVO_BASE_KEY}:${getUserScope()}:`)) {
-            localStorage.removeItem(key);
-          }
-        }
-        localStorage.setItem(`${COUNT_BASE_KEY}:${getUserScope()}`, JSON.stringify({ date: new Date().toDateString(), count: 0 }));
-      }
-    }, timeoutMs);
-    return () => clearTimeout(id);
-  }, []);
+    const handler = () => resetConversationForNewDay();
+    window.addEventListener('dayChanged', handler as EventListener);
+    return () => window.removeEventListener('dayChanged', handler as EventListener);
+  }, [resetConversationForNewDay]);
 
 
 

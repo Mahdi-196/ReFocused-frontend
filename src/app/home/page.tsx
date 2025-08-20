@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { useCurrentDate } from '@/contexts/TimeContext';
 import { perAccountDailyStorage, getTodayDateString, migrateLegacyDateKeyToScoped, migrateLegacyUserDateKeyToScoped, cleanupOldDateEntries } from '@/utils/scopedStorage';
 import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
@@ -62,24 +63,24 @@ const logTasks = (message: string, data?: unknown) => {
 
 const TASKS_BASE_KEY = 'refocused_tasks';
 
-const loadTodayTasks = (): Task[] => {
+const loadTasksForDate = (date: string): Task[] => {
   if (typeof window === 'undefined') return [];
   
   try {
     // Primary: per-account daily key
-    const saved = perAccountDailyStorage.getJSON<Task[]>(TASKS_BASE_KEY);
+    const saved = perAccountDailyStorage.getJSON<Task[]>(TASKS_BASE_KEY, date);
     if (saved && Array.isArray(saved)) return saved;
 
     // Migration 1: from legacy date-only (pre-account) key
-    migrateLegacyDateKeyToScoped(TASKS_BASE_KEY, getTodayDate());
-    const migrated1 = perAccountDailyStorage.getJSON<Task[]>(TASKS_BASE_KEY);
+    migrateLegacyDateKeyToScoped(TASKS_BASE_KEY, date);
+    const migrated1 = perAccountDailyStorage.getJSON<Task[]>(TASKS_BASE_KEY, date);
     if (migrated1 && Array.isArray(migrated1)) return migrated1;
 
     // Migration 2: from legacy per-user key pattern refocused_tasks_${userId}_${date}
     const userId = getUserId();
     if (userId) {
-      migrateLegacyUserDateKeyToScoped(TASKS_BASE_KEY, userId, getTodayDate());
-      const migrated2 = perAccountDailyStorage.getJSON<Task[]>(TASKS_BASE_KEY);
+      migrateLegacyUserDateKeyToScoped(TASKS_BASE_KEY, userId, date);
+      const migrated2 = perAccountDailyStorage.getJSON<Task[]>(TASKS_BASE_KEY, date);
       if (migrated2 && Array.isArray(migrated2)) return migrated2;
     }
 
@@ -91,11 +92,11 @@ const loadTodayTasks = (): Task[] => {
   }
 };
 
-const saveTodayTasks = (tasks: Task[]) => {
+const saveTasksForDate = (date: string, tasks: Task[]) => {
   if (typeof window === 'undefined') return;
   
   try {
-    perAccountDailyStorage.setJSON<Task[]>(TASKS_BASE_KEY, tasks);
+    perAccountDailyStorage.setJSON<Task[]>(TASKS_BASE_KEY, tasks, date);
   } catch (error) {
     console.error('Error saving tasks to localStorage:', error);
   }
@@ -120,13 +121,14 @@ const Home = () => {
   const isFirstTasksEffect = useRef(true);
   const hasHydratedRef = useRef(false);
   const hydrationGuardActiveRef = useRef(true);
+  const userDate = useCurrentDate();
   // Removed progressive loading; page renders as a whole after skeleton delay
 
   // No per-user clearing; tasks are shared per day
 
-  // Load today's tasks from localStorage on component mount
+  // Load today's tasks (user timezone-aware) from localStorage on component mount
   useEffect(() => {
-    const savedTasks = loadTodayTasks();
+    const savedTasks = loadTasksForDate(userDate);
     logTasks('mount:loaded', { length: savedTasks.length });
     setTasks(savedTasks);
     // Defer hydration readiness to next tick to avoid clobbering storage with []
@@ -140,7 +142,7 @@ const Home = () => {
     
     // Clean up old task entries to keep localStorage tidy
     cleanupOldTasks();
-  }, []);
+  }, [userDate]);
   
 
   // Save tasks to localStorage whenever tasks change
@@ -159,7 +161,7 @@ const Home = () => {
     // Prevent clobbering existing saved tasks with [] during initial hydration only
     if (hydrationGuardActiveRef.current) {
       try {
-        const existing = loadTodayTasks();
+        const existing = loadTasksForDate(userDate);
         if (tasks.length === 0 && existing.length > 0) {
           logTasks('effect:skip-prevent-clobber', { existingLen: existing.length });
           return;
@@ -168,8 +170,10 @@ const Home = () => {
     }
     // Always persist to today's key after any subsequent state update
     logTasks('effect:save', { length: tasks.length });
-    saveTodayTasks(tasks);
-  }, [tasks]);
+    saveTasksForDate(userDate, tasks);
+  }, [tasks, userDate]);
+
+  // No manual dayChanged listener needed; tasks reload when userDate changes
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();

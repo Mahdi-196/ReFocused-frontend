@@ -89,10 +89,8 @@ class TokenRefreshManager {
       });
     }
 
-    // Show warning if approaching expiry
+    // Fully silent mode: do not show any UI warnings
     if (timeUntilExpiry <= this.options.warningThreshold && !this.warningShown) {
-      console.warn('⚠️ [TOKEN MONITOR] Token expiring soon, showing warning');
-      this.showExpiryWarning(timeUntilExpiry);
       this.warningShown = true;
     }
 
@@ -105,14 +103,7 @@ class TokenRefreshManager {
   /**
    * Show a warning to the user about token expiry
    */
-  private showExpiryWarning(_timeLeft: number): void {
-    if (typeof window === 'undefined') return;
-    try {
-      window.dispatchEvent(new CustomEvent('tokenNearExpiry', { detail: { timeLeft: _timeLeft } }));
-    } catch {
-      // no-op
-    }
-  }
+  private showExpiryWarning(_timeLeft: number): void {}
 
   /**
    * Handle token expiry by logging out and redirecting
@@ -196,9 +187,7 @@ if (typeof window !== 'undefined') {
   });
 
   // Listen for token near expiry events
-  window.addEventListener('tokenNearExpiry', ((event: CustomEvent) => {
-    console.log('📢 Token near expiry event received:', event.detail);
-  }) as EventListener);
+  // Silent mode: do not attach UI listeners
 }
 
 export { TokenRefreshManager };

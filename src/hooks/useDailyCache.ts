@@ -39,12 +39,28 @@ export const useDailyCache = (): UseDailyCacheReturn => {
 
     initializeCache();
 
+    // Also react to backend-signaled day changes
+    const handleDayChange = () => {
+      try {
+        dailyCache.init();
+        setCacheStats(dailyCache.getStats());
+      } catch {}
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('dayChanged', handleDayChange as EventListener);
+    }
+
     // Set up cache stats update interval (every 5 minutes)
     const interval = setInterval(() => {
       setCacheStats(dailyCache.getStats());
     }, 5 * 60 * 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('dayChanged', handleDayChange as EventListener);
+      }
+    };
   }, []);
 
   const refreshCache = () => {
