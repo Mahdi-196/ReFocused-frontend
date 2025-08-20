@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/contexts/ToastContext';
 import client from '../api/client';
 import { timeService } from '../services/timeService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +10,7 @@ import DailyCacheStatus from './DailyCacheStatus';
 import ConsoleControlPanel from './ConsoleControlPanel';
 
 const DevTools: React.FC = () => {
+  const toast = useToast();
   const [isVisible, setIsVisible] = useState(false);
   const [timeSystemStatus, setTimeSystemStatus] = useState({
     lastSync: null as string | null,
@@ -92,18 +94,11 @@ const DevTools: React.FC = () => {
       // Update time system status after testing
       await loadTimeSystemStatus();
 
-      alert(`🕰️ TIME SYSTEM TEST COMPLETE!
-
-📊 Results: ${passed} passed, ${failed} failed
-Total Endpoints Tested: ${timeEndpoints.length}
-
-${results.join('\n\n')}
-
-🔍 Check console for detailed responses.`);
+      toast.showInfo(`Time system test complete: ${passed} passed, ${failed} failed`);
 
     } catch (error) {
       console.error('❌ Time system test failed:', error);
-      alert('❌ Time system test failed. Check console for details.');
+      toast.showError('Time system test failed. Check console for details.');
     }
   };
 
@@ -176,7 +171,7 @@ ${results.join('\n\n')}
       console.error(`Quick test failed for ${endpoint}:`, error);
     }
     
-    alert(result);
+    toast.showInfo(result);
   };
 
   // Enhanced date manipulation functions
@@ -192,23 +187,11 @@ ${results.join('\n\n')}
       // Update time system status
       await loadTimeSystemStatus();
       
-      alert(`🚀 DATE MOVED FORWARD!
-
-📅 Previous Date: ${response.data.previousDate}
-📅 New Date: ${response.data.newDate}
-🔄 Direction: ${response.data.direction > 0 ? 'Forward' : 'Backward'}
-
-⚠️ Warning: This affects all date-dependent operations including:
-• Habit streaks and completions
-• Statistics calculations
-• Dashboard data
-• Mood tracking
-
-🔄 Use "Reset to Real Date" to restore normal operation.`);
+      toast.showSuccess('Date moved forward by 1 day');
       
     } catch (error) {
       console.error('❌ Failed to move date forward:', error);
-      alert('❌ Failed to move date forward. Check console for details.');
+      toast.showError('Failed to move date forward. Check console for details.');
     }
   };
 
@@ -224,23 +207,11 @@ ${results.join('\n\n')}
       // Update time system status
       await loadTimeSystemStatus();
       
-      alert(`⏪ DATE MOVED BACKWARD!
-
-📅 Previous Date: ${response.data.previousDate}
-📅 New Date: ${response.data.newDate}
-🔄 Direction: ${response.data.direction > 0 ? 'Forward' : 'Backward'}
-
-⚠️ Warning: This affects all date-dependent operations including:
-• Habit streaks and completions
-• Statistics calculations
-• Dashboard data
-• Mood tracking
-
-🔄 Use "Reset to Real Date" to restore normal operation.`);
+      toast.showSuccess('Date moved backward by 1 day');
       
     } catch (error) {
       console.error('❌ Failed to move date backward:', error);
-      alert('❌ Failed to move date backward. Check console for details.');
+      toast.showError('Failed to move date backward. Check console for details.');
     }
   };
 
@@ -256,19 +227,11 @@ ${results.join('\n\n')}
       // Update time system status
       await loadTimeSystemStatus();
       
-      alert(`🔄 DATE RESET TO REAL TIME!
-
-✅ Mock date system disabled
-📅 Current Real Date: ${response.data.currentDate}
-🕐 Current Real Time: ${response.data.currentDateTime}
-🌍 Timezone: ${response.data.timezone}
-
-✨ All systems now use real current date.
-🔄 Habit streaks and other date-dependent features are back to normal.`);
+      toast.showSuccess('Reset to real time');
       
     } catch (error) {
       console.error('❌ Failed to reset date:', error);
-      alert('❌ Failed to reset date. Check console for details.');
+      toast.showError('Failed to reset date. Check console for details.');
     }
   };
 
@@ -305,7 +268,9 @@ ${results.join('\n\n')}
 
   // Clear local storage function
   const handleClearLocalStorage = () => {
-    if (confirm('⚠️ Clear all local storage?\n\nThis will:\n• Log you out\n• Clear all cached data\n• Reset user preferences\n• Clear any saved settings\n\nThis action cannot be undone.')) {
+    if (process.env.NEXT_PUBLIC_APP_ENV !== 'development') return;
+    const shouldProceed = window.confirm('⚠️ Clear all local storage?\n\nThis will:\n• Log you out\n• Clear all cached data\n• Reset user preferences\n• Clear any saved settings\n\nThis action cannot be undone.');
+    if (shouldProceed) {
       // Get all keys before clearing
       const keys = Object.keys(localStorage);
       
@@ -316,7 +281,7 @@ ${results.join('\n\n')}
       window.dispatchEvent(new CustomEvent('userLoggedOut'));
       
       // Show confirmation with what was cleared
-      alert(`✅ Local Storage Cleared!\n\nCleared ${keys.length} items:\n${keys.map(key => `• ${key}`).join('\n')}\n\n🔄 Page will reload to reset application state.`);
+      toast.showSuccess(`Local storage cleared (${keys.length} items). Reloading...`);
       
       // Reload page to reset application state
       window.location.reload();

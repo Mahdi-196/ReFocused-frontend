@@ -4,6 +4,7 @@ import React from "react";
 import { Lightbulb, Heart, Plus, Loader2, Edit } from "lucide-react";
 import type { GratitudeEntry } from "../types";
 import { useWritingPromptsDaily } from "../../../hooks/useDailyContentSimple";
+import { useToast } from '@/contexts/ToastContext';
 
 interface SidebarProps {
   gratitudes: GratitudeEntry[];
@@ -26,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   selectedCollectionId,
   onCreateEntryWithTitle
 }) => {
+  const toast = useToast();
   const [isAddingGratitude, setIsAddingGratitude] = React.useState(false);
   const [newGratitude, setNewGratitude] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
@@ -49,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     // Check if already at maximum of 3 gratitudes
     if (gratitudes.length >= 3) {
-      alert("You can only have up to 3 gratitude entries. Please delete one before adding a new one.");
+      toast.showInfo("Maximum 3 gratitude entries. Delete one to add more.");
       return;
     }
 

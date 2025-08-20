@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/contexts/ToastContext';
 import { useTime, useCurrentDate, useDateFormatting, useTimezone } from '@/contexts/TimeContext';
 import type { TimezoneInfo, WeekInfo } from '@/types/time';
 
@@ -217,6 +218,7 @@ export const DateRangePicker: React.FC = () => {
  * Timezone Selector - Allows users to change their timezone
  */
 export const TimezoneSelector: React.FC = () => {
+  const toast = useToast();
   const { 
     getUserTimezone, 
     detectAndSetTimezone, 
@@ -244,9 +246,9 @@ export const TimezoneSelector: React.FC = () => {
     
     if (success) {
       setSelectedTimezone(getUserTimezone());
-      alert('✅ Timezone auto-detected and updated!');
+      toast.showSuccess('Timezone auto-detected and updated!');
     } else {
-      alert('❌ Failed to auto-detect timezone');
+      toast.showError('Failed to auto-detect timezone');
     }
     
     setLoading(false);
@@ -259,9 +261,9 @@ export const TimezoneSelector: React.FC = () => {
     const success = await updateUserTimezone(selectedTimezone);
     
     if (success) {
-      alert('✅ Timezone updated successfully!');
+      toast.showSuccess('Timezone updated successfully!');
     } else {
-      alert('❌ Failed to update timezone');
+      toast.showError('Failed to update timezone');
     }
     
     setLoading(false);

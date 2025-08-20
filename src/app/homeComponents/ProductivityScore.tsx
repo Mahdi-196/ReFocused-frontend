@@ -128,7 +128,6 @@ const ProductivityScore = () => {
     current_streak = 0,
     longest_streak = 0,
     today_interactions = 0,
-    streak_at_risk = false,
     recent_history = []
   } = streakData || {};
 
@@ -140,11 +139,7 @@ const ProductivityScore = () => {
             <HiFire className="w-5 h-5 text-orange-400" />
             Daily Streak
           </span>
-          {streak_at_risk && (
-            <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30">
-              ⚠️ At Risk
-            </span>
-          )}
+          {/* Removed at-risk warning badge per request */}
         </div>
         
         <div className="flex flex-col items-center">

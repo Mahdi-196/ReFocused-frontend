@@ -14,6 +14,7 @@ import { USER, AUTH } from '@/api/endpoints';
 import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { emailSubscriptionService } from '@/api/services/emailSubscriptionService';
 import { votingService, type PredefinedFeatureKey } from '@/api/services';
+import { useToast } from '@/contexts/ToastContext';
 
 // Priority 1: Critical components (immediate load)
 import AvatarSelector from '@/components/AvatarSelector';
@@ -230,6 +231,7 @@ const feedbackCategories = [
 
 const Profile = () => {
   const router = useRouter();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('profile');
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false);
@@ -684,7 +686,7 @@ const Profile = () => {
       // Check if it's an authentication error
       if (error instanceof Error && 'response' in error && (error as {response?: {status?: number; data?: {error?: string}}}).response?.status === 401) {
         // Show specific auth error message
-        alert('Session expired. Please login again to save your avatar.');
+        toast.showError('Session expired. Please login again to save your avatar.');
         
         // Only logout if it's actually an auth issue, not a temporary token problem
         if ((error as {response?: {data?: {error?: string}}}).response?.data?.error?.includes('expired') || 
@@ -698,7 +700,7 @@ const Profile = () => {
         }
       } else {
         // Show user-friendly error message for other errors
-        alert('Failed to save avatar. Please try again.');
+        toast.showError('Failed to save avatar. Please try again.');
       }
       
       // Revert to previous avatar if the API call failed
@@ -738,8 +740,8 @@ const Profile = () => {
     await client.delete(USER.DELETE_ACCOUNT);
     localStorage.clear();
     sessionStorage.clear();
-    alert('Account deleted successfully. You will be redirected to the home page.');
-    window.location.href = '/';
+    toast.showSuccess('Account deleted successfully');
+    router.push('/');
   };
 
   const validatePassword = (password: string) => {
@@ -870,7 +872,7 @@ const Profile = () => {
   const [feedbackInlineError, setFeedbackInlineError] = useState<string | undefined>(undefined);
   const handleFeedbackSubmit = async () => {
     if (feedbackData.rating < 1 || feedbackData.rating > 5 || !feedbackData.category || !feedbackData.message.trim()) {
-      alert('Please provide rating (1-5), category, and message.');
+      setFeedbackInlineError('Please provide rating (1-5), category, and message.');
       return;
     }
     setIsSubmittingFeedback(true);
@@ -1394,8 +1396,8 @@ const Profile = () => {
               {(voteSuccessMessage || voteErrorMessage) && (
                 <div className="mt-4 text-sm">
                   {voteSuccessMessage && <div className="text-green-400">{voteSuccessMessage}</div>}
-                  {voteErrorMessage && (
-                    <div className="text-red-400">{voteCooldownSeconds > 0 ? `Too many requests. Try again in ${voteCooldownSeconds}s.` : voteErrorMessage}</div>
+                  {voteErrorMessage && voteCooldownSeconds <= 0 && (
+                    <div className="text-red-400">{voteErrorMessage}</div>
                   )}
                 </div>
               )}

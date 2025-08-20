@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FiMail, FiLock, FiUser, FiEye, FiEyeOff } from './icons';
 import GoogleSignInButton from './GoogleSignInButton';
+import { avatarService } from '@/api/services/avatarService';
 import client from '@/api/client';
 import { AUTH } from '@/api/endpoints';
 
@@ -22,9 +23,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     name: '',
   });
   const [error, setError] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  const MIN_PASSWORD_LENGTH = 5;
 
   // Reset form when modal opens - but not on tab changes to prevent jerky animation
   useEffect(() => {
@@ -67,6 +70,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     setError('');
     setIsLoading(false); // Reset loading state on success
     localStorage.setItem('REF_TOKEN', token);
+    try {
+      const userRaw = localStorage.getItem('REF_USER');
+      const user = userRaw ? JSON.parse(userRaw) : null;
+      const scope = String(user?.id || user?.email || 'user');
+      const seenKey = `REF_TUTORIAL_GOOGLE_SEEN:${scope}`;
+      if (localStorage.getItem(seenKey) !== 'true') {
+        localStorage.setItem('REF_TUTORIAL_TRIGGER', 'google');
+      }
+    } catch {}
     onClose();
     // Use Next.js router for client-side navigation
     window.location.reload();
@@ -80,6 +92,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (activeTab === 'register' && formData.password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
+      return;
+    }
+    if (!acceptedTerms) {
+      setError('Please accept the Terms of Service to continue.');
+      return;
+    }
     setIsLoading(true);
 
     try {
@@ -96,7 +116,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
       localStorage.setItem('REF_TOKEN', token);
       client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
+      // Set a default Open Peeps avatar for new account
+      try {
+        const seed = (formData.name || formData.email).trim();
+        await avatarService.updateAvatar({
+          style: 'open-peeps',
+          seed,
+          options: { backgroundColor: 'transparent' }
+        });
+      } catch {}
+
       // Close modal and reload to update auth state
+      try {
+        // Mark that we should show the tutorial right after signup
+        localStorage.setItem('REF_TUTORIAL_TRIGGER', 'signup');
+      } catch {}
       onClose();
       window.location.reload();
     } catch (err: unknown) {
@@ -325,7 +359,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                         value={formData.password}
                         onChange={handleInputChange}
                         autoComplete="new-password"
-                        className="w-full pl-10 pr-16 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#42b9e5] focus:border-transparent transition-all duration-200"
+                        minLength={MIN_PASSWORD_LENGTH}
+                        className={`w-full pl-10 pr-16 py-3 bg-gray-800/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${formData.password && formData.password.length < MIN_PASSWORD_LENGTH ? 'border-red-500/60 focus:ring-red-500 border' : 'border border-gray-600/50 focus:ring-[#42b9e5] focus:border-transparent'}`}
                         style={{ backgroundImage: 'none' }}
                         placeholder="Enter your password"
                         required
@@ -340,23 +375,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                     </button>
                   </div>
                 </div>
+                {activeTab === 'register' && formData.password && formData.password.length < MIN_PASSWORD_LENGTH && (
+                  <div className="mt-1 text-xs text-red-400">Minimum {MIN_PASSWORD_LENGTH} characters.</div>
+                )}
 
                 <div className="flex items-center justify-between">
-                  <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                  <label className="inline-flex items-start gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
+                      checked={acceptedTerms}
+                      onChange={(e) => { setAcceptedTerms(e.target.checked); setRememberMe(e.target.checked); }}
                       className="peer sr-only"
-                      aria-label="Remember me"
+                      aria-label="Accept Terms of Service and Privacy Policy"
                     />
-                    <span className="flex h-5 w-5 items-center justify-center rounded-md border border-gray-600/50 bg-gray-800/60 transition-all duration-200 peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#42b9e5] peer-checked:border-transparent peer-checked:bg-gradient-to-r peer-checked:from-[#42b9e5] peer-checked:to-[#4f83ed] peer-checked:[&>svg]:opacity-100 peer-checked:[&>svg]:scale-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-sm border-2 border-gray-600/60 bg-gray-800/60 transition-all duration-200 peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#42b9e5] peer-checked:border-transparent peer-checked:bg-gradient-to-r peer-checked:from-[#42b9e5] peer-checked:to-[#4f83ed] peer-checked:[&>svg]:opacity-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
                       <svg
-                        className="h-3.5 w-3.5 text-white opacity-0 scale-95 transition-all duration-150"
+                        className="h-4 w-4 text-white opacity-0 transition-all duration-150"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="3.5"
+                        strokeWidth="4"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         aria-hidden="true"
@@ -364,13 +402,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                         <path d="M20 6L9 17l-5-5" />
                       </svg>
                     </span>
-                    <span className="text-sm text-gray-300 hover:text-white transition-colors">Remember me</span>
+                    <span className="text-sm text-gray-300 hover:text-white transition-colors">
+                      I agree to the{' '}
+                      <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">Terms of Service</a>{' '}
+                      and{' '}
+                      <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">Privacy Policy</a>, and I want to stay signed in.
+                    </span>
                   </label>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !acceptedTerms || (activeTab === 'register' && formData.password.length < MIN_PASSWORD_LENGTH)}
                   className="w-full py-3 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-semibold rounded-lg hover:shadow-[0_0_20px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading 
@@ -401,6 +444,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
                   className="w-full"
+                  disabled={!acceptedTerms}
                 />
               </div>
             </div>

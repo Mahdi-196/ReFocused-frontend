@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { getCurrentUserScope } from '@/utils/scopedStorage';
 import { Trash2, Plus, Check } from "lucide-react";
 import { incrementTasksDone } from "@/services/statisticsService";
 
@@ -38,7 +39,7 @@ export default function QuickNotes() {
     
     try {
       // Load from localStorage
-      const storedDataString = localStorage.getItem("userQuickNotes");
+      const storedDataString = localStorage.getItem(`userQuickNotes:${getCurrentUserScope()}`);
       
       if (storedDataString) {
         const storedData: UserNotesData = JSON.parse(storedDataString);
@@ -68,7 +69,7 @@ export default function QuickNotes() {
         lastUpdated: Date.now()
       };
       
-      localStorage.setItem("userQuickNotes", JSON.stringify(userData));
+      localStorage.setItem(`userQuickNotes:${getCurrentUserScope()}`, JSON.stringify(userData));
       setSaveSuccess(true);
       return true;
     } catch (error) {
@@ -101,7 +102,7 @@ export default function QuickNotes() {
     
     try {
       // Clear from localStorage
-      localStorage.removeItem("userQuickNotes");
+      localStorage.removeItem(`userQuickNotes:${getCurrentUserScope()}`);
       setSaveSuccess(true);
     } catch (error) {
       console.error('Failed to clear notes:', error);

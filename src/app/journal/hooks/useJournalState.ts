@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from '@/contexts/ToastContext';
 import type { 
   Collection, 
   DeleteConfirmation, 
@@ -15,6 +16,7 @@ import { useCollections } from "./useCollections";
  */
 export function useJournalState() {
   const router = useRouter();
+  const toast = useToast();
   const {
     collections,
     isLoading: collectionsLoading,
@@ -168,7 +170,7 @@ export function useJournalState() {
     if (!selectedCollectionId) {
       const defaultCol = collections.find((c) => c.name === "My Notes") || collections[0];
       if (!defaultCol) {
-        alert("Please create a collection first");
+        toast.showInfo("Create a collection first");
         return;
       }
       router.push(`/journal/entry?collection=${defaultCol.id}`);
@@ -231,7 +233,7 @@ export function useJournalState() {
         setEnteredPassword("");
       } else {
         console.log('❌ Password incorrect');
-        alert("Incorrect password. Please try again.");
+        toast.showError("Incorrect password. Please try again.");
       }
     } catch (error: any) {
       console.error("💥 Password verification error:", error);
@@ -245,11 +247,11 @@ export function useJournalState() {
       
       // Show more specific error messages for other types of errors
       if (error?.message?.includes('Network Error') || error?.isNetworkError) {
-        alert("Cannot connect to server. Please check your connection and try again.");
+        toast.showError("Cannot connect to server. Please check your connection and try again.");
       } else if (error?.message?.includes('timeout')) {
-        alert("Request timed out. Please try again.");
+        toast.showError("Request timed out. Please try again.");
       } else {
-        alert("An error occurred. Please try again.");
+        toast.showError("An error occurred. Please try again.");
       }
     } finally {
       setOperationLoading(false);
@@ -303,11 +305,11 @@ export function useJournalState() {
       if (success) {
         setDeleteConfirmation(null);
       } else {
-        alert(`Failed to delete ${deleteConfirmation.type}. Please try again.`);
+        toast.showError(`Failed to delete ${deleteConfirmation.type}. Please try again.`);
       }
     } catch (error) {
       console.error(`Delete ${deleteConfirmation.type} error:`, error);
-      alert(`Failed to delete ${deleteConfirmation.type}. Please try again.`);
+      toast.showError(`Failed to delete ${deleteConfirmation.type}. Please try again.`);
     } finally {
       setOperationLoading(false);
     }

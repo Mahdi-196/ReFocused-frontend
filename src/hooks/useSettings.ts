@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getCurrentUserScope } from '@/utils/scopedStorage';
 
 // Settings type definitions
 export interface AudioSettings {
@@ -72,7 +73,7 @@ export function useSettings() {
   // Load settings from localStorage on mount
   useEffect(() => {
     try {
-      const savedSettings = localStorage.getItem('refocused_settings');
+      const savedSettings = localStorage.getItem(`refocused_settings:${getCurrentUserScope()}`);
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
         setSettings({ ...defaultSettings, ...parsed });
@@ -88,7 +89,7 @@ export function useSettings() {
   useEffect(() => {
     if (isLoaded) {
       try {
-        localStorage.setItem('refocused_settings', JSON.stringify(settings));
+        localStorage.setItem(`refocused_settings:${getCurrentUserScope()}`, JSON.stringify(settings));
       } catch (error) {
         console.error('Error saving settings:', error);
       }
@@ -109,7 +110,7 @@ export function useSettings() {
   // Reset settings to defaults
   const resetSettings = () => {
     setSettings(defaultSettings);
-    localStorage.removeItem('refocused_settings');
+    localStorage.removeItem(`refocused_settings:${getCurrentUserScope()}`);
   };
 
   // Get a specific setting value

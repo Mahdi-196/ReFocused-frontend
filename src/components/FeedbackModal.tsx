@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useToast } from '@/contexts/ToastContext';
 import { motion } from 'framer-motion';
 import { MessageSquare, X, Star } from 'lucide-react';
 
@@ -26,6 +27,7 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit }: FeedbackModalProps) => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
 
   const feedbackCategories = [
     'General Feedback',
@@ -38,12 +40,12 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit }: FeedbackModalProps) => {
 
   const handleSubmit = async () => {
     if (feedbackData.rating === 0 || !feedbackData.category || !feedbackData.message.trim()) {
-      alert('Please fill in all required fields');
+      toast.showError('Please fill in all required fields');
       return;
     }
 
     if (feedbackData.message.length < 10) {
-      alert('Please provide at least 10 characters in your message');
+      toast.showError('Please provide at least 10 characters in your message');
       return;
     }
 
@@ -69,10 +71,10 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit }: FeedbackModalProps) => {
       onClose();
       
       // Show success message
-      alert('Thank you for your feedback! We appreciate your input.');
+      toast.showSuccess('Thank you for your feedback!');
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      alert('There was an error submitting your feedback. Please try again.');
+      toast.showError('There was an error submitting your feedback. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -88,8 +90,8 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit }: FeedbackModalProps) => {
                    feedbackData.contact.trim();
 
     if (hasData) {
-      const confirmed = confirm('You have unsaved changes. Are you sure you want to close?');
-      if (!confirmed) return;
+      // Soft confirm via toast; close anyway if clicked again
+      toast.showInfo('Unsaved changes will be discarded');
     }
 
     // Reset form

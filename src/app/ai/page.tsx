@@ -36,9 +36,10 @@ const AiPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const wordIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const CONVO_STORAGE_PREFIX = 'ai-conversation-';
+  const CONVO_BASE_KEY = 'ai-conversation';
+  const COUNT_BASE_KEY = 'ai-daily-count';
   const getUserScope = () => String(user?.id || user?.email || 'guest');
-  const getTodayKey = () => `${CONVO_STORAGE_PREFIX}${getUserScope()}-${new Date().toDateString()}`;
+  const getTodayKey = () => `${CONVO_BASE_KEY}:${getUserScope()}:${new Date().toDateString()}`;
   const hasLoadedConvoRef = useRef(false);
 
   const DEFAULT_SYSTEM_PROMPT = "You are ReFocused AI, a helpful assistant focused on productivity, mindfulness, wellness, and personal growth. Provide practical, actionable advice that helps users stay focused, reduce stress, and achieve their goals. Be encouraging, supportive, and concise in your responses.";
@@ -256,7 +257,7 @@ const AiPage = () => {
       // Save to localStorage with today's date
       const today = new Date().toDateString();
       if (typeof window !== 'undefined') {
-        localStorage.setItem('ai-daily-count', JSON.stringify({ 
+        localStorage.setItem(`${COUNT_BASE_KEY}:${getUserScope()}`, JSON.stringify({ 
           date: today, 
           count: messageLimit - result.messages_remaining 
         }));
@@ -320,7 +321,7 @@ const AiPage = () => {
       hasLoadedConvoRef.current = true;
 
       // Load daily message count
-      const dailyData = localStorage.getItem('ai-daily-count');
+      const dailyData = localStorage.getItem(`${COUNT_BASE_KEY}:${getUserScope()}`);
       const today = new Date().toDateString();
       
       if (dailyData) {
@@ -330,10 +331,10 @@ const AiPage = () => {
         } else {
           // New day, reset count
           setDailyMessageCount(0);
-          localStorage.setItem('ai-daily-count', JSON.stringify({ date: today, count: 0 }));
+          localStorage.setItem(`${COUNT_BASE_KEY}:${getUserScope()}`, JSON.stringify({ date: today, count: 0 }));
         }
       } else {
-        localStorage.setItem('ai-daily-count', JSON.stringify({ date: today, count: 0 }));
+        localStorage.setItem(`${COUNT_BASE_KEY}:${getUserScope()}`, JSON.stringify({ date: today, count: 0 }));
       }
     }
   }, [authLoading, user]);
@@ -360,11 +361,11 @@ const AiPage = () => {
         // Clean out all prior conversation keys for this user
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && key.startsWith(`${CONVO_STORAGE_PREFIX}${getUserScope()}-`)) {
+          if (key && key.startsWith(`${CONVO_BASE_KEY}:${getUserScope()}:`)) {
             localStorage.removeItem(key);
           }
         }
-        localStorage.setItem('ai-daily-count', JSON.stringify({ date: new Date().toDateString(), count: 0 }));
+        localStorage.setItem(`${COUNT_BASE_KEY}:${getUserScope()}`, JSON.stringify({ date: new Date().toDateString(), count: 0 }));
       }
     }, timeoutMs);
     return () => clearTimeout(id);

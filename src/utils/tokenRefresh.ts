@@ -4,6 +4,8 @@
  */
 
 import { tokenValidator } from './tokenValidator';
+import axios from 'axios';
+import client from '@/api/client';
 
 interface TokenRefreshOptions {
   warningThreshold?: number; // seconds before expiry to show warning
@@ -14,6 +16,7 @@ class TokenRefreshManager {
   private warningShown = false;
   private checkInterval: NodeJS.Timeout | null = null;
   private options: Required<TokenRefreshOptions>;
+  private refreshAttempted = false;
 
   constructor(options: TokenRefreshOptions = {}) {
     this.options = {
@@ -30,6 +33,7 @@ class TokenRefreshManager {
 
     // Clear any existing interval
     this.stopMonitoring();
+    this.refreshAttempted = false;
 
     // Check every 15 seconds for more responsive token monitoring
     this.checkInterval = setInterval(() => {
@@ -75,11 +79,14 @@ class TokenRefreshManager {
     //   console.log('🔄 [TOKEN MONITOR] Time until expiry:', timeUntilExpiry, 'seconds');
     // }
 
-    // Auto-logout if very close to expiry
-    if (timeUntilExpiry <= this.options.autoLogoutThreshold) {
-      console.warn('🚨 [TOKEN MONITOR] Token expiring very soon, logging out');
-      this.handleTokenExpiry();
-      return;
+    // Proactive silent refresh when approaching expiry (once per cycle)
+    if (timeUntilExpiry <= this.options.warningThreshold && !this.refreshAttempted) {
+      this.refreshAttempted = true;
+      this.silentRefresh().finally(() => {
+        // Allow another attempt after a successful refresh resets the token times
+        // If refresh failed, we keep the flag to avoid spamming; interceptor will handle on next 401
+        setTimeout(() => { this.refreshAttempted = false; }, 60_000);
+      });
     }
 
     // Show warning if approaching expiry
@@ -99,8 +106,12 @@ class TokenRefreshManager {
    * Show a warning to the user about token expiry
    */
   private showExpiryWarning(_timeLeft: number): void {
-    // Disable all user-facing warnings; rely on silent auto-refresh in axios client
-    return;
+    if (typeof window === 'undefined') return;
+    try {
+      window.dispatchEvent(new CustomEvent('tokenNearExpiry', { detail: { timeLeft: _timeLeft } }));
+    } catch {
+      // no-op
+    }
   }
 
   /**
@@ -118,24 +129,44 @@ class TokenRefreshManager {
     window.dispatchEvent(new CustomEvent('userLoggedOut'));
     
     // Show user-friendly message
-    alert('Your session has expired. Please log in again to continue.');
+    // Prefer non-blocking UI; allow app-level UI to react to logout
+    // window.dispatchEvent(new CustomEvent('tokenExpired'));
     
     // Redirect to landing page
     window.location.href = '/';
   }
 
   /**
+   * Attempt a silent refresh using refresh cookie without interrupting the user
+   */
+  private async silentRefresh(): Promise<void> {
+    try {
+      // Use root-level refresh alias so credentials flow correctly regardless of API base
+      const refreshResp = await axios.post('/auth/refresh', {}, { withCredentials: true });
+      const newAccess: string | undefined = refreshResp.data?.access_token;
+      if (newAccess) {
+        localStorage.setItem('REF_TOKEN', newAccess);
+        client.defaults.headers.common['Authorization'] = `Bearer ${newAccess}`;
+        // Reset warning flag after successful refresh
+        this.warningShown = false;
+        // Immediately re-check timings with the fresh token
+        this.checkTokenExpiry();
+      }
+    } catch {
+      // Swallow errors; the axios response interceptor will handle 401/403 on demand
+    }
+  }
+
+  /**
    * Request user to refresh their session
    */
   static requestSessionRefresh(): void {
-    const shouldRefresh = confirm(
-      'Your session is about to expire. Would you like to refresh the page to continue your session?'
-    );
-    
-    if (shouldRefresh) {
-      window.location.reload();
-    } else {
-      console.log('User declined session refresh');
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('tokenNearExpiry', { detail: { timeLeft: null } }));
+      } catch {
+        // no-op
+      }
     }
   }
 
