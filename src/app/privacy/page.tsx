@@ -24,7 +24,7 @@ export default function PrivacyPolicyPage() {
           <li>
             <span className="font-medium text-gray-200">App data you provide</span>: goals, habits, mood entries (happiness/focus/stress),
             journal collections/entries (which may contain sensitive information), calendars, study sets,
-            mantras, voting choices, feedback, and email subscription status.
+            trackings, voting choices, feedback, and email subscription status.
           </li>
           <li>
             <span className="font-medium text-gray-200">Technical data</span>: IP address (for security and rate limiting), user agent, device

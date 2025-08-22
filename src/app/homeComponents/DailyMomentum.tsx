@@ -70,7 +70,7 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
           type="text"
           placeholder="Set your main goal for today..."
           className="w-full p-2 bg-transparent text-lg font-semibold text-white placeholder-gray-400 focus:outline-none focus:border-b-2 focus:border-blue-400"
-          aria-label="Enter your daily mantra or focus goal"
+          aria-label="Enter your daily tracking or focus goal"
           value={focusGoal}
           onChange={(e) => setFocusGoal(e.target.value)}
         />

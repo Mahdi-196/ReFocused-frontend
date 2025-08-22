@@ -1,7 +1,9 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import audioService from '@/services/audioService';
+import { Play } from 'lucide-react';
 import Header from './Header';
 import Footer from './footer';
 import AnimatedLayout from './AnimatedLayout';
@@ -72,6 +74,179 @@ export default function ClientLayoutWrapper({
       window.removeEventListener('userLoggedOut', handleLogout);
     };
   }, []);
+
+  // Live tab-title updater for Pomodoro timer
+  const titleIntervalRef = useRef<number | null>(null);
+  const baseTitleRef = useRef<string>('');
+  const wasRunningRef = useRef<boolean>(false);
+  const ambientAutoplayPendingRef = useRef<string | null>(null);
+  const [ambientResumePending, setAmbientResumePending] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Always use a fixed base title per request
+    baseTitleRef.current = 'ReFocused';
+
+    const formatTime = (secondsTotal: number) => {
+      const seconds = Math.max(0, Math.floor(secondsTotal));
+      const minutesPart = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const secondsPart = (seconds % 60).toString().padStart(2, '0');
+      return `${minutesPart}:${secondsPart}`;
+    };
+
+    const updateTitle = () => {
+      try {
+        const isRunning = localStorage.getItem('pomodoroIsRunning') === 'true';
+        const targetStr = localStorage.getItem('pomodoroTargetTime');
+
+        let formatted: string | null = null;
+        if (isRunning && targetStr) {
+          const targetTime = parseInt(targetStr, 10);
+          const remainingMs = Math.max(targetTime - Date.now(), 0);
+          const remainingSec = Math.floor(remainingMs / 1000);
+          formatted = formatTime(remainingSec);
+        }
+
+        if (isRunning && formatted) {
+          wasRunningRef.current = true;
+          const newTitle = `ReFocused || ${formatted}`;
+          if (document.title !== newTitle) {
+            document.title = newTitle;
+          }
+        } else {
+          // Not running -> restore and keep base up-to-date
+          if (wasRunningRef.current) {
+            document.title = 'ReFocused';
+            wasRunningRef.current = false;
+          } else {
+            // Keep enforcing the base when idle
+            if (document.title !== 'ReFocused') {
+              document.title = 'ReFocused';
+            }
+          }
+        }
+      } catch {
+        // No-op
+      }
+    };
+
+    // Kick-off and poll for accuracy even when tab is hidden (targetTime-based)
+    updateTitle();
+    titleIntervalRef.current = window.setInterval(updateTitle, 500);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') updateTitle();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Observe <title> mutations to immediately re-assert our computed title, avoiding flicker on page changes
+    const titleNode = document.querySelector('head > title') || document.createElement('title');
+    if (!titleNode.parentNode) document.head.appendChild(titleNode);
+    const observer = new MutationObserver(() => {
+      updateTitle();
+    });
+    observer.observe(titleNode, { childList: true, characterData: true, subtree: true });
+
+    return () => {
+      if (titleIntervalRef.current) {
+        clearInterval(titleIntervalRef.current);
+        titleIntervalRef.current = null;
+      }
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      observer.disconnect();
+      document.title = 'ReFocused';
+      wasRunningRef.current = false;
+    };
+  }, []);
+
+  // Keep base title refreshed on navigation when not running
+  useEffect(() => {
+    // Immediately apply correct title on route change to avoid flicker
+    try {
+      const isRunning = localStorage.getItem('pomodoroIsRunning') === 'true';
+      const targetStr = localStorage.getItem('pomodoroTargetTime');
+      if (isRunning && targetStr) {
+        const targetTime = parseInt(targetStr, 10);
+        const remainingMs = Math.max(targetTime - Date.now(), 0);
+        const remainingSec = Math.floor(remainingMs / 1000);
+        const minutesPart = Math.floor(remainingSec / 60).toString().padStart(2, '0');
+        const secondsPart = (remainingSec % 60).toString().padStart(2, '0');
+        const immediateTitle = `ReFocused || ${minutesPart}:${secondsPart}`;
+        if (document.title !== immediateTitle) {
+          document.title = immediateTitle;
+        }
+        wasRunningRef.current = true;
+        return;
+      }
+
+      // Not running -> ensure base title without causing extra refresh
+      if (!wasRunningRef.current && document.title !== 'ReFocused') {
+        document.title = 'ReFocused';
+        baseTitleRef.current = 'ReFocused';
+      }
+    } catch {
+      // no-op
+    }
+  }, [pathname]);
+
+  // Global ambient audio resume on full refresh (works on any page)
+  useEffect(() => {
+    try {
+      const storedIsPlaying = localStorage.getItem('ambientSoundsIsPlaying') === 'true';
+      const storedTargetTime = localStorage.getItem('ambientSoundsTargetTime');
+      const lastSoundId = localStorage.getItem('lastUsedAmbientSound');
+      if (storedIsPlaying && storedTargetTime && lastSoundId) {
+        const targetTime = parseInt(storedTargetTime, 10);
+        if (Number.isFinite(targetTime) && targetTime > Date.now()) {
+          audioService.playAmbientSound(lastSoundId).then((success) => {
+            if (!success) {
+              // Autoplay likely blocked; mark pending and reflect paused state in storage
+              ambientAutoplayPendingRef.current = lastSoundId;
+              setAmbientResumePending(lastSoundId);
+              localStorage.setItem('ambientSoundsIsPlaying', 'false');
+            }
+          });
+        } else {
+          // Session expired while away
+          localStorage.setItem('ambientSoundsIsPlaying', 'false');
+          localStorage.removeItem('ambientSoundsTargetTime');
+        }
+      }
+    } catch {
+      // no-op
+    }
+  }, []);
+
+  // If autoplay was blocked on load, resume on first user interaction globally
+  useEffect(() => {
+    if (!ambientResumePending) return;
+    const handler = () => {
+      const lastId = ambientResumePending;
+      audioService.playAmbientSound(lastId).then((success) => {
+        if (success) {
+          ambientAutoplayPendingRef.current = null;
+          setAmbientResumePending(null);
+          localStorage.setItem('ambientSoundsIsPlaying', 'true');
+        }
+      });
+    };
+    window.addEventListener('pointerdown', handler, { once: true } as any);
+    window.addEventListener('keydown', handler, { once: true } as any);
+    return () => {
+      window.removeEventListener('pointerdown', handler as any);
+      window.removeEventListener('keydown', handler as any);
+    };
+  }, [ambientResumePending]);
+
+  const handleAmbientResumeClick = () => {
+    if (!ambientResumePending) return;
+    audioService.playAmbientSound(ambientResumePending).then((success) => {
+      if (success) {
+        ambientAutoplayPendingRef.current = null;
+        setAmbientResumePending(null);
+        localStorage.setItem('ambientSoundsIsPlaying', 'true');
+      }
+    });
+  };
 
   // Handle authentication-based redirects
   useEffect(() => {
@@ -228,6 +403,19 @@ export default function ClientLayoutWrapper({
             
             {/* Daily Cache Status - positioned at bottom-left for development */}
             {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DailyCacheStatus />}
+
+            {/* Ambient autoplay resume prompt (global, minimal UI) */}
+            {ambientResumePending && (
+              <div className="fixed bottom-6 right-6 z-[60]">
+                <button
+                  onClick={handleAmbientResumeClick}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white shadow-lg hover:bg-blue-500 transition-colors"
+                  title="Resume ambient sounds"
+                >
+                  <Play className="w-4 h-4" /> Resume Ambient Sounds
+                </button>
+              </div>
+            )}
 
             {/* First-time tutorial overlay manager */}
             {isAuthenticated && <TutorialManager />}

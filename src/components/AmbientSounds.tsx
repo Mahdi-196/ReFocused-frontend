@@ -76,6 +76,10 @@ const AMBIENT_SOUNDS: Sound[] = [
   }
 ];
 
+// Maximum allowed ambient session duration
+const MAX_AMBIENT_MINUTES = 999;
+const MAX_AMBIENT_MS = MAX_AMBIENT_MINUTES * 60 * 1000;
+
 // Utility functions for localStorage
 const getFromLocalStorage = (key: string): string | null => {
   try {
@@ -112,6 +116,8 @@ export default function AmbientSounds() {
   const [duration, setDuration] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [durationInput, setDurationInput] = useState<string>('');
+  const [isAutoplayBlocked, setIsAutoplayBlocked] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   // Initialize client-side rendering flag
@@ -187,19 +193,39 @@ export default function AmbientSounds() {
       const storedDuration = localStorage.getItem("ambientSoundsDuration");
       
       if (storedIsPlaying === "true" && storedTargetTime && lastSound) {
-        const targetTime = parseInt(storedTargetTime, 10);
+        let targetTime = parseInt(storedTargetTime, 10);
+        // Clamp excessive target time to the max window
+        const maxTarget = Date.now() + MAX_AMBIENT_MS;
+        if (isFinite(targetTime) && targetTime > maxTarget) {
+          targetTime = maxTarget;
+          localStorage.setItem("ambientSoundsTargetTime", String(targetTime));
+          if (storedDuration) {
+            const clamped = Math.min(MAX_AMBIENT_MINUTES, Math.max(1, parseInt(storedDuration, 10)));
+            localStorage.setItem("ambientSoundsDuration", String(clamped));
+          }
+        }
+
         const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
         
         if (newTimeLeft > 0) {
           setTimeLeft(newTimeLeft);
-          setIsPlaying(true);
           if (storedDuration) {
-            setDuration(parseInt(storedDuration, 10));
+            setDuration(Math.min(MAX_AMBIENT_MINUTES, Math.max(1, parseInt(storedDuration, 10))));
           }
-          // Resume audio playback if was playing
-          audioService.playAmbientSound(lastSound.id).catch(error => {
-            console.error('Failed to resume audio on load:', error);
-          });
+          // Attempt to resume audio playback; handle autoplay restrictions
+          (async () => {
+            const success = await audioService.playAmbientSound(lastSound!.id);
+            if (success) {
+              setIsPlaying(true);
+              setIsAutoplayBlocked(false);
+              localStorage.setItem("ambientSoundsIsPlaying", "true");
+            } else {
+              // Autoplay likely blocked; wait for user interaction to resume
+              setIsPlaying(false);
+              setIsAutoplayBlocked(true);
+              localStorage.setItem("ambientSoundsIsPlaying", "false");
+            }
+          })();
         } else {
           // Timer finished while away, handle session completion
           completeSession();
@@ -210,27 +236,38 @@ export default function AmbientSounds() {
     }
   }, [isClient, completeSession]);
 
-  // Update timer every 100ms when running - Following exact same pattern
+  // Update timer from target time regardless of component-local state; rely on storage flag
   useEffect(() => {
-    if (!isPlaying || !isClient) return;
-    
+    if (!isClient) return;
     const interval = setInterval(() => {
+      const storedIsPlaying = localStorage.getItem("ambientSoundsIsPlaying") === "true";
       const storedTargetTime = localStorage.getItem("ambientSoundsTargetTime");
-      if (storedTargetTime) {
-        const targetTime = parseInt(storedTargetTime, 10);
-        const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
-        
-        if (newTimeLeft <= 0.1) {
-          clearInterval(interval);
-          completeSession();
-        } else {
-          setTimeLeft(newTimeLeft);
+      if (!storedTargetTime) return;
+
+      let targetTime = parseInt(storedTargetTime, 10);
+      const maxTarget = Date.now() + MAX_AMBIENT_MS;
+      if (isFinite(targetTime) && targetTime > maxTarget) {
+        // Clamp and persist corrected target
+        targetTime = maxTarget;
+        localStorage.setItem("ambientSoundsTargetTime", String(targetTime));
+        if (duration && duration > MAX_AMBIENT_MINUTES) {
+          const clamped = MAX_AMBIENT_MINUTES;
+          setDuration(clamped);
+          localStorage.setItem("ambientSoundsDuration", String(clamped));
         }
       }
-    }, 100);
-    
+
+      const newTimeLeft = Math.max((targetTime - Date.now()) / 1000, 0);
+
+      if (newTimeLeft <= 0.1) {
+        completeSession();
+      } else if (storedIsPlaying) {
+        // Only tick visibly when playing
+        setTimeLeft(Math.min(newTimeLeft, (MAX_AMBIENT_MINUTES * 60)));
+      }
+    }, 250);
     return () => clearInterval(interval);
-  }, [isPlaying, isClient, completeSession]);
+  }, [isClient, completeSession, duration]);
 
   // Listen for storage events from other tabs/windows - Following exact same pattern
   useEffect(() => {
@@ -266,17 +303,13 @@ export default function AmbientSounds() {
     }
   }, [currentSound]);
 
-  // Cleanup audio on component unmount
-  useEffect(() => {
-    return () => {
-      // Stop any playing audio when component unmounts
-      audioService.stopAmbientSound();
-    };
-  }, []);
+  // Do not stop audio on unmount; allow playback to persist across pages
+  // If you need a global stop, use the play/pause controls or global mute
 
   const handleSoundSelect = (sound: Sound) => {
     if (currentSound?.id === sound.id) {
       if (!isPlaying) {
+        setDurationInput('');
         setShowDurationPicker(true);
       } else {
         // Stop current session
@@ -288,6 +321,7 @@ export default function AmbientSounds() {
       }
     } else {
       setCurrentSound(sound);
+      setDurationInput('');
       setShowDurationPicker(true);
     }
   };
@@ -295,7 +329,9 @@ export default function AmbientSounds() {
   const startPlaying = async (selectedDuration: number | null) => {
     if (!currentSound) return;
     
-    setDuration(selectedDuration);
+    // Coerce and clamp duration
+    const coerced = selectedDuration === null ? null : Math.max(1, Math.min(MAX_AMBIENT_MINUTES, selectedDuration));
+    setDuration(coerced);
     setShowDurationPicker(false);
     
     // Start playing the actual audio
@@ -305,26 +341,39 @@ export default function AmbientSounds() {
       return;
     }
     
-    if (selectedDuration) {
+    if (coerced) {
       // Start timed session - Following exact same pattern as Pomodoro
-      const targetTime = Date.now() + selectedDuration * 60 * 1000;
+      const targetTime = Date.now() + coerced * 60 * 1000;
       localStorage.setItem("ambientSoundsTargetTime", targetTime.toString());
       localStorage.setItem("ambientSoundsIsPlaying", "true");
-      localStorage.setItem("ambientSoundsDuration", selectedDuration.toString());
-      setTimeLeft(selectedDuration * 60);
+      localStorage.setItem("ambientSoundsDuration", coerced.toString());
+      setTimeLeft(coerced * 60);
       setIsPlaying(true);
     } else {
-      // Start infinite session
+      // No longer allow infinite: treat as max session length
+      const maxTarget = Date.now() + MAX_AMBIENT_MS;
       localStorage.setItem("ambientSoundsIsPlaying", "true");
-      localStorage.removeItem("ambientSoundsTargetTime");
-      localStorage.removeItem("ambientSoundsDuration");
-      setTimeLeft(null);
+      localStorage.setItem("ambientSoundsTargetTime", String(maxTarget));
+      localStorage.setItem("ambientSoundsDuration", String(MAX_AMBIENT_MINUTES));
+      setTimeLeft(MAX_AMBIENT_MINUTES * 60);
       setIsPlaying(true);
     }
   };
 
   const togglePlayPause = () => {
     if (!isPlaying) {
+      const storedTargetTime = localStorage.getItem("ambientSoundsTargetTime");
+      if (isAutoplayBlocked && currentSound && storedTargetTime) {
+        // Try resume immediately on user intent
+        audioService.playAmbientSound(currentSound.id).then(success => {
+          if (success) {
+            setIsPlaying(true);
+            setIsAutoplayBlocked(false);
+            localStorage.setItem("ambientSoundsIsPlaying", "true");
+          }
+        });
+        return;
+      }
       setShowDurationPicker(true);
     } else {
       // Stop audio and pause - Following exact same pattern as Pomodoro
@@ -335,6 +384,26 @@ export default function AmbientSounds() {
       localStorage.setItem("ambientSoundsIsPlaying", "false");
     }
   };
+
+  // If autoplay was blocked on load, resume automatically on first user interaction
+  useEffect(() => {
+    if (!isAutoplayBlocked || !currentSound) return;
+    const tryResume = async () => {
+      const success = await audioService.playAmbientSound(currentSound.id);
+      if (success) {
+        setIsPlaying(true);
+        setIsAutoplayBlocked(false);
+        localStorage.setItem("ambientSoundsIsPlaying", "true");
+      }
+    };
+    const handler = () => { tryResume(); };
+    window.addEventListener('pointerdown', handler, { once: true } as any);
+    window.addEventListener('keydown', handler, { once: true } as any);
+    return () => {
+      window.removeEventListener('pointerdown', handler as any);
+      window.removeEventListener('keydown', handler as any);
+    };
+  }, [isAutoplayBlocked, currentSound]);
 
   const formatTime = (seconds: number) => {
     const totalSeconds = Math.floor(seconds);
@@ -359,7 +428,7 @@ export default function AmbientSounds() {
               <span className="text-sm text-gray-300">
                 Now Playing: {currentSound.name}
               </span>
-              {timeLeft !== null && (
+              {timeLeft !== null && isPlaying && (
                 <span className="text-xs text-gray-400">
                   Time left: {formatTime(timeLeft)}
                 </span>
@@ -433,11 +502,21 @@ export default function AmbientSounds() {
                 placeholder="Minutes"
                 autoFocus
                 className="flex-1 p-2 bg-gray-700/60 border border-gray-600/50 rounded text-white text-sm placeholder-gray-400 text-center focus:border-blue-500 focus:outline-none h-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                value={durationInput}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^0-9]/g, '');
+                  if (raw === '') { setDurationInput(''); return; }
+                  let num = parseInt(raw, 10);
+                  if (!Number.isFinite(num)) { setDurationInput(''); return; }
+                  if (num > MAX_AMBIENT_MINUTES) num = MAX_AMBIENT_MINUTES;
+                  setDurationInput(String(num));
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    const value = parseInt(e.currentTarget.value);
-                    if (value && value > 0) {
-                      startPlaying(value);
+                    const raw = parseInt(durationInput);
+                    if (Number.isFinite(raw) && raw > 0) {
+                      const clamped = Math.max(1, Math.min(MAX_AMBIENT_MINUTES, raw));
+                      startPlaying(clamped);
                     }
                   }
                   if (e.key === 'Escape') {
@@ -446,11 +525,11 @@ export default function AmbientSounds() {
                 }}
               />
               <button
-                onClick={(e) => {
-                  const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                  const value = parseInt(input.value);
-                  if (value && value > 0) {
-                    startPlaying(value);
+                onClick={() => {
+                  const raw = parseInt(durationInput);
+                  if (Number.isFinite(raw) && raw > 0) {
+                    const clamped = Math.max(1, Math.min(MAX_AMBIENT_MINUTES, raw));
+                    startPlaying(clamped);
                   }
                 }}
                 className="px-3 py-2 bg-[#93979F] hover:bg-[#80848c] rounded text-white text-sm transition-colors h-8 flex items-center"
@@ -460,7 +539,7 @@ export default function AmbientSounds() {
             </div>
             
             <button
-              onClick={() => startPlaying(null)}
+              onClick={() => startPlaying(MAX_AMBIENT_MINUTES)}
               className="w-full p-2 bg-gray-700/60 hover:bg-gray-600/60 rounded flex items-center justify-center gap-2 text-gray-300 text-sm transition-colors h-8"
             >
               <InfinityIcon className="w-4 h-4" />

@@ -414,11 +414,13 @@ const Pomodoro: React.FC = () => {
   }, [mode, rounds, timeLeft, isRunning, isLoaded, isClient]);
 
   // === UPDATE timeLeft WHEN mode OR PREFERENCES CHANGE ===
+  // Avoid overriding active countdown to keep timer consistent across page loads
   useEffect(() => {
+    if (isRunning) return;
     if (mode === "pomodoro") setTimeLeft(pomodoroTime * 60);
     else if (mode === "short") setTimeLeft(shortBreakTime * 60);
     else setTimeLeft(longBreakTime * 60);
-  }, [pomodoroTime, shortBreakTime, longBreakTime, mode]);
+  }, [pomodoroTime, shortBreakTime, longBreakTime, mode, isRunning]);
 
   // Initialize temporary settings when opening the modal
   const openSettings = () => {

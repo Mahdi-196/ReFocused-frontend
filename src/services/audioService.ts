@@ -5,6 +5,7 @@ class AudioService {
   private notificationVolume: number = 0.8;
   private breathingVolume: number = 0.6;
   private isGloballyMuted: boolean = false;
+  private isBrowser: boolean = false;
 
   // Preload audio files for better performance
   private audioCache: Map<string, HTMLAudioElement> = new Map();
@@ -15,12 +16,16 @@ class AudioService {
   private audioStates: Map<HTMLAudioElement, 'idle' | 'playing' | 'paused' | 'loading'> = new Map();
 
   constructor() {
-    this.preloadAudioFiles();
-    this.preloadNotificationSounds();
-    this.initializeGlobalMuteListener();
+    this.isBrowser = typeof window !== 'undefined' && typeof Audio !== 'undefined';
+    if (this.isBrowser) {
+      this.preloadAudioFiles();
+      this.preloadNotificationSounds();
+      this.initializeGlobalMuteListener();
+    }
   }
 
   private initializeGlobalMuteListener() {
+    if (!this.isBrowser) return;
     // Load initial global mute state
     try {
       const savedMuteState = localStorage.getItem('refocused_global_mute');
@@ -28,7 +33,7 @@ class AudioService {
         this.isGloballyMuted = savedMuteState === 'true';
       }
     } catch (error) {
-      console.error('Failed to load global mute state in audioService:', error);
+      // ignore
     }
 
     // Listen for global mute state changes
@@ -55,6 +60,7 @@ class AudioService {
   }
 
   private preloadAudioFiles() {
+    if (!this.isBrowser) return;
     const soundIds = [
       'forest', 'ocean', 'rain', 'thunderstorm', 'wind',
       'birdsong', 'waterfall', 'fire', 'coffee', 'whitenoise'
@@ -70,6 +76,7 @@ class AudioService {
   }
 
   private preloadNotificationSounds() {
+    if (!this.isBrowser) return;
     const notificationIds = ['gentle-chime', 'soft-bell', 'zen-ding'];
 
     notificationIds.forEach(soundId => {
@@ -83,11 +90,12 @@ class AudioService {
 
   // Safe play method that handles race conditions
   private async safePlay(audio: HTMLAudioElement): Promise<boolean> {
+    if (!this.isBrowser) return false;
     try {
       // Check if there's already a pending play promise
       const existingPromise = this.playingPromises.get(audio);
       if (existingPromise) {
-        console.log('Audio play already in progress, waiting for completion');
+        // already playing/loading; wait for completion
         try {
           await existingPromise;
         } catch (error) {
@@ -98,7 +106,6 @@ class AudioService {
       // Check current state
       const currentState = this.audioStates.get(audio);
       if (currentState === 'playing' || currentState === 'loading') {
-        console.log('Audio already playing or loading');
         return true;
       }
 
@@ -122,13 +129,10 @@ class AudioService {
       this.audioStates.set(audio, 'idle');
       
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Audio play was interrupted by pause - this is normal');
         return false;
       } else if (error instanceof Error && error.name === 'NotAllowedError') {
-        console.warn('Audio play blocked by browser - user interaction required');
         return false;
       } else {
-        console.error('Audio play failed:', error);
         return false;
       }
     }
@@ -136,6 +140,7 @@ class AudioService {
 
   // Safe pause method that handles ongoing play promises
   private safePause(audio: HTMLAudioElement): void {
+    if (!this.isBrowser) return;
     try {
       // Cancel any pending play promise
       const pendingPromise = this.playingPromises.get(audio);
@@ -152,10 +157,10 @@ class AudioService {
   }
 
   async playAmbientSound(soundId: string): Promise<boolean> {
+    if (!this.isBrowser) return false;
     try {
       // Don't play if globally muted
       if (this.isGloballyMuted) {
-        console.log('Audio globally muted, not playing ambient sound');
         return false;
       }
 
@@ -163,10 +168,14 @@ class AudioService {
       this.stopAmbientSound();
 
       // Get audio from cache
-      const audio = this.audioCache.get(soundId);
+      let audio = this.audioCache.get(soundId);
       if (!audio) {
-        console.error(`Audio file not found: ${soundId}`);
-        return false;
+        // Create on-demand if not preloaded
+        audio = new Audio(`/audio/ambient/${soundId}.mp3`);
+        audio.preload = 'auto';
+        audio.loop = true;
+        this.audioCache.set(soundId, audio);
+        this.audioStates.set(audio, 'idle');
       }
 
       // Set volume and reset position
@@ -181,12 +190,12 @@ class AudioService {
       
       return success;
     } catch (error) {
-      console.error('Failed to play ambient sound:', error);
       return false;
     }
   }
 
   stopAmbientSound() {
+    if (!this.isBrowser) return;
     if (this.currentAudio) {
       this.safePause(this.currentAudio);
       this.currentAudio.currentTime = 0;
@@ -202,6 +211,7 @@ class AudioService {
   }
 
   async resumeAmbientSound(): Promise<boolean> {
+    if (!this.isBrowser) return false;
     if (this.currentAudio) {
       return await this.safePlay(this.currentAudio);
     }
@@ -227,17 +237,21 @@ class AudioService {
   }
 
   async playNotificationSound(soundId: string): Promise<boolean> {
+    if (!this.isBrowser) return false;
     try {
       // Don't play if globally muted
       if (this.isGloballyMuted) {
-        console.log('Audio globally muted, not playing notification sound');
         return false;
       }
 
-      const audio = this.notificationCache.get(soundId);
+      let audio = this.notificationCache.get(soundId);
       if (!audio) {
-        console.error(`Notification sound not found: ${soundId}`);
-        return false;
+        // Create on-demand
+        audio = new Audio(`/audio/notifications/${soundId}.mp3`);
+        audio.preload = 'auto';
+        audio.loop = false;
+        this.notificationCache.set(soundId, audio);
+        this.audioStates.set(audio, 'idle');
       }
 
       // Set volume for notification
@@ -247,7 +261,6 @@ class AudioService {
       // Use safe play method
       return await this.safePlay(audio);
     } catch (error) {
-      console.error('Failed to play notification sound:', error);
       return false;
     }
   }
@@ -268,6 +281,7 @@ class AudioService {
   }
 
   private updateCurrentAudioVolume() {
+    if (!this.isBrowser) return;
     if (this.currentAudio) {
       this.currentAudio.volume = this.calculateEffectiveVolume();
     }
@@ -288,6 +302,7 @@ class AudioService {
 
   // Cleanup method for components to use on unmount
   cleanup(): void {
+    if (!this.isBrowser) return;
     // Stop all audio and clear promises
     this.stopAmbientSound();
     

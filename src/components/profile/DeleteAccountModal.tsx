@@ -92,7 +92,7 @@ export const DeleteAccountModal = ({
                 <li>All your goals and habits</li>
                 <li>Journal entries and collections</li>
                 <li>Mood tracking data</li>
-                <li>Study sets and mantras</li>
+                <li>Study sets and trackings</li>
                 <li>Account settings and preferences</li>
                 <li>All other personal data</li>
               </ul>

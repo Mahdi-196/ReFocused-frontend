@@ -1,7 +1,7 @@
 {
   "name": "ReFocused",
   "short_name": "ReFocused",
-  "description": "Daily mantras, mindful breathing exercises and weekly themes like Stoicism to boost your resilience.",
+  "description": "Daily trackings, mindful breathing exercises and weekly themes like Stoicism to boost your resilience.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ECEFF1",

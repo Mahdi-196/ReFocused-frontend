@@ -6,7 +6,7 @@ interface UserStats {
   habits_total: number;
   mood_entries_count: number;
   study_sets_count: number;
-  mantras_count: number;
+  trackings_count: number;
   journal_collections_count: number;
   account_age_days: number;
 }
@@ -89,8 +89,8 @@ export const UserStats = ({ stats, loading }: UserStatsProps) => {
     },
     {
       icon: BookOpen,
-      label: 'Mantras',
-      value: stats.mantras_count,
+      label: 'trackings',
+      value: stats.trackings_count,
       subtitle: 'collected',
       color: 'text-orange-400',
       bgColor: 'bg-orange-500/20'
