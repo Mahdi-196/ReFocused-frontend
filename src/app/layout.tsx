@@ -10,8 +10,8 @@ import ClientLayoutWrapper from '@/components/ClientLayoutWrapper';
 import PerformanceMonitor from '@/components/PerformanceMonitor';
 
 export const metadata: Metadata = {
-  title: 'Daily Mantra & Weekly Mindfulness Theme | ReFocused',
-  description: 'ReFocused: Daily mantras, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
+  title: 'ReFocused',
+  description: 'ReFocused: Daily trackings, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
   keywords: [
     'productivity',
     'mindfulness',
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'Daily Mantra & Weekly Mindfulness Theme | ReFocused',
-    description: 'ReFocused: Daily mantras, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
+    title: 'ReFocused',
+    description: 'ReFocused: Daily trackings, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
     url: 'https://refocused.app',
     siteName: 'ReFocused',
     locale: 'en_US',
@@ -54,8 +54,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Daily Mantra & Weekly Mindfulness Theme | ReFocused',
-    description: 'ReFocused: Daily mantras, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
+    title: 'ReFocused',
+    description: 'ReFocused: Daily trackings, mindful breathing exercises, and dynamically generated weekly themes to boost your resilience.',
     creator: '@refocused_app',
     images: ['/twitter-image.jpg'],
   },
@@ -123,6 +123,30 @@ export default function RootLayout({
             `
           }}
         />
+
+        {/* Early title sync to avoid flicker during navigation or initial load */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var isRunning = localStorage.getItem('pomodoroIsRunning') === 'true';
+                  var targetStr = localStorage.getItem('pomodoroTargetTime');
+                  if (isRunning && targetStr) {
+                    var targetTime = parseInt(targetStr, 10) || 0;
+                    var remainingMs = Math.max(targetTime - Date.now(), 0);
+                    var remainingSec = Math.floor(remainingMs / 1000);
+                    var m = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+                    var s = String(remainingSec % 60).padStart(2, '0');
+                    document.title = 'ReFocused || ' + m + ':' + s;
+                  } else {
+                    document.title = 'ReFocused';
+                  }
+                } catch (e) {}
+              })();
+            `
+          }}
+        />
         
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#3B82F6" />
@@ -140,7 +164,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebApplication",
               "name": "ReFocused",
-              "description": "Daily mantra input, breathing exercises, and weekly themes to build resilience and productivity.",
+              "description": "Daily tracking input, breathing exercises, and weekly themes to build resilience and productivity.",
               "url": "https://refocused.app",
               "applicationCategory": "HealthApplication",
               "operatingSystem": "Any",

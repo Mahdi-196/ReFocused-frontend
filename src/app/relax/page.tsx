@@ -95,7 +95,7 @@ export default function RelaxPage() {
 
 
 
-  // Removed unused handleSaveMantra function
+  // Removed unused handleSavetracking function
 
   // Use API-provided weekly theme shape directly
   const currentTheme = weeklyThemeData ?? null;
@@ -447,7 +447,7 @@ export default function RelaxPage() {
           )}
           </div>
 
-{/* Pinned Mantra feature removed for optimization */}
+{/* Pinned tracking feature removed for optimization */}
       </div>
       </SkeletonDemo>
     </PageTransition>

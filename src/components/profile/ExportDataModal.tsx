@@ -201,7 +201,7 @@ export const ExportDataModal = ({
                 <li>Journal entries and collections</li>
                 <li>Mood tracking data</li>
                 <li>Study sets and flashcards</li>
-                <li>Personal mantras and settings</li>
+                <li>Personal trackings and settings</li>
                 <li>Activity statistics and calendar data</li>
               </ul>
               <p className="text-sm text-blue-400 mt-4 font-medium">

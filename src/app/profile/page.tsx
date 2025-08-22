@@ -65,7 +65,7 @@ interface UserStats {
   habits_total: number;
   mood_entries_count: number;
   study_sets_count: number;
-  mantras_count: number;
+  trackings_count: number;
   journal_collections_count: number;
   account_age_days: number;
 }
@@ -561,7 +561,7 @@ const Profile = () => {
           habits_total: 0,
           mood_entries_count: 0,
           study_sets_count: 0,
-          mantras_count: 0,
+          trackings_count: 0,
           journal_collections_count: 0,
           account_age_days: 0
         });
