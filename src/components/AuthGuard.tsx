@@ -21,7 +21,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
       // Check if user has a valid token
       const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
       
-      if (token && token !== 'dummy-auth-token') {
+      if (token && !token.startsWith('dummy-') && token !== 'test-token') {
         setIsAuthenticated(true);
       } else {
         setIsAuthenticated(false);

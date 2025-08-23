@@ -44,7 +44,7 @@ const Journal: React.FC = () => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
       
-      if (!token || token === 'dummy-auth-token') {
+      if (!token || token.startsWith('dummy-') || token === 'test-token') {
         window.location.href = '/';
         return;
       }

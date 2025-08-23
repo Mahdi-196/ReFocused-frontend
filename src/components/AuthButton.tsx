@@ -25,7 +25,7 @@ const AuthButton = () => {
       // Check if user has a valid token
       const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
       
-      if (token && token !== 'dummy-auth-token') {
+      if (token && !token.startsWith('dummy-') && token !== 'test-token') {
         // Validate token format before proceeding
         try {
           const validation = authService.isAuthenticated();

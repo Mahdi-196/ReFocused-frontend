@@ -23,8 +23,8 @@ export const tokenValidator = {
         return { isValid: false, isExpired: false, error: 'Token is empty' };
       }
 
-      if (token === 'dummy-auth-token') {
-        return { isValid: false, isExpired: false, error: 'Dummy token detected' };
+      if (token && token.startsWith('dummy-') || token === 'test-token') {
+        return { isValid: false, isExpired: false, error: 'Test token detected' };
       }
 
       // JWT tokens have 3 parts separated by dots
@@ -103,7 +103,7 @@ export const tokenValidator = {
       prefix: token.substring(0, 20) + '...',
       suffix: '...' + token.substring(token.length - 10),
       parts: token.split('.').length,
-      isDummy: token === 'dummy-auth-token'
+      isTest: token && (token.startsWith('dummy-') || token === 'test-token')
     };
   },
 

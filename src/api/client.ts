@@ -19,7 +19,7 @@ client.interceptors.request.use(
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
       
-      if (token && token !== 'dummy-auth-token' && token.trim() !== '') {
+      if (token && !token.startsWith('dummy-') && token !== 'test-token' && token.trim() !== '') {
         // Validate token before using it
         const validation = tokenValidator.validateJWT(token);
         
@@ -268,7 +268,7 @@ client.interceptors.response.use(
 export const initializeAuth = () => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem("REF_TOKEN");
-    if (token && token !== 'dummy-auth-token') {
+          if (token && !token.startsWith('dummy-') && token !== 'test-token') {
       client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       logger.debug('Auth initialized with token', token.substring(0, 10) + '...', 'AUTH');
     } else {
@@ -280,8 +280,8 @@ export const initializeAuth = () => {
 };
 
 // ✅ Real backend API integration
-// Backend running on http://localhost:8000 via Next.js rewrites
-// Documentation: http://localhost:8000/docs
+// Backend running via environment configuration
+// Documentation: Check environment config for backend URL
 
 // Collection Access Token Management
 export const collectionTokens = {

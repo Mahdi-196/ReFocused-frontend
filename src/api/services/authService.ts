@@ -168,7 +168,7 @@ export const authService = {
     if (typeof window === 'undefined') return false;
     
     const token = localStorage.getItem('REF_TOKEN');
-    if (!token || token === 'dummy-auth-token' || token.trim() === '') {
+          if (!token || token.startsWith('dummy-') || token === 'test-token' || token.trim() === '') {
       return false;
     }
 

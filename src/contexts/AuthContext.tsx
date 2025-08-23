@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
       const token = localStorage.getItem('REF_TOKEN');
-      let isTokenValid = token && token !== 'dummy-auth-token' && token.trim() !== '';
+      let isTokenValid = token && !token.startsWith('dummy-') && token !== 'test-token' && token.trim() !== '';
       
       // If we have a token, validate its format before proceeding
       if (isTokenValid && token) {

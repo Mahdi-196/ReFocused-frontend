@@ -93,7 +93,7 @@ export default function ConsoleTestPage() {
       // Seed a valid-looking token with ~60s lifetime and a user
       const token = createUnsignedJwt(60);
       localStorage.setItem('REF_TOKEN', token);
-      localStorage.setItem('REF_USER', JSON.stringify({ id: 42, email: 'user@example.com', name: 'Test User' }));
+              localStorage.setItem('REF_USER', JSON.stringify({ id: 42, email: 'test@example.com', name: 'Test User' }));
 
       // Ensure the token refresh monitor is running for this session
       try { tokenRefreshManager.startMonitoring(); } catch {}

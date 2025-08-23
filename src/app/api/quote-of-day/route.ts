@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const CLAUDE_API_URL = process.env.CLAUDE_API_URL || (process.env.NODE_ENV !== 'production' ? 'http://localhost:8000/api/v1' : '');
+import { getBackendUrl } from '@/config/environment';
 
 export async function GET() {
   try {
-    if (!CLAUDE_API_URL) {
-      throw new Error('CLAUDE_API_URL is not configured');
-    }
-    const response = await fetch(`${CLAUDE_API_URL.replace(/\/$/, '')}/claude/quote-of-day`, {
+    const response = await fetch(getBackendUrl('/quote-of-day'), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

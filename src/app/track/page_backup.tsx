@@ -54,7 +54,7 @@ export default function TrackPage() {
   useEffect(() => {
     const token = localStorage.getItem('REF_TOKEN');
     const user = localStorage.getItem('REF_USER');
-    const isAuthenticated = !!(token && token !== 'dummy-auth-token');
+    const isAuthenticated = !!(token && !token.startsWith('dummy-') && token !== 'test-token');
     
     setAuthStatus({
       isAuthenticated,
