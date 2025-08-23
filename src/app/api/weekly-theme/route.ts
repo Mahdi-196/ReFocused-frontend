@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const CLAUDE_API_URL = process.env.CLAUDE_API_URL || (process.env.NODE_ENV !== 'production' ? 'http://localhost:8000/api/v1' : '');
+import { getBackendUrl } from '@/config/environment';
 
 export async function GET() {
   try {
-    if (!CLAUDE_API_URL) {
-      throw new Error('CLAUDE_API_URL is not configured');
-    }
-    const response = await fetch(`${CLAUDE_API_URL.replace(/\/$/, '')}/claude/mind-fuel`, {
+    const response = await fetch(getBackendUrl('/weekly-theme'), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -21,9 +17,9 @@ export async function GET() {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching mind fuel:', error);
+    console.error('Error fetching weekly theme:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch mind fuel' },
+      { error: 'Failed to fetch weekly theme' },
       { status: 500 }
     );
   }

@@ -18,6 +18,9 @@ export const ENV = {
   // API Configuration
   API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.refocused.app',
   
+  // Backend Configuration
+  BACKEND_API_URL: process.env.BACKEND_API_URL || (process.env.NODE_ENV !== 'production' ? 'http://localhost:8000/api/v1' : process.env.BACKEND_API_URL),
+  
   // Analytics
   ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
   ANALYTICS_ID: process.env.NEXT_PUBLIC_ANALYTICS_ID,
@@ -26,6 +29,15 @@ export const ENV = {
   DEV_PORT: process.env.PORT || 3000,
   DEV_HOST: process.env.HOST || 'localhost',
 } as const;
+
+// Helper function to get backend URL
+export const getBackendUrl = (endpoint: string = '') => {
+  const baseUrl = ENV.BACKEND_API_URL;
+  if (!baseUrl) {
+    throw new Error('BACKEND_API_URL is not configured');
+  }
+  return `${baseUrl.replace(/\/$/, '')}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+};
 
 // Type-safe environment checks
 export const isDevelopment = ENV.APP_ENV === 'development';

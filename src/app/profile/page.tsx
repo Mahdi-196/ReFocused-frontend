@@ -377,7 +377,7 @@ const Profile = () => {
   useEffect(() => {
     const checkPageAuth = () => {
       const token = localStorage.getItem('REF_TOKEN');
-      if (!token || token === 'dummy-auth-token') {
+      if (!token || token.startsWith('dummy-') || token === 'test-token') {
         router.push('/');
         return;
       }
@@ -396,9 +396,11 @@ const Profile = () => {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const res = await emailSubscriptionService.status(userData?.email || 'cheaxx123@gmail.com');
-        if (typeof res?.isSubscribed === 'boolean') {
-          setIsSubscribed(res.isSubscribed);
+        if (userData?.email) {
+          const res = await emailSubscriptionService.status(userData.email);
+          if (typeof res?.isSubscribed === 'boolean') {
+            setIsSubscribed(res.isSubscribed);
+          }
         }
       } catch (e) {
         // Ignore status errors silently here
@@ -587,7 +589,11 @@ const Profile = () => {
     setIsSubscribing(true);
     setEmailWarning(null);
     try {
-      await emailSubscriptionService.subscribe(userData?.email || 'cheaxx123@gmail.com');
+      if (userData?.email) {
+        await emailSubscriptionService.subscribe(userData.email);
+      } else {
+        throw new Error('Email is required for subscription');
+      }
       setIsSubscribed(true);
     } catch (error: any) {
       const status = (error?.status as number | undefined) ?? error?.response?.status;
@@ -605,7 +611,11 @@ const Profile = () => {
     setIsSubscribing(true);
     setEmailWarning(null);
     try {
-      await emailSubscriptionService.unsubscribe(userData?.email || 'cheaxx123@gmail.com');
+      if (userData?.email) {
+        await emailSubscriptionService.unsubscribe(userData.email);
+      } else {
+        throw new Error('Email is required for unsubscription');
+      }
       setIsSubscribed(false);
     } catch (error: any) {
       const status = (error?.status as number | undefined) ?? error?.response?.status;
@@ -1261,7 +1271,7 @@ const Profile = () => {
                       <p className="text-sm text-gray-300">
                         {isSubscribed ? 'You are currently subscribed to our newsletter' : 'You are not subscribed to our newsletter'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">{userData?.email || 'cheaxx123@gmail.com'}</p>
+                      <p className="text-xs text-gray-400 mt-1">{userData?.email || 'No email available'}</p>
                       {emailWarning && (
                         <div className="mt-2 text-xs text-amber-300 bg-amber-900/30 border border-amber-800/50 rounded px-2 py-1 inline-block">
                           {emailWarning}

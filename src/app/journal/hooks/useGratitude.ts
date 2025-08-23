@@ -18,7 +18,7 @@ export function useGratitude() {
     try {
       // Check authentication before making request
       const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
-      if (!token || token === 'dummy-auth-token') {
+      if (!token || token.startsWith('dummy-') || token === 'test-token') {
         console.log('🔐 [GRATITUDE HOOK] No valid auth token, skipping load');
         setIsLoading(false);
         return;

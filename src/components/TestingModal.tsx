@@ -57,7 +57,7 @@ const TEST_CASES: TestCase[] = [
     payload: {
       message: "Recommend 3 books about mindfulness, meditation, or personal growth that would help me develop a better meditation practice and reduce daily stress."
     },
-    description: 'Tests AI assistance for book recommendations'
+    description: 'Tests AI assistance for book recommendations via backend'
   },
   {
     id: 'ai-assistance-affirmations',
@@ -67,7 +67,7 @@ const TEST_CASES: TestCase[] = [
     payload: {
       message: "Create 5 personalized daily affirmations that will help me stay calm, focused, and positive throughout my day, especially during stressful moments."
     },
-    description: 'Tests AI assistance for daily affirmations'
+    description: 'Tests AI assistance for daily affirmations via backend'
   },
   {
     id: 'ai-assistance-meditation',
@@ -77,7 +77,7 @@ const TEST_CASES: TestCase[] = [
     payload: {
       message: "Guide me through a personalized 10-minute meditation session based on my current stress level and what I'm hoping to achieve from today's practice."
     },
-    description: 'Tests AI assistance for meditation guidance'
+    description: 'Tests AI assistance for meditation guidance via backend'
   },
   {
     id: 'ai-assistance-stress-relief',
@@ -87,7 +87,7 @@ const TEST_CASES: TestCase[] = [
     payload: {
       message: "Suggest 5 quick stress relief techniques I can use during work breaks, including breathing exercises and mindfulness practices under 5 minutes."
     },
-    description: 'Tests AI assistance for stress relief techniques'
+    description: 'Tests AI assistance for stress relief techniques via backend'
   },
   {
     id: 'data-population-journal',

@@ -54,11 +54,11 @@ export const authDebugUtils = {
     // Token analysis
     const tokenInfo: TokenInfo = {
       isPresent: !!token,
-      isValid: !!(token && token !== 'dummy-auth-token' && token.trim() !== ''),
+      isValid: !!(token && !token.startsWith('dummy-') && token !== 'test-token' && token.trim() !== ''),
       length: token?.length || 0,
       prefix: token ? token.substring(0, 20) + '...' : '',
       hasBearer: token?.startsWith('Bearer ') || false,
-      isDummy: token === 'dummy-auth-token',
+              isTest: token && (token.startsWith('dummy-') || token === 'test-token'),
       isEmpty: !token || token.trim() === ''
     };
 

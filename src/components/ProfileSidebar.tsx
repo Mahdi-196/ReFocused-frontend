@@ -26,7 +26,7 @@ const ProfileSidebar = () => {
             <User size={20} className="text-gray-400" />
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-900">John Doe</p>
+            <p className="text-sm font-medium text-gray-900">User</p>
             <p className="text-xs text-gray-500">john@example.com</p>
           </div>
         </div>

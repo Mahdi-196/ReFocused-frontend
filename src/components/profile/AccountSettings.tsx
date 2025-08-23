@@ -54,9 +54,11 @@ export const AccountSettings = ({ userData, isSubscribed, onSubscriptionToggle, 
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const res = await emailSubscriptionService.status(userData?.email || 'cheaxx123@gmail.com');
-        if (typeof res?.isSubscribed === 'boolean' && res.isSubscribed !== isSubscribed) {
-          onSubscriptionToggle();
+        if (userData?.email) {
+          const res = await emailSubscriptionService.status(userData.email);
+          if (typeof res?.isSubscribed === 'boolean' && res.isSubscribed !== isSubscribed) {
+            onSubscriptionToggle();
+          }
         }
       } catch (e) {
         // ignore
@@ -151,7 +153,11 @@ export const AccountSettings = ({ userData, isSubscribed, onSubscriptionToggle, 
   const handleSubscribe = async () => {
     setIsSubscribing(true);
     try {
-      await emailSubscriptionService.subscribe(userData?.email || 'cheaxx123@gmail.com');
+      if (userData?.email) {
+        await emailSubscriptionService.subscribe(userData.email);
+      } else {
+        throw new Error('Email is required for subscription');
+      }
       onSubscriptionToggle();
     } catch (error: any) {
       // Silently fail - don't show error
@@ -163,7 +169,11 @@ export const AccountSettings = ({ userData, isSubscribed, onSubscriptionToggle, 
   const handleUnsubscribe = async () => {
     setIsSubscribing(true);
     try {
-      await emailSubscriptionService.unsubscribe(userData?.email || 'cheaxx123@gmail.com');
+      if (userData?.email) {
+        await emailSubscriptionService.unsubscribe(userData.email);
+      } else {
+        throw new Error('Email is required for unsubscription');
+      }
       onSubscriptionToggle();
     } catch (error: any) {
       // Silently fail - don't show error
@@ -267,7 +277,7 @@ export const AccountSettings = ({ userData, isSubscribed, onSubscriptionToggle, 
                 <p className="text-sm text-gray-300">
                   {isSubscribed ? 'You are currently subscribed to our newsletter' : 'You are not subscribed to our newsletter'}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">{userData?.email || 'cheaxx123@gmail.com'}</p>
+                <p className="text-xs text-gray-400 mt-1">{userData?.email || 'No email available'}</p>
               </div>
               <button
                 onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}

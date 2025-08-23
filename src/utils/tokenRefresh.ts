@@ -177,7 +177,7 @@ export const tokenRefreshManager = new TokenRefreshManager();
 if (typeof window !== 'undefined') {
   // Start monitoring if token exists
   const token = localStorage.getItem('REF_TOKEN');
-  if (token && token !== 'dummy-auth-token') {
+      if (token && !token.startsWith('dummy-') && token !== 'test-token') {
     tokenRefreshManager.startMonitoring();
   }
 

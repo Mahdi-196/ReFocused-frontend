@@ -61,7 +61,7 @@ function EntryContent() {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('REF_TOKEN');
       
-      if (!token || token === 'dummy-auth-token') {
+      if (!token || token.startsWith('dummy-') || token === 'test-token') {
         // No valid authentication token; redirect to landing
         window.location.href = '/';
         return;

@@ -371,7 +371,7 @@ class JournalService {
       
       // Check auth status before making request
       const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
-      const isAuthenticated = !!token && token !== 'dummy-auth-token';
+      const isAuthenticated = !!token && !token.startsWith('dummy-') && token !== 'test-token';
       
       console.log('📅 [GRATITUDE] Creating gratitude:', {
         text: data.text,
