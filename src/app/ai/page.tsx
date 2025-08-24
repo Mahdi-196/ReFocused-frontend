@@ -3,12 +3,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCurrentDate } from '@/contexts/TimeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Send, User, Loader2, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
-import DevTestingButton from '@/components/DevTestingButton';
 import { apiService } from '@/services/api';
 import { useAiAssistanceDaily } from '@/hooks/useDailyContentSimple';
 
@@ -29,7 +28,7 @@ const AiPage = () => {
   const [dailyMessageCount, setDailyMessageCount] = useState(0);
   const [messageLimit] = useState(100);
   // Daily AI assistance suggestions (cached like Quote/Word)
-  const { isCached: aiCached, refresh: refreshAiDaily } = useAiAssistanceDaily();
+  const { isCached: aiCached } = useAiAssistanceDaily();
   // Conversation virtualization state
   const [showAllMessages, setShowAllMessages] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
@@ -182,17 +181,11 @@ const AiPage = () => {
 
   // Background suggestion refresh - preload new suggestions while user is typing
   useEffect(() => {
-    if (inputMessage.trim().length > 10) {
-      // Debounced background refresh of AI suggestions
-      const timeoutId = setTimeout(() => {
-        if (!aiCached) {
-          refreshAiDaily();
-        }
-      }, 2000);
-      
-      return () => clearTimeout(timeoutId);
+    // Background refresh trigger removed - handled by daily content system
+    if (inputMessage.trim().length > 10 && !aiCached) {
+      // AI suggestions will be refreshed by daily content cache
     }
-  }, [inputMessage, aiCached, refreshAiDaily]);
+  }, [inputMessage, aiCached]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -420,18 +413,6 @@ const AiPage = () => {
                     <div className="text-center max-w-3xl">
                       <div className="flex items-center justify-center gap-3 mb-2">
                         <h1 className="text-3xl font-bold text-white">ReFocused AI</h1>
-                        {aiCached && (
-                          <span className="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded" title="Daily suggestions loaded from cache">
-                            📋
-                          </span>
-                        )}
-                        <button
-                          onClick={refreshAiDaily}
-                          className="p-1 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
-                          title="Refresh daily suggestions"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                        </button>
                       </div>
                       <p className="text-base text-gray-300 mb-5">Ask about focus, productivity, mindfulness, wellness, or goals.</p>
                       <div className="flex flex-wrap justify-center gap-2">
@@ -669,7 +650,6 @@ const AiPage = () => {
             </div>
         </div>
 
-        {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTestingButton />}
       </div>
     </PageTransition>
   );

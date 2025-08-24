@@ -19,7 +19,7 @@ export interface UnsubscribeResponse {
 }
 
 export const emailSubscriptionService = {
-  async status(email: string): Promise<{ success?: boolean; isSubscribed?: boolean; email?: string } & Record<string, any>> {
+  async status(email: string): Promise<{ success?: boolean; isSubscribed?: boolean; email?: string } & Record<string, unknown>> {
     const response = await client.post(EMAIL.STATUS, { email });
     return response.data;
   },

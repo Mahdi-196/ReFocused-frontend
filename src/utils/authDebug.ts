@@ -58,7 +58,7 @@ export const authDebugUtils = {
       length: token?.length || 0,
       prefix: token ? token.substring(0, 20) + '...' : '',
       hasBearer: token?.startsWith('Bearer ') || false,
-              isTest: token && (token.startsWith('dummy-') || token === 'test-token'),
+      isDummy: !!(token && (token.startsWith('dummy-') || token === 'test-token')),
       isEmpty: !token || token.trim() === ''
     };
 

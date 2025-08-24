@@ -1,6 +1,6 @@
 import client from '../client';
 import { STREAK } from '../endpoints';
-import { cacheService, CacheKeys, CacheTTL } from '../../services/cacheService';
+import { cacheService, CacheKeys } from '../../services/cacheService';
 
 interface StreakStatusResponse {
   success: boolean;

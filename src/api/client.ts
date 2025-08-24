@@ -1,6 +1,8 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { tokenValidator } from '@/utils/tokenValidator';
 import logger from '@/utils/logger';
+import { getCSRFHeaders } from '@/utils/csrf';
+import { RateLimitHandler } from '@/utils/rateLimiting';
 
 // Create axios instance with proper TypeScript typing
 const client: AxiosInstance = axios.create({
@@ -99,17 +101,30 @@ client.interceptors.request.use(
       }
     }
     
-    // Debug logging for gratitude requests
-    if (config.url?.includes('/journal/gratitude') && config.method === 'post') {
-      console.log('🌐 [CLIENT] Gratitude POST request:', {
+    // Check client-side rate limiting before making request
+    const rateLimitCheck = RateLimitHandler.shouldBlockRequest(config.url || '');
+    if (rateLimitCheck.block) {
+      return Promise.reject(new Error(rateLimitCheck.message));
+    }
+    
+    // Add CSRF protection for state-changing requests
+    if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {
+      try {
+        const csrfHeaders = getCSRFHeaders();
+        config.headers = config.headers || {};
+        Object.assign(config.headers, csrfHeaders);
+      } catch (error) {
+        console.warn('Failed to add CSRF token:', error);
+      }
+    }
+    
+    // Log API requests in development only
+    if (process.env.NODE_ENV === 'development' && config.url?.includes('/journal/gratitude') && config.method === 'post') {
+      logger.debug('Gratitude POST request', {
         url: config.url,
         method: config.method,
-        data: config.data,
-        headers: {
-          'Authorization': config.headers?.Authorization ? 'Bearer [TOKEN]' : 'MISSING',
-          'Content-Type': config.headers?.['Content-Type']
-        }
-      });
+        hasAuth: !!config.headers?.Authorization
+      }, 'API');
     }
     
     return config;
@@ -132,7 +147,9 @@ client.interceptors.response.use(
         try {
           localStorage.setItem('REF_TOKEN', newToken);
           client.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-        } catch {}
+        } catch (error) {
+          console.warn('Failed to update token in localStorage:', error);
+        }
       }
     }
     return response;
@@ -161,22 +178,28 @@ client.interceptors.response.use(
       error.isNetworkError = true;
     }
 
-    // Fire global rate-limit event as early as possible (before any early returns)
+    // Enhanced rate limiting handling
     const status = error.response?.status;
     if (status === 429 && typeof window !== 'undefined') {
       const retryAfterHeader =
         error.response.headers?.['retry-after'] || error.response.headers?.['Retry-After'];
-      const retryAfter = parseInt(retryAfterHeader ?? '0', 10);
+      const retryAfter = parseInt(retryAfterHeader ?? '60', 10);
+      
+      // Use the enhanced rate limit handler
+      RateLimitHandler.handleRateLimit(error.config?.url || '', retryAfter, true);
+      
       try {
         window.dispatchEvent(
           new CustomEvent('rateLimit', {
             detail: {
-              retryAfter: Number.isFinite(retryAfter) ? retryAfter : undefined,
+              retryAfter: Number.isFinite(retryAfter) ? retryAfter : 60,
               path: error.config?.url,
             },
           })
         );
-      } catch {}
+      } catch (dispatchError) {
+        console.warn('Failed to dispatch rate limit event:', dispatchError);
+      }
     }
     
     // Extract backend error messages for proper frontend display
@@ -241,7 +264,9 @@ client.interceptors.response.use(
               return client(originalRequest);
             }
           }
-        } catch {}
+        } catch (refreshError) {
+          console.warn('Token refresh failed:', refreshError);
+        }
 
         // Clear all authentication data
         localStorage.removeItem('REF_TOKEN');

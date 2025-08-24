@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getBackendUrl } from '@/config/environment';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const response = await fetch(getBackendUrl('/writing-prompts'), {
       method: 'POST',
@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error('Writing prompts API error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Writing prompts API error:', error);
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

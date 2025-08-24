@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getBackendUrl } from '@/config/environment';
 
 export async function GET() {
@@ -17,7 +17,9 @@ export async function GET() {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching word of day:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error fetching word of day:', error);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch word of day' },
       { status: 500 }

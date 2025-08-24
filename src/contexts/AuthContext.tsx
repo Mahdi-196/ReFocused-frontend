@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { initializeAuth } from '@/api/client';
 import { authService } from '@/api/services/authService';
 import { timeService } from '@/services/timeService';
-import { authDebugUtils } from '@/utils/authDebug';
 import { tokenRefreshManager } from '@/utils/tokenRefresh';
 import { tokenValidator } from '@/utils/tokenValidator';
+import { cookieAuth } from '@/utils/cookieAuth';
 import logger from '@/utils/logger';
 
 interface User {
@@ -46,9 +46,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Only run on client side
     if (typeof window !== 'undefined') {
-      checkAuthStatus();
+      initializeAuthSystem();
     }
   }, []);
+
+  // Initialize authentication system with cookie migration
+  const initializeAuthSystem = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Check if backend supports cookie-based authentication
+      const supportsCookies = await cookieAuth.checkCookieAuthSupport();
+      
+      if (supportsCookies) {
+        logger.info('Backend supports cookie authentication, attempting migration', undefined, 'AuthContext');
+        
+        // Try to migrate from localStorage to cookies
+        const migrationSuccessful = await cookieAuth.migrateFromLocalStorage();
+        
+        if (migrationSuccessful) {
+          logger.info('Successfully migrated to cookie-based authentication', undefined, 'AuthContext');
+          
+          // Get user from server using cookies
+          const currentUser = await cookieAuth.getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            timeService.setAuthenticationStatus(true);
+            return;
+          }
+        } else {
+          // Migration failed or no localStorage token, try cookie auth anyway
+          const currentUser = await cookieAuth.getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            timeService.setAuthenticationStatus(true);
+            return;
+          }
+        }
+      }
+      
+      // Fallback to localStorage-based authentication
+      logger.info('Using localStorage-based authentication', undefined, 'AuthContext');
+      await checkAuthStatus();
+      
+    } catch (error) {
+      logger.error('Error initializing auth system', error, 'AuthContext');
+      // Fallback to original auth check
+      await checkAuthStatus();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const checkAuthStatus = async () => {
     try {
@@ -195,22 +245,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    // Stop token monitoring
-    tokenRefreshManager.stopMonitoring();
-    
-    // Use auth service to clear everything
-    authService.logout();
-    
-    // Update time service authentication status
-    timeService.setAuthenticationStatus(false);
-    
-    // Reset state
-    setUser(null);
-    setIsAuthenticated(false);
-    
-    // Redirect to home page
-    router.push('/');
+  const logout = async () => {
+    try {
+      // Stop token monitoring
+      tokenRefreshManager.stopMonitoring();
+      
+      // Clear cookies if backend supports it, otherwise fall back to localStorage
+      try {
+        await cookieAuth.clearAuthCookies();
+        logger.info('Cleared authentication cookies', undefined, 'AuthContext');
+      } catch (cookieError) {
+        logger.warn('Failed to clear cookies, falling back to localStorage logout', cookieError, 'AuthContext');
+        // Fallback to localStorage logout
+        authService.logout();
+      }
+      
+      // Update time service authentication status
+      timeService.setAuthenticationStatus(false);
+      
+      // Reset state
+      setUser(null);
+      setIsAuthenticated(false);
+      
+      // Redirect to home page
+      router.push('/');
+      
+    } catch (error) {
+      logger.error('Logout error', error, 'AuthContext');
+      // Even if logout fails, clear local state
+      setUser(null);
+      setIsAuthenticated(false);
+      router.push('/');
+    }
   };
 
   const value: AuthContextType = {

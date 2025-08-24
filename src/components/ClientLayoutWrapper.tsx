@@ -8,7 +8,6 @@ import Header from './Header';
 import Footer from './footer';
 import AnimatedLayout from './AnimatedLayout';
 import StatisticsInitializer from './StatisticsInitializer';
-import DevTools from './devTools';
 // import RateLimitNotification from './RateLimitNotification';
 import CacheManager from './CacheManager';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -398,8 +397,6 @@ export default function ClientLayoutWrapper({
             {/* Token expiry notification intentionally disabled for fully silent refresh */}
             {/* Rate limit notification disabled per request */}
             
-            {/* DevTools - positioned at bottom-right globally */}
-            {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DevTools />}
             
             {/* Daily Cache Status - positioned at bottom-left for development */}
             {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DailyCacheStatus />}

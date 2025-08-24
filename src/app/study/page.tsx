@@ -18,7 +18,6 @@ const FlashcardDisplay = dynamic(() => import('./components/FlashcardDisplay'), 
 
 const StatisticsSection = dynamic(() => import('./components/StatisticsSection'), { ssr: false });
 
-const StatisticsDevTools = dynamic(() => import('./components/StatisticsDevTools'), { ssr: false });
 const StudyModals = dynamic(() => import('./components/StudyModals'), { ssr: false });
 
 // Import the custom hooks
@@ -85,7 +84,6 @@ export default function StudyPage() {
               />
 
               {/* Statistics Dev Tools - Development Only */}
-              <StatisticsDevTools onRefresh={statistics.forceRefresh} />
 
               {/* Modals */}
               <StudyModals

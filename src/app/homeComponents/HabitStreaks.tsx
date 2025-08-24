@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { getHabits, getHabitCompletions, clearHabitsCache } from '@/services/habitsService';
-import type { UserHabit, HabitCompletion } from '@/services/habitsService';
-import { FireIcon, CheckIcon } from '@/components/icons';
+import { getHabits, getHabitCompletions } from '@/services/habitsService';
+import type { UserHabit } from '@/services/habitsService';
+import { FireIcon } from '@/components/icons';
 import { 
   Brain, 
   Dumbbell, 
@@ -33,8 +33,18 @@ const HabitStreaks = () => {
       setLoading(true);
       setError(null);
       
+      // Wait for time service to be ready before making API calls
+      if (!timeService.isReady()) {
+        return;
+      }
+      
       // Get current date for today's completions
       const today = timeService.getCurrentDate();
+      
+      // Skip if we still don't have a valid date
+      if (today === 'LOADING_DATE') {
+        return;
+      }
       
       // Load habits and today's completions in parallel
       const [allHabits, completions] = await Promise.all([
@@ -74,8 +84,14 @@ const HabitStreaks = () => {
   };
 
   useEffect(() => {
-    // Initial load
+    // Initial load (will return early if time service not ready)
     loadPinnedHabitsAndCompletions();
+    
+    // Listen for time service ready state
+    const handleTimeReady = () => {
+      loadPinnedHabitsAndCompletions();
+    };
+    timeService.addEventListener(handleTimeReady);
 
     // Listen for user logout events
     const handleUserLogout = () => {
@@ -127,6 +143,7 @@ const HabitStreaks = () => {
 
     // Cleanup event listeners
     return () => {
+      timeService.removeEventListener(handleTimeReady);
       window.removeEventListener('userLoggedOut', handleUserLogout);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handleFocus);
