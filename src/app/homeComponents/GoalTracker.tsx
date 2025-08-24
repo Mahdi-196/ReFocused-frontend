@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { History } from 'lucide-react';
-import { IoCheckmarkDoneCircleSharp, IoCheckmarkDoneSharp, IoCheckmark } from "react-icons/io5";
-import { Target, Trophy } from 'lucide-react';
+import { IoCheckmarkDoneSharp, IoCheckmark } from "react-icons/io5";
+import { Trophy } from 'lucide-react';
 import { 
   Goal, 
   CreateGoalRequest, 

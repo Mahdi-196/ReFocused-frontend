@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import client from '@/api/client';
 import { AUTH } from '@/api/endpoints';
+import { validateEmail, validatePassword, validateText } from '@/utils/validation';
+import { logger } from '@/utils/logger';
 
 interface RegisterProps {
   onRegisterSuccess?: () => void;
@@ -24,18 +26,46 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
     setIsLoading(true);
 
     try {
-      console.log('Registering user with:', { username, email, name });
+      // Validate inputs
+      const emailValidation = validateEmail(email);
+      const passwordValidation = validatePassword(password);
+      const usernameValidation = validateText(username, 50);
+      const nameValidation = validateText(name || username, 100);
+
+      if (!emailValidation.isValid) {
+        setError(emailValidation.error || 'Invalid email');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!passwordValidation.isValid) {
+        setError(passwordValidation.error || 'Invalid password');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!usernameValidation.isValid) {
+        setError(usernameValidation.error || 'Invalid username');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!nameValidation.isValid) {
+        setError(nameValidation.error || 'Invalid name');
+        setIsLoading(false);
+        return;
+      }
       
       const response = await client.post(AUTH.REGISTER, {
-        username,
-        email,
-        password,
-        name: name.trim() || username // Use name if provided, otherwise username
+        username: usernameValidation.sanitizedValue,
+        email: emailValidation.sanitizedValue,
+        password: passwordValidation.sanitizedValue,
+        name: nameValidation.sanitizedValue
       });
       
       const data = response.data;
       
-      console.log('Registration successful:', data);
+      logger.info('Registration successful', data, 'Register');
       
       // Show success message
       setSuccess('Registration successful! You can now log in.');

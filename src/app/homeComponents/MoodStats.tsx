@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { getTodaysMood } from '@/services/moodService';
 import type { MoodEntry } from '@/services/moodService';
 import { SkeletonWrapper, Skeleton } from '@/components/skeletons/SkeletonConfig';
+import { timeService } from '@/services/timeService';
 
 const MoodStats = () => {
   const [moodData, setMoodData] = useState<MoodEntry | null>(null);
@@ -15,6 +16,12 @@ const MoodStats = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        // Wait for time service to be ready before making API calls
+        if (!timeService.isReady()) {
+          return;
+        }
+        
         const todaysMood = await getTodaysMood();
         setMoodData(todaysMood);
       } catch (err) {
@@ -25,7 +32,19 @@ const MoodStats = () => {
       }
     };
 
+    // Initial load (will return early if time service not ready)
     loadTodaysMood();
+    
+    // Listen for time service ready state
+    const handleTimeReady = () => {
+      loadTodaysMood();
+    };
+    timeService.addEventListener(handleTimeReady);
+    
+    // Cleanup
+    return () => {
+      timeService.removeEventListener(handleTimeReady);
+    };
   }, []);
 
   // Listen for mood data cleared event

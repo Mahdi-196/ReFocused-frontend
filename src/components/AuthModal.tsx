@@ -7,6 +7,7 @@ import GoogleSignInButton from './GoogleSignInButton';
 import { avatarService } from '@/api/services/avatarService';
 import client from '@/api/client';
 import { AUTH } from '@/api/endpoints';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface AuthModalProps {
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'login' }) => {
+  const { login, register } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultTab);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -103,36 +105,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     setIsLoading(true);
 
     try {
-      const endpoint = activeTab === 'login' ? AUTH.LOGIN : AUTH.REGISTER;
-      const response = await client.post(endpoint, { ...formData, remember_me: rememberMe });
-      
-      const token = response.data.access_token;
-      
-      if (!token) {
-        throw new Error('No access token received from server');
+      if (activeTab === 'login') {
+        await login(formData.email, formData.password);
+      } else {
+        await register(formData.email, formData.password, formData.name);
       }
       
-      // Store token and set auth header
-      localStorage.setItem('REF_TOKEN', token);
-      client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      // Set a default Open Peeps avatar for new account
-      try {
-        const seed = (formData.name || formData.email).trim();
-        await avatarService.updateAvatar({
-          style: 'open-peeps',
-          seed,
-          options: { backgroundColor: 'transparent' }
-        });
-      } catch {}
-
-      // Close modal and reload to update auth state
-      try {
+      // Set a default Open Peeps avatar for new accounts
+      if (activeTab === 'register') {
+        try {
+          const seed = (formData.name || formData.email).trim();
+          await avatarService.updateAvatar({
+            style: 'open-peeps',
+            seed,
+            options: { backgroundColor: 'transparent' }
+          });
+        } catch {}
+        
         // Mark that we should show the tutorial right after signup
-        localStorage.setItem('REF_TUTORIAL_TRIGGER', 'signup');
-      } catch {}
+        try {
+          localStorage.setItem('REF_TUTORIAL_TRIGGER', 'signup');
+        } catch {}
+      }
+
+      // Close modal - the AuthContext will handle the redirect
       onClose();
-      window.location.reload();
     } catch (err: unknown) {
       console.error(`${activeTab} error:`, err);
       if (err instanceof Error) {

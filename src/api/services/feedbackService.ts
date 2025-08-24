@@ -28,17 +28,17 @@ export const feedbackService = {
     });
 
     if (res.status === 429) {
-      const header = (res.headers['retry-after'] as string) || (res.headers['Retry-After'] as unknown as string) || '60';
+      const header = (res.headers['retry-after'] as string) || (res.headers['Retry-After'] as string) || '60';
       const seconds = parseInt(header, 10);
-      const err: any = new Error('Rate limited');
+      const err = new Error('Rate limited') as Error & { status?: number; retryAfter?: number };
       err.status = 429;
       err.retryAfter = Number.isFinite(seconds) ? seconds : 60;
       throw err;
     }
 
     if (res.status < 200 || res.status >= 300) {
-      const detail = (res.data as any)?.message || (res.data as any)?.error || 'Feedback failed';
-      const err: any = new Error(detail);
+      const detail = (res.data as { message?: string; error?: string })?.message || (res.data as { message?: string; error?: string })?.error || 'Feedback failed';
+      const err = new Error(detail) as Error & { status?: number };
       err.status = res.status;
       throw err;
     }

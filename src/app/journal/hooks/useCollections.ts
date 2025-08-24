@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { v4 as uuidv4 } from "uuid";
+// UUID generation available if needed
 import journalService from "@/api/services/journalService";
 import { collectionTokens } from "@/api/client";
 import type { Entry, Collection, JournalApiError } from "../types";
