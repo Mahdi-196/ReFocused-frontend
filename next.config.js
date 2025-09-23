@@ -4,6 +4,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Export static files for S3 deployment
+  output: 'export',
+  distDir: 'out',
+  trailingSlash: true,
+
   // Performance optimizations
   experimental: {
     // Optimize package imports for better tree shaking

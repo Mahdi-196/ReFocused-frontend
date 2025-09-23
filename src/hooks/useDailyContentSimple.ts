@@ -213,33 +213,33 @@ export function useDailyContentSimple<T>(
 // Specific hooks for each content type
 export const useQuoteOfTheDaySimple = () => {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-  return useDailyContentSimple<QuoteResponse>('quote', `${base}/ai/quote-of-day`, { method: 'GET' });
+  return useDailyContentSimple<QuoteResponse>('quote', `${base}/v1/ai/quote-of-day`, { method: 'GET' });
 };
 
 export const useWordOfTheDaySimple = () => {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-  return useDailyContentSimple<WordResponse>('word', `${base}/ai/word-of-day`, { method: 'GET' });
+  return useDailyContentSimple<WordResponse>('word', `${base}/v1/ai/word-of-day`, { method: 'GET' });
 };
 
 export const useMindFuelSimple = () => {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-  return useDailyContentSimple<MindFuelResponse>('mindFuel', `${base}/ai/mind-fuel`, { method: 'GET' });
+  return useDailyContentSimple<MindFuelResponse>('mindFuel', `${base}/v1/ai/mind-fuel`, { method: 'GET' });
 };
 
 // Daily AI Assistance suggestions (cache per day)
 export const useAiAssistanceDaily = () => {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-  return useDailyContentSimple<AiSuggestionsResponse>('aiAssist', `${base}/ai/ai-suggestions`, { method: 'POST' });
+  return useDailyContentSimple<AiSuggestionsResponse>('aiAssist', `${base}/v1/ai/ai-suggestions`, { method: 'POST' });
 };
 
 // Daily Writing Prompts (cache per day)
 export const useWritingPromptsDaily = () => {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-  return useDailyContentSimple<WritingPromptsResponse>('writingPrompts', `${base}/ai/writing-prompts`, { method: 'POST' });
+  return useDailyContentSimple<WritingPromptsResponse>('writingPrompts', `${base}/v1/ai/writing-prompts`, { method: 'POST' });
 };
 
 // Weekly Theme (cache per day)
 export const useWeeklyTheme = () => {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
-  return useDailyContentSimple<any>('weeklyTheme', `${base}/ai/weekly-theme`, { method: 'POST', auth: 'required' });
+  return useDailyContentSimple<any>('weeklyTheme', `${base}/v1/ai/weekly-theme`, { method: 'POST', auth: 'required' });
 };

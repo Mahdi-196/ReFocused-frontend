@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getBackendUrl } from '@/config/environment';
 
+export const dynamic = 'force-static';
+
 export async function GET() {
   try {
     const response = await fetch(getBackendUrl('/quote-of-day'), {

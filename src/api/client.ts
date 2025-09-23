@@ -254,7 +254,7 @@ client.interceptors.response.use(
           if (!originalRequest._retry) {
             originalRequest._retry = true;
             // Use root-level refresh alias to ensure HttpOnly cookies are sent from the same origin
-            const refreshResp = await axios.post('/auth/refresh', {}, { withCredentials: true });
+            const refreshResp = await axios.post('/v1/auth/refresh', {}, { withCredentials: true });
             const newAccess = refreshResp.data?.access_token;
             if (newAccess) {
               localStorage.setItem('REF_TOKEN', newAccess);

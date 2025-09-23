@@ -52,7 +52,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'ai-assistance-books',
     name: 'AI Book Recommendations',
-    endpoint: `/api/claude-chat`,
+    endpoint: `/api/ai-chat`,
     method: 'POST',
     payload: {
       message: "Recommend 3 books about mindfulness, meditation, or personal growth that would help me develop a better meditation practice and reduce daily stress."
@@ -62,7 +62,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'ai-assistance-affirmations',
     name: 'AI Daily Affirmations',
-    endpoint: `/api/claude-chat`,
+    endpoint: `/api/ai-chat`,
     method: 'POST',
     payload: {
       message: "Create 5 personalized daily affirmations that will help me stay calm, focused, and positive throughout my day, especially during stressful moments."
@@ -72,7 +72,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'ai-assistance-meditation',
     name: 'AI Meditation Guidance',
-    endpoint: `/api/claude-chat`,
+    endpoint: `/api/ai-chat`,
     method: 'POST',
     payload: {
       message: "Guide me through a personalized 10-minute meditation session based on my current stress level and what I'm hoping to achieve from today's practice."
@@ -82,7 +82,7 @@ const TEST_CASES: TestCase[] = [
   {
     id: 'ai-assistance-stress-relief',
     name: 'AI Stress Relief',
-    endpoint: `/api/claude-chat`,
+    endpoint: `/api/ai-chat`,
     method: 'POST',
     payload: {
       message: "Suggest 5 quick stress relief techniques I can use during work breaks, including breathing exercises and mindfulness practices under 5 minutes."
