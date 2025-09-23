@@ -133,7 +133,7 @@ class TokenRefreshManager {
   private async silentRefresh(): Promise<void> {
     try {
       // Use root-level refresh alias so credentials flow correctly regardless of API base
-      const refreshResp = await axios.post('/auth/refresh', {}, { withCredentials: true });
+      const refreshResp = await axios.post('/v1/auth/refresh', {}, { withCredentials: true });
       const newAccess: string | undefined = refreshResp.data?.access_token;
       if (newAccess) {
         localStorage.setItem('REF_TOKEN', newAccess);

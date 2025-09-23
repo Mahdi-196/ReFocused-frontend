@@ -81,7 +81,7 @@ class ApiService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = typeof window !== 'undefined' ? localStorage.getItem('REF_TOKEN') : null;
 
-    const url = `${this.getBaseUrl()}/ai/${endpoint.replace(/^\//, '')}`;
+    const url = `${this.getBaseUrl()}/v1/ai/${endpoint.replace(/^\//, '')}`;
 
     const response = await fetch(url, {
       method: options.method || 'GET',
