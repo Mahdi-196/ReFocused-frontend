@@ -321,5 +321,45 @@ export const authService = {
    */
   clearUserCache() {
     cacheService.delete(CacheKeys.USER_PROFILE());
+  },
+
+  /**
+   * Development-only simplified registration (no validation needed)
+   */
+  async registerSimple(): Promise<AuthResponse> {
+    if (process.env.NODE_ENV !== 'development') {
+      throw new Error('This endpoint is only available in development mode');
+    }
+
+    try {
+      const response = await client.post<AuthResponse>('/api/v1/auth/register', {});
+      return response.data;
+    } catch (error: unknown) {
+      console.error('API Error [/api/v1/auth/register]:', error);
+      const errorMessage = error instanceof Error && 'response' in error
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Development registration failed. Please try again.'
+        : 'Development registration failed. Please try again.';
+      throw new Error(errorMessage);
+    }
+  },
+
+  /**
+   * Development-only simplified login (no validation needed)
+   */
+  async loginSimple(): Promise<AuthResponse> {
+    if (process.env.NODE_ENV !== 'development') {
+      throw new Error('This endpoint is only available in development mode');
+    }
+
+    try {
+      const response = await client.post<AuthResponse>('/api/v1/auth/login-simple', {});
+      return response.data;
+    } catch (error: unknown) {
+      console.error('API Error [/api/v1/auth/login-simple]:', error);
+      const errorMessage = error instanceof Error && 'response' in error
+        ? (error as {response?: {data?: {message?: string}}}).response?.data?.message || 'Development login failed. Please try again.'
+        : 'Development login failed. Please try again.';
+      throw new Error(errorMessage);
+    }
   }
 }; 
