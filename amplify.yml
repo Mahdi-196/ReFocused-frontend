@@ -1,0 +1,27 @@
+version: 1
+applications:
+  - frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            - echo "Building for branch $AWS_BRANCH"
+            - |
+              if [ "$AWS_BRANCH" = "dev" ] || [ "$AWS_BRANCH" = "dev-deploy" ]; then
+                echo "Development build configuration"
+                cp .env .env.production
+                echo "NEXT_PUBLIC_APP_ENV=development" >> .env.production
+                echo "NEXT_PUBLIC_ENABLE_DEBUG_LOGS=true" >> .env.production
+                echo "NEXT_PUBLIC_ENABLE_DEV_TOOLS=true" >> .env.production
+              fi
+            - npm run build
+      artifacts:
+        baseDirectory: out
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+          - .next/cache/**/*
