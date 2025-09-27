@@ -4,7 +4,7 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm ci
+            - yarn install --frozen-lockfile
         build:
           commands:
             - echo "Building for branch $AWS_BRANCH"
@@ -16,7 +16,7 @@ applications:
                 echo "NEXT_PUBLIC_ENABLE_DEBUG_LOGS=true" >> .env.production
                 echo "NEXT_PUBLIC_ENABLE_DEV_TOOLS=true" >> .env.production
               fi
-            - npm run build
+            - yarn build
       artifacts:
         baseDirectory: out
         files:
