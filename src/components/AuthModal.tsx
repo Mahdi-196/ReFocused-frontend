@@ -8,6 +8,7 @@ import { avatarService } from '@/api/services/avatarService';
 import client from '@/api/client';
 import { AUTH } from '@/api/endpoints';
 import { useAuth } from '@/contexts/AuthContext';
+import { authService } from '@/api/services/authService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -444,6 +445,100 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                   disabled={!acceptedTerms}
                 />
               </div>
+
+              {/* Development-only simplified auth buttons */}
+              {process.env.NODE_ENV === 'development' && (
+                <>
+                  <div className="my-6 flex items-center">
+                    <div className="flex-1 border-t border-yellow-600/30"></div>
+                    <span className="px-4 text-sm text-yellow-400">Development Only</span>
+                    <div className="flex-1 border-t border-yellow-600/30"></div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!acceptedTerms) {
+                          setError('Please accept the Terms of Service to continue.');
+                          return;
+                        }
+                        setError('');
+                        setIsLoading(true);
+                        try {
+                          const response = await authService.registerSimple();
+                          authService.saveAuthData(response);
+
+                          // Set a default avatar for new accounts
+                          try {
+                            await avatarService.updateAvatar({
+                              style: 'open-peeps',
+                              seed: 'test-user',
+                              options: { backgroundColor: 'transparent' }
+                            });
+                          } catch {}
+
+                          // Mark that we should show the tutorial
+                          try {
+                            localStorage.setItem('REF_TUTORIAL_TRIGGER', 'signup');
+                          } catch {}
+
+                          onClose();
+                          window.location.reload();
+                        } catch (err: unknown) {
+                          console.error('Dev register error:', err);
+                          if (err instanceof Error) {
+                            setError(err.message);
+                          } else {
+                            setError('Development registration failed. Please try again.');
+                          }
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                      disabled={isLoading || !acceptedTerms}
+                      className="w-full py-3 bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-semibold rounded-lg hover:shadow-[0_0_20px_rgba(255,165,0,0.4)] transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Creating Dev Account...' : '🚀 Quick Register (Dev)'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!acceptedTerms) {
+                          setError('Please accept the Terms of Service to continue.');
+                          return;
+                        }
+                        setError('');
+                        setIsLoading(true);
+                        try {
+                          const response = await authService.loginSimple();
+                          authService.saveAuthData(response);
+                          onClose();
+                          window.location.reload();
+                        } catch (err: unknown) {
+                          console.error('Dev login error:', err);
+                          if (err instanceof Error) {
+                            setError(err.message);
+                          } else {
+                            setError('Development login failed. Please try again.');
+                          }
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                      disabled={isLoading || !acceptedTerms}
+                      className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Signing In...' : '⚡ Quick Login (Dev)'}
+                    </button>
+
+                    <div className="text-xs text-yellow-400/70 text-center">
+                      No validation required • Rate limiting disabled • ~0.003s response time
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         </motion.div>
