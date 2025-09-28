@@ -4,6 +4,7 @@ applications:
       phases:
         preBuild:
           commands:
+            - corepack enable
             - yarn install --frozen-lockfile
         build:
           commands:
