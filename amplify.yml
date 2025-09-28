@@ -18,6 +18,11 @@ applications:
                 echo "NEXT_PUBLIC_ENABLE_DEV_TOOLS=true" >> .env.production
               fi
             - yarn build
+        postBuild:
+          commands:
+            - echo "Static export build completed - creating required files for Amplify"
+            - echo '{"version":3,"files":{},"ignore":[]}' > out/required-server-files.json
+            - echo "Created required-server-files.json for static export compatibility"
       artifacts:
         baseDirectory: out
         files:
