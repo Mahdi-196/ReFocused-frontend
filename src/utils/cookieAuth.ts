@@ -54,7 +54,8 @@ export class CookieAuthManager {
   async clearAuthCookies(): Promise<void> {
     try {
       // Call logout endpoint to clear HTTP-only cookies
-      const response = await fetch('/api/v1/auth/logout', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const response = await fetch(`${baseUrl}/v1/auth/logout`, {
         method: 'POST',
         credentials: 'include', // Important: include cookies in request
         headers: {
@@ -86,7 +87,8 @@ export class CookieAuthManager {
    */
   async getCurrentUser(): Promise<any> {
     try {
-      const response = await fetch('/api/v1/auth/me', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const response = await fetch(`${baseUrl}/v1/auth/me`, {
         method: 'GET',
         credentials: 'include', // Include HTTP-only cookies
         headers: {
@@ -144,7 +146,8 @@ export class CookieAuthManager {
 
     try {
       // Send existing token to backend for validation and cookie setup
-      const response = await fetch('/api/v1/auth/migrate-to-cookies', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const response = await fetch(`${baseUrl}/v1/auth/migrate-to-cookies`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -173,7 +176,8 @@ export class CookieAuthManager {
    */
   async checkCookieAuthSupport(): Promise<boolean> {
     try {
-      const response = await fetch('/api/v1/auth/cookie-support', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const response = await fetch(`${baseUrl}/v1/auth/cookie-support`, {
         method: 'GET',
         credentials: 'include',
       });
