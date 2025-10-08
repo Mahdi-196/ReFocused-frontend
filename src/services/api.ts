@@ -85,6 +85,7 @@ class ApiService {
 
     const response = await fetch(url, {
       method: options.method || 'GET',
+      credentials: 'include', // Send cookies with cross-origin requests
       ...options,
       headers: {
         'Content-Type': 'application/json',
