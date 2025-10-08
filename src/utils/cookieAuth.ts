@@ -135,56 +135,30 @@ export class CookieAuthManager {
 
   /**
    * Migrate from localStorage to cookie-based auth
-   * This method helps transition existing users
+   * Note: Backend now sets cookies automatically on login/register,
+   * so no explicit migration endpoint is needed.
    */
   async migrateFromLocalStorage(): Promise<boolean> {
     const existingToken = localStorage.getItem('REF_TOKEN');
-    
+
     if (!existingToken) {
       return false; // Nothing to migrate
     }
 
-    try {
-      // Send existing token to backend for validation and cookie setup
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-      const response = await fetch(`${baseUrl}/v1/auth/migrate-to-cookies`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${existingToken}`,
-        },
-      });
-
-      if (response.ok) {
-        // Migration successful, clear localStorage
-        this.clearLocalFallbackData();
-        console.log('Successfully migrated to cookie-based authentication');
-        return true;
-      } else {
-        console.warn('Failed to migrate to cookie-based auth:', response.status);
-        return false;
-      }
-    } catch (error) {
-      console.error('Error during migration to cookie auth:', error);
-      return false;
-    }
+    // Backend automatically sets cookies on successful authentication
+    // No migration endpoint needed - cookies are set on login/register
+    console.log('Cookie-based auth is enabled automatically on login/register');
+    return false; // Return false to use normal auth flow
   }
 
   /**
    * Check if backend supports cookie-based auth
+   * Note: Backend now supports cookies by default on all auth endpoints
    */
   async checkCookieAuthSupport(): Promise<boolean> {
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-      const response = await fetch(`${baseUrl}/v1/auth/cookie-support`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      return response.ok;
-    } catch {
-      return false;
-    }
+    // Backend supports cookies on all authentication endpoints by default
+    // No need to check a dedicated endpoint
+    return true;
   }
 }
 

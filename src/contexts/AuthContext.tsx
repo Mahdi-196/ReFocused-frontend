@@ -50,50 +50,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Initialize authentication system with cookie migration
+  // Initialize authentication system with cookie support
   const initializeAuthSystem = async () => {
     setIsLoading(true);
-    
+
     try {
-      // Check if backend supports cookie-based authentication
-      const supportsCookies = await cookieAuth.checkCookieAuthSupport();
-      
-      if (supportsCookies) {
-        logger.info('Backend supports cookie authentication, attempting migration', undefined, 'AuthContext');
-        
-        // Try to migrate from localStorage to cookies
-        const migrationSuccessful = await cookieAuth.migrateFromLocalStorage();
-        
-        if (migrationSuccessful) {
-          logger.info('Successfully migrated to cookie-based authentication', undefined, 'AuthContext');
-          
-          // Get user from server using cookies
-          const currentUser = await cookieAuth.getCurrentUser();
-          if (currentUser) {
-            setUser(currentUser);
-            setIsAuthenticated(true);
-            timeService.setAuthenticationStatus(true);
-            return;
-          }
-        } else {
-          // Migration failed or no localStorage token, try cookie auth anyway
-          const currentUser = await cookieAuth.getCurrentUser();
-          if (currentUser) {
-            setUser(currentUser);
-            setIsAuthenticated(true);
-            timeService.setAuthenticationStatus(true);
-            return;
-          }
-        }
+      // Backend now sets cookies automatically on login/register
+      // First try cookie-based auth by checking with the server
+      const currentUser = await cookieAuth.getCurrentUser();
+
+      if (currentUser) {
+        // Cookie authentication successful
+        logger.info('Cookie-based authentication successful', undefined, 'AuthContext');
+        setUser(currentUser);
+        setIsAuthenticated(true);
+        timeService.setAuthenticationStatus(true);
+
+        // Start token monitoring
+        tokenRefreshManager.startMonitoring();
+      } else {
+        // No cookie session, fall back to localStorage check
+        logger.info('No cookie session found, checking localStorage', undefined, 'AuthContext');
+        await checkAuthStatus();
       }
-      
-      // Fallback to localStorage-based authentication
-      logger.info('Using localStorage-based authentication', undefined, 'AuthContext');
-      await checkAuthStatus();
-      
+
     } catch (error) {
       logger.error('Error initializing auth system', error, 'AuthContext');
-      // Fallback to original auth check
+      // Fallback to localStorage-based auth check
       await checkAuthStatus();
     } finally {
       setIsLoading(false);
