@@ -114,19 +114,19 @@ export const useContentCache = () => {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
   const refreshContent = {
     quote: async () => {
-      return fetch(`${base}/v1/ai/quote-of-day`, { method: 'GET' }).then(res => res.json());
+      return fetch(`${base}/v1/ai/quote-of-day`, { method: 'GET', credentials: 'include' }).then(res => res.json());
     },
     word: async () => {
-      return fetch(`${base}/v1/ai/word-of-day`, { method: 'GET' }).then(res => res.json());
+      return fetch(`${base}/v1/ai/word-of-day`, { method: 'GET', credentials: 'include' }).then(res => res.json());
     },
     mindFuel: async () => {
-      return fetch(`${base}/v1/ai/mind-fuel`, { method: 'GET' }).then(res => res.json());
+      return fetch(`${base}/v1/ai/mind-fuel`, { method: 'GET', credentials: 'include' }).then(res => res.json());
     },
     all: async () => {
       await Promise.all([
-        fetch(`${base}/v1/ai/quote-of-day`, { method: 'GET' }),
-        fetch(`${base}/v1/ai/word-of-day`, { method: 'GET' }),
-        fetch(`${base}/v1/ai/mind-fuel`, { method: 'GET' })
+        fetch(`${base}/v1/ai/quote-of-day`, { method: 'GET', credentials: 'include' }),
+        fetch(`${base}/v1/ai/word-of-day`, { method: 'GET', credentials: 'include' }),
+        fetch(`${base}/v1/ai/mind-fuel`, { method: 'GET', credentials: 'include' })
       ]);
     }
   };

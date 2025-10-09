@@ -118,6 +118,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({ habitId, habitName }
       }
       const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/v1/habits/${habitId}/complete`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${getToken()}`
