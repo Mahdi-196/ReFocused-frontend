@@ -231,7 +231,7 @@ export class TimeService implements ITimeService {
       const timeoutId = setTimeout(() => controller.abort(), this.SYNC_TIMEOUT_MS);
 
       logger.debug('📡 Making request to /time/current...', undefined, 'TIME_SERVICE');
-      const response = await client.get('/time/current', {
+      const response = await client.get('/v1/time/current', {
         signal: controller.signal
       });
 
@@ -432,7 +432,7 @@ export class TimeService implements ITimeService {
    */
   async getWeekInfo(): Promise<WeekInfo | null> {
     try {
-      const response = await client.get('/time/week-info');
+      const response = await client.get('/v1/time/week-info');
       return response.data;
     } catch (error) {
       logger.error('Failed to get week info', error, 'TIME_SERVICE');
@@ -460,7 +460,7 @@ export class TimeService implements ITimeService {
         confidence: 'high'
       };
 
-      const response = await client.post('/time/detect', detectionRequest);
+      const response = await client.post('/v1/time/detect', detectionRequest);
 
       if (response.status === 200) {
         logger.info('✅ Timezone auto-detected', { timezone: detectedTimezone }, 'TIME_SERVICE');
@@ -485,7 +485,7 @@ export class TimeService implements ITimeService {
         method: 'manual'
       };
 
-      const response = await client.post('/time/timezone', updateRequest);
+      const response = await client.post('/v1/time/timezone', updateRequest);
 
       if (response.status === 200) {
         logger.info('✅ Timezone updated manually', { timezone }, 'TIME_SERVICE');
@@ -505,7 +505,7 @@ export class TimeService implements ITimeService {
    */
   async getAvailableTimezones(): Promise<TimezoneInfo[]> {
     try {
-      const response = await client.get('/time/timezones');
+      const response = await client.get('/v1/time/timezones');
       return response.data;
     } catch (error) {
       logger.error('Failed to get timezones', error, 'TIME_SERVICE');
@@ -523,7 +523,7 @@ export class TimeService implements ITimeService {
         frontend_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       };
 
-      const response = await client.post('/time/sync-check', syncRequest);
+      const response = await client.post('/v1/time/sync-check', syncRequest);
       const syncData: TimeSyncCheck = response.data;
 
       if (!syncData.is_synchronized) {
@@ -547,11 +547,11 @@ export class TimeService implements ITimeService {
       if (isoDateTime === null) {
         // Reset to real time
         logger.info('🔄 Resetting to real time...', undefined, 'TIME_SERVICE');
-        await client.post('/time/debug/reset-date');
+        await client.post('/v1/time/debug/reset-date');
       } else {
         // Set mock date
         logger.info('🕰️ Setting mock date...', { isoDateTime }, 'TIME_SERVICE');
-        await client.post('/time/debug/set-date', {
+        await client.post('/v1/time/debug/set-date', {
           new_datetime: isoDateTime
         });
       }

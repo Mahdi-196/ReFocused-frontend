@@ -44,11 +44,11 @@ export async function getMoodEntries(startDate: string, endDate: string): Promis
     }
 
     console.log('🔄 Fetching mood entries from API:', { startDate, endDate });
-    
+
     // Get user timezone for header
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    const response = await client.get('/mood/entries', {
+
+    const response = await client.get('/v1/mood/entries', {
       params: { 
         start_date: startDate,  // Use snake_case to match backend
         end_date: endDate 
@@ -161,7 +161,7 @@ export async function saveMoodEntry(moodEntry: MoodEntry): Promise<MoodEntry> {
     };
     
     // Use the new endpoint /api/v1/mood/today
-    const response = await client.post('/mood/today', payload);
+    const response = await client.post('/v1/mood/today', payload);
     
     const savedEntry = response.data;
     
@@ -329,7 +329,7 @@ export async function saveMoodRating(ratings: {
   
   // Use the /mood/today endpoint which doesn't require date field
   try {
-    const response = await client.post('/mood/today', {
+    const response = await client.post('/v1/mood/today', {
       happiness,
       focus,
       stress

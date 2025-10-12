@@ -74,7 +74,7 @@ export async function getDailyEntries(month: string): Promise<{[key: string]: Da
     }
 
     console.log('🔄 Fetching dashboard entries from API for month:', month);
-    const response = await client.get(`/dashboard/entries?month=${month}`);
+    const response = await client.get(`/v1/dashboard/entries?month=${month}`);
     
     const entries = response.data || {};
     
@@ -104,7 +104,7 @@ export async function getDailyEntry(date: string): Promise<DailyEntry | null> {
     }
 
     // Fetch from API
-    const response = await client.get(`/dashboard/entries/${date}`);
+    const response = await client.get(`/v1/dashboard/entries/${date}`);
     
     const entry = response.data;
     
@@ -125,7 +125,7 @@ export async function getDailyEntry(date: string): Promise<DailyEntry | null> {
  */
 export async function saveDailyEntry(entry: DailyEntry): Promise<DailyEntry> {
   try {
-    const response = await client.post('/dashboard/entries', entry);
+    const response = await client.post('/v1/dashboard/entries', entry);
     
     const savedEntry = response.data;
     
@@ -150,7 +150,7 @@ export async function saveDailyEntry(entry: DailyEntry): Promise<DailyEntry> {
  */
 export async function updateDailyEntry(date: string, updates: Partial<DailyEntry>): Promise<DailyEntry> {
   try {
-    const response = await client.put(`/dashboard/entries/${date}`, updates);
+    const response = await client.put(`/v1/dashboard/entries/${date}`, updates);
     
     const updatedEntry = response.data;
     
@@ -184,7 +184,7 @@ export async function getDashboardStats(startDate: string, endDate: string): Pro
     }
 
     // Fetch from API
-    const response = await client.get('/dashboard/stats', {
+    const response = await client.get('/v1/dashboard/stats', {
       params: { startDate, endDate }
     });
     
@@ -230,7 +230,7 @@ export async function getWeeklyData(weeks: number = 4): Promise<WeeklyData[]> {
     }
 
     // Fetch from API
-    const response = await client.get('/dashboard/weekly', {
+    const response = await client.get('/v1/dashboard/weekly', {
       params: { weeks }
     });
     
@@ -262,7 +262,7 @@ export async function getMonthlyData(months: number = 6): Promise<MonthlyData[]>
     }
 
     // Fetch from API
-    const response = await client.get('/dashboard/monthly', {
+    const response = await client.get('/v1/dashboard/monthly', {
       params: { months }
     });
     

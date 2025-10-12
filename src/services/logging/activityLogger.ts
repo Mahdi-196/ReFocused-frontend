@@ -206,7 +206,7 @@ class ActivityLogger {
     activityBreakdown: { [key: string]: number };
   }> {
     try {
-      const response = await client.get('/activity/summary', {
+      const response = await client.get('/v1/activity/summary', {
         params: { start_date: startDate, end_date: endDate }
       });
 
@@ -253,7 +253,7 @@ class ActivityLogger {
         this.batchTimeout = null;
       }
 
-      await client.post('/activity/batch', { activities: logsToSend });
+      await client.post('/v1/activity/batch', { activities: logsToSend });
       
       console.log(`📊 Sent ${logsToSend.length} activity logs to server`);
     } catch (error) {
