@@ -30,11 +30,12 @@ const TextEditor: React.FC<Props> = ({
   useEffect(() => {
     if (!isMounted || !editorRef.current || quillRef.current) return;
 
+    // Always initialize with toolbar enabled - we'll control editability with readOnly
     quillRef.current = new Quill(editorRef.current, {
       theme: "snow",
       readOnly: disabled,
       modules: {
-        toolbar: disabled ? false : [
+        toolbar: [
           [{ header: [1, 2, 3, false] }],
           ["bold", "italic", "underline", "strike"],
           [{ list: "ordered" }, { list: "bullet" }],
@@ -49,7 +50,7 @@ const TextEditor: React.FC<Props> = ({
       if (quillRef.current) {
         const html = quillRef.current.root.innerHTML;
         const text = quillRef.current.getText();
-        
+
         // ✅ Word and character count logic
         const wordCount = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
         const charCount = text.length;
@@ -105,6 +106,12 @@ const TextEditor: React.FC<Props> = ({
             border-top-left-radius: 0; /* square corners per request */
             border-top-right-radius: 0; /* square corners per request */
             box-shadow: none;
+          }
+
+          /* Disable toolbar when editor is readonly */
+          .ql-container.ql-disabled ~ .ql-toolbar.ql-snow {
+            pointer-events: none;
+            opacity: 0.5;
           }
 
           .ql-container.ql-snow {
