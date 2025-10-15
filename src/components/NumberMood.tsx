@@ -83,10 +83,17 @@ export default function NumberMood() {
     try {
       setError(null);
 
-      await saveMoodRating({
+      const savedMood = await saveMoodRating({
         happiness: moodRatings.happiness,
         focus: moodRatings.focus,
         stress: moodRatings.stress
+      });
+
+      // Update local state with the saved data from the server
+      setMoodRatings({
+        happiness: savedMood.happiness || null,
+        focus: savedMood.focus || null,
+        stress: savedMood.stress || null
       });
     } catch (err) {
       console.error('Failed to save mood ratings:', err);

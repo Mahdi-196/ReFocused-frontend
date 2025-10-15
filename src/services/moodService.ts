@@ -334,16 +334,26 @@ export async function saveMoodRating(ratings: {
       focus,
       stress
     });
-    
-    return response.data;
+
+    const savedEntry = response.data;
+
+    // Invalidate cache to ensure fresh data on next fetch
+    const today = timeService.getCurrentDate();
+    cacheService.invalidateByPattern(`${MOOD_CACHE_PREFIX}_entries_*`);
+    cacheService.invalidate(`${MOOD_CACHE_PREFIX}_entry_${today}`);
+
+    // Cache the new entry
+    cacheService.set(`${MOOD_CACHE_PREFIX}_entry_${today}`, savedEntry, MOOD_CACHE_TTL);
+
+    return savedEntry;
   } catch (error: any) {
     console.error('❌ [MOOD] Failed to save mood rating:', error);
-    
+
     // Log the full error response for debugging
     if (error.response?.data) {
       console.error('📝 [MOOD] API Error Details:', JSON.stringify(error.response.data, null, 2));
     }
-    
+
     throw error;
   }
 }
