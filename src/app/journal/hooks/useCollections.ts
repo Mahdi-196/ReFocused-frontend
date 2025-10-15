@@ -248,15 +248,20 @@ export function useCollections() {
       
       // Check if this is an update (entry has a valid ID and exists in collection)
       const hasValidId = entry.id && (typeof entry.id === 'string' ? entry.id.trim() !== "" : entry.id !== null && entry.id !== undefined);
-      const existingEntry = hasValidId ? collection.entries.find(e => e.id === entry.id) : null;
-      
-      console.log('🔍 [AUTOSAVE DEBUG] Entry detection:', {
+      // Normalize IDs to strings for comparison
+      const normalizedEntryId = entry.id ? String(entry.id) : null;
+      const existingEntry = hasValidId ? collection.entries.find(e => String(e.id) === normalizedEntryId) : null;
+
+      console.log('🔍 [JOURNAL SAVE] Entry detection:', {
         entryId: entry.id,
+        entryIdType: typeof entry.id,
+        normalizedEntryId,
         hasValidId,
         collectionEntriesCount: collection.entries.length,
-        collectionEntryIds: collection.entries.map(e => e.id),
+        collectionEntryIds: collection.entries.map(e => ({ id: e.id, type: typeof e.id })),
         existingEntryFound: !!existingEntry,
-        isUpdate: hasValidId && existingEntry
+        existingEntryId: existingEntry?.id,
+        isUpdate: hasValidId && !!existingEntry
       });
       
       if (hasValidId && existingEntry) {
@@ -313,21 +318,22 @@ export function useCollections() {
             ? {
                 ...col,
                 entries: existingEntry
-                  ? col.entries.map(e => e.id === entry.id ? savedEntry : e)
+                  ? col.entries.map(e => String(e.id) === String(savedEntry.id) ? savedEntry : e)
                   : [...col.entries, savedEntry],
                 entry_count: (col.entry_count || 0) + (existingEntry ? 0 : 1),
                 entryCount: (col.entryCount || 0) + (existingEntry ? 0 : 1),
               }
             : col
         );
-        
-        console.log('🔍 [AUTOSAVE DEBUG] Local state updated:', {
+
+        console.log('🔍 [JOURNAL SAVE] Local state updated:', {
           collectionId,
           wasUpdate: !!existingEntry,
+          savedEntryId: savedEntry.id,
           newEntryCount: updated.find(c => c.id.toString() === collectionId)?.entries.length,
           allEntryIds: updated.find(c => c.id.toString() === collectionId)?.entries.map(e => e.id)
         });
-        
+
         return updated;
       });
       
