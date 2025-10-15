@@ -30,7 +30,7 @@ interface NetworkProviderProps {
 
 export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) => {
   const networkMonitor = useNetworkMonitor({
-    failureThreshold: 3,
+    failureThreshold: 10,
     retryDelay: 10000, // Check every 10 seconds when disconnected
     enableAutoCheck: true
   });
