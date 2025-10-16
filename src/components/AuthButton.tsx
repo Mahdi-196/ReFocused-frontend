@@ -213,11 +213,6 @@ const AuthButton = () => {
   }, []);
 
   const openAuthModal = () => {
-    const legalRoutes = ['/privacy', '/terms', '/cookies', '/data-protection', '/legal'];
-    if (legalRoutes.includes(pathname || '')) {
-      router.push('/');
-      return;
-    }
     setIsAuthModalOpen(true);
   };
 
