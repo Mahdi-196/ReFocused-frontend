@@ -9,6 +9,7 @@ import client from '@/api/client';
 import { AUTH } from '@/api/endpoints';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/api/services/authService';
+import LegalModal from './LegalModal';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
   const [rememberMe, setRememberMe] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const MIN_PASSWORD_LENGTH = 5;
 
@@ -402,9 +404,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                     </span>
                     <span className="text-sm text-gray-300 hover:text-white transition-colors">
                       I agree to the{' '}
-                      <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">Terms of Service</a>{' '}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); setIsLegalModalOpen(true); }}
+                        className="text-blue-400 hover:text-blue-300 underline"
+                      >
+                        Terms of Service
+                      </button>{' '}
                       and{' '}
-                      <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">Privacy Policy</a>, and I want to stay signed in.
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); setIsLegalModalOpen(true); }}
+                        className="text-blue-400 hover:text-blue-300 underline"
+                      >
+                        Privacy Policy
+                      </button>, and I want to stay signed in.
                     </span>
                   </label>
                 </div>
@@ -541,6 +555,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
               )}
             </div>
           </motion.div>
+
+          {/* Legal Modal */}
+          <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} />
         </motion.div>
       )}
     </AnimatePresence>
