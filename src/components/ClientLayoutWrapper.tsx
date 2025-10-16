@@ -32,7 +32,8 @@ export default function ClientLayoutWrapper({
   const [isLoading, setIsLoading] = useState(true);
   const isLandingPage = pathname === '/';
   const isProfilePage = pathname === '/profile';
-  const shouldShowFooter = isLandingPage || isProfilePage;
+  const isLegalPage = ['/privacy', '/terms', '/cookies', '/data-protection', '/legal'].includes(pathname || '');
+  const shouldShowFooter = isLandingPage || isProfilePage || isLegalPage;
   const publicRoutes = ['/', '/privacy', '/terms', '/cookies', '/data-protection', '/legal', '/console-test'];
   const isPublicRoute = publicRoutes.includes(pathname || '/');
 
