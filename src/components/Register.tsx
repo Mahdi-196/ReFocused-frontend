@@ -5,6 +5,7 @@ import client from '@/api/client';
 import { AUTH } from '@/api/endpoints';
 import { validateEmail, validatePassword, validateText } from '@/utils/validation';
 import { logger } from '@/utils/logger';
+import LegalModal from './LegalModal';
 
 interface RegisterProps {
   onRegisterSuccess?: () => void;
@@ -18,6 +19,7 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,6 +241,27 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
           {isLoading ? 'Creating Account...' : 'Register'}
         </button>
       </form>
+
+      {/* Legal Links */}
+      <div className="mt-4 text-center text-xs text-gray-500">
+        By registering, you agree to our{' '}
+        <button
+          onClick={() => setIsLegalModalOpen(true)}
+          className="text-blue-600 hover:underline"
+        >
+          Terms of Service
+        </button>
+        {' '}and{' '}
+        <button
+          onClick={() => setIsLegalModalOpen(true)}
+          className="text-blue-600 hover:underline"
+        >
+          Privacy Policy
+        </button>
+      </div>
+
+      {/* Legal Modal */}
+      <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} />
     </div>
   );
 };
