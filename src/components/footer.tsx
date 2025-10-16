@@ -4,11 +4,16 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Mail, ArrowUp, Heart, Send } from "./icons";
 import { emailSubscriptionService } from "@/api/services/emailSubscriptionService";
+import LegalModal from "./LegalModal";
+import { usePathname } from "next/navigation";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const pathname = usePathname();
+  const isLandingPage = pathname === '/';
 
   useEffect(() => {
     // Component initialization
@@ -35,12 +40,17 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const legalLinks = [
-    { name: "Privacy Policy", href: "/privacy" },
-    { name: "Terms of Service", href: "/terms" },
-    { name: "Cookie Policy", href: "/cookies" },
-    { name: "Data Protection", href: "/data-protection" },
-  ];
+  const legalLinks = isLandingPage
+    ? [
+        { name: "Privacy Policy", onClick: () => setIsLegalModalOpen(true) },
+        { name: "Terms of Service", onClick: () => setIsLegalModalOpen(true) },
+      ]
+    : [
+        { name: "Privacy Policy", href: "/privacy" },
+        { name: "Terms of Service", href: "/terms" },
+        { name: "Cookie Policy", href: "/cookies" },
+        { name: "Data Protection", href: "/data-protection" },
+      ];
 
   return (
     <footer className="bg-[#0F1419] border-t border-gray-800" suppressHydrationWarning>
@@ -136,13 +146,23 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex flex-wrap justify-center md:justify-start gap-6">
               {legalLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
-                >
-                  {link.name}
-                </Link>
+                'href' in link ? (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
+                  >
+                    {link.name}
+                  </Link>
+                ) : (
+                  <button
+                    key={link.name}
+                    onClick={link.onClick}
+                    className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
+                  >
+                    {link.name}
+                  </button>
+                )
               ))}
             </div>
 
@@ -154,6 +174,9 @@ const Footer = () => {
           </div>
         </div>
       </div>
+
+      {/* Legal Modal */}
+      <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} />
     </footer>
   );
 };

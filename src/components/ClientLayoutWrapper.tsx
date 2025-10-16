@@ -32,21 +32,9 @@ export default function ClientLayoutWrapper({
   const [isLoading, setIsLoading] = useState(true);
   const isLandingPage = pathname === '/';
   const isProfilePage = pathname === '/profile';
-  const isLegalPage = ['/privacy', '/terms', '/cookies', '/data-protection', '/legal'].includes(pathname || '');
-  const shouldShowFooter = isLandingPage || isProfilePage || isLegalPage;
+  const shouldShowFooter = isLandingPage || isProfilePage;
   const publicRoutes = ['/', '/privacy', '/terms', '/cookies', '/data-protection', '/legal', '/console-test'];
   const isPublicRoute = publicRoutes.includes(pathname || '/');
-
-  // Debug logging for route access
-  useEffect(() => {
-    console.log('🔍 [ROUTE DEBUG]', {
-      pathname,
-      isPublicRoute,
-      isAuthenticated,
-      isLoading,
-      shouldRedirect: !isLoading && !isAuthenticated && !isPublicRoute
-    });
-  }, [pathname, isPublicRoute, isAuthenticated, isLoading]);
 
   // Check authentication status
   useEffect(() => {
