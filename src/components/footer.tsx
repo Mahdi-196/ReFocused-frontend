@@ -141,7 +141,7 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex flex-wrap justify-center md:justify-start gap-6">
               {legalLinks.map((link) => (
-                'href' in link ? (
+                'href' in link && link.href ? (
                   <Link
                     key={link.name}
                     href={link.href}
@@ -149,7 +149,7 @@ const Footer = () => {
                   >
                     {link.name}
                   </Link>
-                ) : (
+                ) : 'onClick' in link ? (
                   <button
                     key={link.name}
                     onClick={link.onClick}
@@ -157,7 +157,7 @@ const Footer = () => {
                   >
                     {link.name}
                   </button>
-                )
+                ) : null
               ))}
             </div>
 
