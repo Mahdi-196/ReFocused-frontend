@@ -14,8 +14,14 @@ const LegalModal: React.FC<LegalModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-[#1A2537] rounded-2xl shadow-2xl border border-gray-700/50 flex flex-col mx-4">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-4xl max-h-[90vh] bg-[#1A2537] rounded-2xl shadow-2xl border border-gray-700/50 flex flex-col mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700/50">
           <div className="flex gap-4">

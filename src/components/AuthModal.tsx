@@ -40,6 +40,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
       setFormData({ email: '', password: '', name: '' });
       setError('');
       setShowPassword(false);
+    } else {
+      // Close legal modal when auth modal closes
+      setIsLegalModalOpen(false);
     }
   }, [isOpen]); // Removed activeTab dependency to prevent re-renders during animation
 
