@@ -53,28 +53,15 @@ export const validatePassword = (password: string): ValidationResult => {
   if (!password) {
     return { isValid: false, error: 'Password is required' };
   }
-  
+
   if (password.length < 8) {
-    return { isValid: false, error: 'Password must be at least 8 characters long' };
+    return { isValid: false, error: 'Password is too short. Must be at least 8 characters.' };
   }
-  
+
   if (password.length > 128) {
-    return { isValid: false, error: 'Password too long' };
+    return { isValid: false, error: 'Password is too long. Maximum 128 characters.' };
   }
-  
-  // Check for at least one uppercase, lowercase, number, and special character
-  const hasUpper = /[A-Z]/.test(password);
-  const hasLower = /[a-z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-  
-  if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-    return { 
-      isValid: false, 
-      error: 'Password must contain at least one uppercase letter, lowercase letter, number, and special character' 
-    };
-  }
-  
+
   return { isValid: true, sanitizedValue: password };
 };
 

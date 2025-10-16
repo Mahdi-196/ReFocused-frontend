@@ -82,15 +82,57 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
       }
     } catch (err: unknown) {
       console.error('Registration error:', err);
-      
+
       // Handle different error types
-      const error = err as { name?: string; message?: string; response?: { data?: { message?: string } } };
+      const error = err as {
+        name?: string;
+        message?: string;
+        response?: {
+          status?: number;
+          data?: {
+            message?: string;
+            detail?: string;
+            error?: string;
+          }
+        }
+      };
+
+      // Network errors
       if (error.name === 'AbortError') {
-        setError('Network error: Request timed out. Please try again later.');
+        setError('Request timed out. Please check your connection and try again.');
       } else if (error.message === 'Network Error' || error.name === 'TypeError') {
-        setError('Network error: Unable to connect to the server. Please check your connection or try again later.');
-      } else {
-        setError(error.response?.data?.message || error.message || 'Failed to register. Please try again with different credentials.');
+        setError('Unable to connect to the server. Please check your internet connection.');
+      }
+      // Backend validation errors
+      else if (error.response?.status === 400) {
+        const backendMessage = error.response.data?.message || error.response.data?.detail || error.response.data?.error;
+
+        // Check for specific error messages
+        if (backendMessage?.toLowerCase().includes('email') && backendMessage?.toLowerCase().includes('already')) {
+          setError('This email is already registered. Please use a different email or try logging in.');
+        } else if (backendMessage?.toLowerCase().includes('username') && backendMessage?.toLowerCase().includes('already')) {
+          setError('This username is already taken. Please choose a different username.');
+        } else if (backendMessage?.toLowerCase().includes('password')) {
+          setError(backendMessage);
+        } else {
+          setError(backendMessage || 'Invalid registration details. Please check your information and try again.');
+        }
+      }
+      // Conflict errors (duplicate entries)
+      else if (error.response?.status === 409) {
+        const backendMessage = error.response.data?.message || error.response.data?.detail;
+        if (backendMessage?.toLowerCase().includes('email')) {
+          setError('This email is already registered. Please use a different email or try logging in.');
+        } else if (backendMessage?.toLowerCase().includes('username')) {
+          setError('This username is already taken. Please choose a different username.');
+        } else {
+          setError('An account with these details already exists. Please try different credentials.');
+        }
+      }
+      // Other errors
+      else {
+        const backendMessage = error.response?.data?.message || error.response?.data?.detail || error.response?.data?.error;
+        setError(backendMessage || error.message || 'Registration failed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -168,8 +210,8 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
         </div>
         
         <div className="mb-6">
-          <label 
-            htmlFor="password" 
+          <label
+            htmlFor="password"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
             Password
@@ -180,10 +222,13 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Create a password"
+            placeholder="At least 8 characters"
             required
-            minLength={6}
+            minLength={8}
           />
+          <p className="mt-1 text-xs text-gray-500">
+            Must be at least 8 characters long
+          </p>
         </div>
         
         <button
