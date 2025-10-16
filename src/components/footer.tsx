@@ -40,17 +40,12 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const legalLinks = isLandingPage
-    ? [
-        { name: "Privacy Policy", onClick: () => setIsLegalModalOpen(true) },
-        { name: "Terms of Service", onClick: () => setIsLegalModalOpen(true) },
-      ]
-    : [
-        { name: "Privacy Policy", href: "/privacy" },
-        { name: "Terms of Service", href: "/terms" },
-        { name: "Cookie Policy", href: "/cookies" },
-        { name: "Data Protection", href: "/data-protection" },
-      ];
+  const legalLinks = [
+    { name: "Privacy Policy", onClick: () => setIsLegalModalOpen(true) },
+    { name: "Terms of Service", onClick: () => setIsLegalModalOpen(true) },
+    { name: "Cookie Policy", href: "/cookies" },
+    { name: "Data Protection", href: "/data-protection" },
+  ];
 
   return (
     <footer className="bg-[#0F1419] border-t border-gray-800" suppressHydrationWarning>
