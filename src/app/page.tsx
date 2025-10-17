@@ -177,7 +177,7 @@ export default function HomePage() {
                 <FiCheckCircle className="w-6 h-6 text-[#42b9e5]" />
               </div>
               <div className="text-left">
-                <h3 className="text-white font-semibold mb-1">Research-Backed</h3>
+                <h3 className="text-white font-semibold mb-1">Research Backed</h3>
                 <p className="text-slate-300 text-sm">Methods proven by productivity and focus research</p>
               </div>
             </div>
@@ -277,7 +277,7 @@ export default function HomePage() {
               Everything You Need to <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">Succeed</span>
             </h2>
             <p className="text-base text-slate-300 max-w-xl mx-auto">
-              Experience simple yet effective tools designed to help you succeed with an easy-to-use interface and intuitive navigation that keeps you focused on what matters.
+              Experience simple yet effective tools designed to help you succeed with an easy to use interface and intuitive navigation that keeps you focused on what matters.
             </p>
           </div>
 
@@ -300,7 +300,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Premium Focus Sessions</h3>
               <p className="text-slate-300 leading-relaxed text-sm">
-                Studying made simple with customizable Pomodoro timers, flashcards, progress tracking, easy note-taking, and intuitive to-do lists all in one seamless experience.
+                Studying made simple with customizable Pomodoro timers, flashcards, progress tracking, easy note taking, and intuitive to do lists in one seamless experience.
               </p>
             </div>
 
@@ -311,7 +311,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Intelligent Habit Building</h3>
               <p className="text-slate-300 leading-relaxed text-sm">
-                Habit tracking reimagined for simplicity and effectiveness. Our intuitive system helps you not only create new habits but maintain them long-term with minimal friction.
+                Habit tracking reimagined for simplicity and effectiveness. Our intuitive system helps you not only create new habits but maintain them long term with minimal friction.
               </p>
             </div>
 
@@ -322,7 +322,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Guided Reflection</h3>
               <p className="text-slate-300 leading-relaxed text-sm">
-                Journaling made simple yet profound with premade challenges, thoughtful prompts, and creative ideas that inspire deeper self-awareness and personal growth.
+                Journaling made simple yet profound with premade challenges, thoughtful prompts, and creative ideas that inspire deeper self awareness and personal growth.
               </p>
             </div>
 
@@ -344,7 +344,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Smart Recommendations</h3>
               <p className="text-slate-300 leading-relaxed text-sm">
-                Receive subtle, non-intrusive AI recommendations precisely when you need them, designed specifically to help you overcome obstacles and maintain momentum.
+                Receive subtle, nonintrusive AI recommendations precisely when you need them, designed specifically to help you overcome obstacles and maintain momentum.
               </p>
             </div>
           </div>
@@ -372,7 +372,7 @@ export default function HomePage() {
               <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-3 rounded-lg w-fit mb-4">
                 <FaBrain className="w-5 h-5 text-green-400" />
               </div>
-              <h3 className="text-base font-bold text-white mb-3">Self-Help Focused</h3>
+              <h3 className="text-base font-bold text-white mb-3">Self Help Focused</h3>
               <p className="text-slate-300 text-xs leading-relaxed">
                 Trained specifically for personal development and productivity guidance
               </p>
@@ -394,7 +394,7 @@ export default function HomePage() {
               <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-3 rounded-lg w-fit mb-4">
                 <FiTarget className="w-5 h-5 text-green-400" />
               </div>
-              <h3 className="text-base font-bold text-white mb-3">Goal-Oriented</h3>
+              <h3 className="text-base font-bold text-white mb-3">Goal Oriented</h3>
               <p className="text-slate-300 text-xs leading-relaxed">
                 Helps you set, track, and achieve your personal and professional goals
               </p>
