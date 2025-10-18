@@ -89,7 +89,7 @@ export async function getMoodEntry(date: string): Promise<MoodEntry | null> {
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     // Fetch from API
-    const response = await client.get(`/mood/entries/${date}`, {
+    const response = await client.get(`/v1/mood/entries/${date}`, {
       headers: {
         'X-User-Timezone': userTimezone
       }
@@ -193,7 +193,7 @@ export async function updateMoodEntry(date: string, updates: Partial<MoodEntry>)
     if (updates.focus !== undefined) payload.focus = updates.focus; // Changed from satisfaction to focus
     if (updates.stress !== undefined) payload.stress = updates.stress;
     
-    const response = await client.put(`/mood/${date}`, payload, {
+    const response = await client.put(`/v1/mood/${date}`, payload, {
       headers: {
         'X-User-Timezone': userTimezone
       }
@@ -223,7 +223,7 @@ export async function deleteMoodEntry(date: string): Promise<void> {
     // Get user timezone for header
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
-    await client.delete(`/mood/${date}`, {
+    await client.delete(`/v1/mood/${date}`, {
       headers: {
         'X-User-Timezone': userTimezone
       }

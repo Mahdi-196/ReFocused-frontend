@@ -25,21 +25,14 @@ client.interceptors.request.use(
         // Validate token before using it
         const validation = tokenValidator.validateJWT(token);
         
-        if (validation.isValid) {
-          config.headers = config.headers || {};
-          config.headers.Authorization = `Bearer ${token}`;
-          
-          // Silent mode: avoid near-expiry UI events
-          if (validation.payload?.exp && validation.payload.exp - Math.floor(Date.now() / 1000) < 300) {
-            // no-op
-          }
-        } else {
-          if (validation.isExpired) {
-            localStorage.removeItem('REF_TOKEN');
-            localStorage.removeItem('REF_USER');
-            localStorage.removeItem('REF_COLLECTION_TOKENS');
-            window.dispatchEvent(new CustomEvent('userLoggedOut'));
-          }
+        // Always attach token and let backend handle validation
+        // Backend will auto-refresh expired tokens via cookies
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+
+        // Silent mode: avoid near-expiry UI events
+        if (validation.payload?.exp && validation.payload.exp - Math.floor(Date.now() / 1000) < 300) {
+          // no-op
         }
       }
     }
@@ -254,7 +247,7 @@ client.interceptors.response.use(
           if (!originalRequest._retry) {
             originalRequest._retry = true;
             // Use root-level refresh alias to ensure HttpOnly cookies are sent from the same origin
-            const refreshResp = await axios.post('/v1/auth/refresh', {}, { withCredentials: true });
+            const refreshResp = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true });
             const newAccess = refreshResp.data?.access_token;
             if (newAccess) {
               localStorage.setItem('REF_TOKEN', newAccess);
