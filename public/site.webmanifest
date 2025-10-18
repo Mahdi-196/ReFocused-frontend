@@ -1,13 +1,13 @@
 {
   "name": "ReFocused",
   "short_name": "ReFocused",
-  "description": "Daily trackings, mindful breathing exercises and weekly themes like Stoicism to boost your resilience.",
+  "description": "Build better habits and achieve your goals faster. Pomodoro timer, habit tracker, goal planner, meditation, journaling, and study tools. Transform your productivity today.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1A2537",
+  "background_color": "transparent",
   "theme_color": "#3B82F6",
   "orientation": "portrait-primary",
-  "categories": ["health", "productivity", "lifestyle"],
+  "categories": ["productivity", "education", "health", "lifestyle", "utilities"],
   "lang": "en",
   "scope": "/",
   "icons": [
