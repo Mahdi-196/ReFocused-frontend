@@ -163,26 +163,16 @@ export const authService = {
 
   /**
    * Check if user is authenticated
+   * Trust the backend to handle token expiration and refresh
    */
   isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;
-    
+
     const token = localStorage.getItem('REF_TOKEN');
-          if (!token || token.startsWith('dummy-') || token === 'test-token' || token.trim() === '') {
-      return false;
-    }
 
-    // Validate the token
-    const validation = tokenValidator.validateJWT(token);
-
-    // If token is invalid (malformed or expired), clear it automatically
-    if (!validation.isValid) {
-      console.warn('🔑 Invalid token detected, clearing auth data:', validation.error);
-      this.logout();
-      return false;
-    }
-    
-    return true;
+    // Just check if token exists - let backend handle validation and refresh
+    // Backend will auto-refresh expired tokens via cookies
+    return !!(token && !token.startsWith('dummy-') && token !== 'test-token' && token.trim() !== '');
   },
 
   /**
