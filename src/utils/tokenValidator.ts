@@ -125,23 +125,13 @@ export const tokenValidator = {
 
   /**
    * Clean up invalid tokens from localStorage
+   * DISABLED: Let backend handle token validation and refresh
    */
   cleanupInvalidTokens(): void {
-    if (typeof window === 'undefined') return;
-    
-    const token = localStorage.getItem('REF_TOKEN');
-    if (!token) return;
-    
-    const validation = this.validateJWT(token);
-    if (!validation.isValid) {
-      console.warn('🔧 Cleaning up invalid token:', validation.error);
-      localStorage.removeItem('REF_TOKEN');
-      localStorage.removeItem('REF_USER');
-      localStorage.removeItem('REF_REFRESH_TOKEN');
-      
-      // Dispatch event to notify other components
-      window.dispatchEvent(new Event('userLoggedOut'));
-    }
+    // Do nothing - let backend handle expired tokens via auto-refresh
+    // Backend will refresh tokens automatically using refresh cookies
+    // Only actual 401 errors from backend should trigger logout
+    return;
   },
 
   /**
