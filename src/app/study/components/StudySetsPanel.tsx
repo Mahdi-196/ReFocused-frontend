@@ -90,9 +90,9 @@ export default function StudySetsPanel({
                 onClick={() => onSetSelect(set.id)}
                 className="flex-1 text-left"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-white">{set.name}</span>
-                  <span className="text-sm text-white">{set.cards.length} cards</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-white truncate flex-1">{set.name}</span>
+                  <span className="text-sm text-white whitespace-nowrap">{set.cards.length} cards</span>
                 </div>
               </button>
               <button

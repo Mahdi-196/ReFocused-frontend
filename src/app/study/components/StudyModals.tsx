@@ -51,11 +51,14 @@ export default function StudyModals({
               type="text"
               placeholder="Enter set name"
               value={newSetName}
-              onChange={(e) => setNewSetName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md mb-4"
+              onChange={(e) => setNewSetName(e.target.value.slice(0, 50))}
+              className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md mb-2"
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && newSetName.trim() && onAddSet()}
             />
+            <div className="text-xs text-gray-400 mb-4 text-right">
+              {newSetName.length}/50 characters
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={handleCloseModal}
@@ -84,11 +87,14 @@ export default function StudyModals({
               type="text"
               placeholder="Enter new name"
               value={newSetName}
-              onChange={(e) => setNewSetName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md mb-4"
+              onChange={(e) => setNewSetName(e.target.value.slice(0, 50))}
+              className="w-full px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-md mb-2"
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && onEditSet()}
             />
+            <div className="text-xs text-gray-400 mb-4 text-right">
+              {newSetName.length}/50 characters
+            </div>
             <div className="flex justify-between">
               {/* Delete button on the left */}
               <button
