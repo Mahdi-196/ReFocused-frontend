@@ -74,9 +74,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleGoogleSuccess = (token: string) => {
+  const handleGoogleSuccess = async (token: string) => {
     setError('');
-    setIsLoading(false); // Reset loading state on success
+    setIsLoading(false);
     localStorage.setItem('REF_TOKEN', token);
     try {
       const userRaw = localStorage.getItem('REF_USER');
@@ -88,7 +88,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
       }
     } catch {}
     onClose();
-    // Use Next.js router for client-side navigation
+    // Force re-check auth status by reloading - needed for Google auth flow
     window.location.reload();
   };
 
@@ -501,6 +501,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                           } catch {}
 
                           onClose();
+                          // Reload to trigger auth re-check
                           window.location.reload();
                         } catch (err: unknown) {
                           console.error('Dev register error:', err);
@@ -532,6 +533,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
                           const response = await authService.loginSimple();
                           authService.saveAuthData(response);
                           onClose();
+                          // Reload to trigger auth re-check
                           window.location.reload();
                         } catch (err: unknown) {
                           console.error('Dev login error:', err);

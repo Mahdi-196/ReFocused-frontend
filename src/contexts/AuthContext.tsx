@@ -169,20 +169,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       const response = await authService.login({ email, password });
-      
+
       // Save auth data and cache user
       authService.saveAuthData(response);
-      
+
       // Update time service authentication status
       timeService.setAuthenticationStatus(true);
-      
+
       // Start token monitoring
       tokenRefreshManager.startMonitoring();
-      
-      // Update state
+
+      // Update state immediately
       setUser(response.user);
       setIsAuthenticated(true);
-      
+
+      // Navigate to dashboard after successful login
+      router.push('/dashboard');
+
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -191,26 +194,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      const response = await authService.register({ 
+      const response = await authService.register({
         username: email, // Use email as username for now
         email,
         password,
-        name 
+        name
       });
-      
+
       // Save auth data and cache user
       authService.saveAuthData(response);
 
       // Update time service authentication status
       timeService.setAuthenticationStatus(true);
-      
+
       // Start token monitoring
       tokenRefreshManager.startMonitoring();
 
-      // Update state
+      // Update state immediately
       setUser(response.user);
       setIsAuthenticated(true);
-      
+
+      // Navigate to dashboard after successful registration
+      router.push('/dashboard');
+
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
