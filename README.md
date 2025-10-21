@@ -133,6 +133,7 @@ ReFocused exists for many reasons, the main being consolidation. The app has abo
 │   ├── monthlyProductivity.ts
 │   └── [other types]
 
+```
 ---
 
 ## Feature Rundown
