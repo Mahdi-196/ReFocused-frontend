@@ -385,9 +385,9 @@ export function useCollections() {
   };
 
   // Get entry by ID
-  const getEntry = async (entryId: string): Promise<Entry | null> => {
+  const getEntry = async (entryId: string, collectionId?: string): Promise<Entry | null> => {
     try {
-      return await journalService.getEntry(entryId);
+      return await journalService.getEntry(entryId, collectionId);
     } catch (err) {
       const error = err as JournalApiError;
       console.error("Failed to get entry:", error);

@@ -243,9 +243,19 @@ class JournalService {
     }
   }
 
-  async getEntry(id: string): Promise<Entry> {
+  async getEntry(id: string, collectionId?: string): Promise<Entry> {
     try {
-      const response = await client.get<EntryResponse>(JOURNAL.ENTRY_DETAIL(id));
+      // Add access token header for private collections if collectionId provided
+      const headers: Record<string, string> = {};
+      if (collectionId) {
+        const accessToken = this.getCollectionToken(collectionId);
+        if (accessToken) {
+          headers['X-Collection-Access-Token'] = accessToken;
+          console.log('🔐 [GET ENTRY] Adding access token for collection:', collectionId);
+        }
+      }
+
+      const response = await client.get<EntryResponse>(JOURNAL.ENTRY_DETAIL(id), { headers });
       return this.mapEntryResponse(response.data);
     } catch (error) {
       throw this.handleError(error, 'Failed to fetch entry');

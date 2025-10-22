@@ -200,8 +200,7 @@ const Pomodoro: React.FC = () => {
     }
 
     try {
-      const soundId = 'soft-bell';
-      audioService.playNotificationSound(soundId)
+      audioService.playNotificationSound(notificationSound)
         .then(success => {
           if (success) {
             console.log('[POMODORO] Notification sound played successfully');

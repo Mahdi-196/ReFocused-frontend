@@ -170,7 +170,20 @@ function EntryContent() {
     setIsLoadingEntry(true);
     try {
       setEntryId(id);
-      const entry = await getEntry(id);
+
+      // First, try to find the entry in local collections to get its collection ID
+      let foundCollectionId: string | undefined;
+      for (const collection of collections) {
+        const localEntry = collection.entries.find(e => e.id === id);
+        if (localEntry) {
+          foundCollectionId = collection.id.toString();
+          console.log('📝 [LOAD ENTRY] Found entry in collection:', foundCollectionId);
+          break;
+        }
+      }
+
+      // Fetch the entry from the server with the collection ID (for access token)
+      const entry = await getEntry(id, foundCollectionId);
       if (entry) {
         setTitle(entry.title || "");
         setContent(entry.content || "");
