@@ -63,7 +63,7 @@ const Header = () => {
             {/* Desktop Logo */}
             <motion.div id="header-logo-desktop" className="hidden md:flex items-center space-x-2 group">
               <img src="/favicon.svg" alt="Brain Logo" className="w-10 h-10" width="40" height="40" />
-              <Link href="/ai" className="group">
+              <Link href="/ai" prefetch={true} className="group">
                 <span className="inline-flex items-center whitespace-nowrap text-xl font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">
                   <span className="peer">ReFocused</span>
                   <span
@@ -82,7 +82,7 @@ const Header = () => {
             {/* Mobile Logo - Centered */}
             <motion.div id="header-logo-mobile" className="md:hidden flex items-center space-x-2 group">
               <img src="/favicon.svg" alt="Brain Logo" className="w-8 h-8" width="32" height="32" />
-              <Link href="/ai" className="group">
+              <Link href="/ai" prefetch={true} className="group">
                 <span className="inline-flex items-center whitespace-nowrap text-lg font-bold bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">
                   <span className="peer">ReFocused</span>
                   <span
@@ -108,9 +108,10 @@ const Header = () => {
                       >
                         <Link
                           href={item.href}
+                          prefetch={true}
                           className={`relative block px-4 text-center transition-all duration-200 h-10 ${
-                            pathname === item.href 
-                              ? "text-[#42b9e5] font-medium" 
+                            pathname === item.href
+                              ? "text-[#42b9e5] font-medium"
                               : "text-gray-300 hover:text-[#42b9e5]"
                           }`}
                         >
@@ -193,10 +194,11 @@ const Header = () => {
                     >
                       <Link
                         href={item.href}
+                        prefetch={true}
                         onClick={closeMobileMenu}
                         className={`block px-4 py-3 rounded-lg transition-all duration-200 ${
-                          pathname === item.href 
-                            ? "bg-gradient-to-r from-[#42b9e5]/20 to-[#4f83ed]/20 text-[#42b9e5] font-medium border-l-4 border-[#42b9e5]" 
+                          pathname === item.href
+                            ? "bg-gradient-to-r from-[#42b9e5]/20 to-[#4f83ed]/20 text-[#42b9e5] font-medium border-l-4 border-[#42b9e5]"
                             : "text-gray-300 hover:text-[#42b9e5] hover:bg-[#42b9e5]/10"
                         }`}
                       >

@@ -50,6 +50,18 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
     return () => clearTimeout(id);
   }, [focusGoal, userDate]);
 
+  // Save immediately before page unload to prevent data loss
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      try {
+        perAccountDailyStorage.set(FOCUS_BASE_KEY, focusGoal.trim(), userDate);
+      } catch {}
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [focusGoal, userDate]);
+
   return (
   <section 
     className="lg:col-span-2" 
@@ -73,6 +85,11 @@ const DailyMomentum: React.FC<DailyMomentumProps> = ({
           aria-label="Enter your daily tracking or focus goal"
           value={focusGoal}
           onChange={(e) => setFocusGoal(e.target.value)}
+          onBlur={() => {
+            try {
+              perAccountDailyStorage.set(FOCUS_BASE_KEY, focusGoal.trim(), userDate);
+            } catch {}
+          }}
         />
       </div>
 

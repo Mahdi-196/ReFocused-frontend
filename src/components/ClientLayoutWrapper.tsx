@@ -19,6 +19,7 @@ import DataPreloader from './DataPreloader';
 import DailyCacheStatus from './DailyCacheStatus';
 import TutorialManager from './TutorialManager';
 import { ToastProvider } from '@/contexts/ToastContext';
+import QueryProvider from '@/providers/QueryProvider';
 
 export default function ClientLayoutWrapper({
   children,
@@ -371,55 +372,57 @@ export default function ClientLayoutWrapper({
   }
 
   return (
-    <NetworkProvider>
-      <AuthProvider>
-        <TimeProvider>
-          <AudioProvider>
-            <ToastProvider>
-            <StatisticsInitializer />
-            <CacheManager />
-            <DataPreloader />
-            {/* AI page now provides its own background; no global backdrop here */}
-            <div className={isLandingPage ? '' : 'pt-20'}>
-              {!isLandingPage && <Header />}
-              <AnimatedLayout>
-                <main className={`${isAiPage ? 'min-h-screen w-full p-0 m-0' : ''}`}>
-                  {isLandingPage
-                    ? children
-                    : isAiPage
-                      ? children
-                      : <div className="container mx-auto px-4 py-8">{children}</div>}
-                </main>
-              </AnimatedLayout>
-              {shouldShowFooter && <Footer />}
-            </div>
-            
-            {/* Token expiry notification intentionally disabled for fully silent refresh */}
-            {/* Rate limit notification disabled per request */}
-            
-            
-            {/* Daily Cache Status - positioned at bottom-left for development */}
-            {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DailyCacheStatus />}
+    <QueryProvider>
+      <NetworkProvider>
+        <AuthProvider>
+          <TimeProvider>
+            <AudioProvider>
+              <ToastProvider>
+                <StatisticsInitializer />
+                <CacheManager />
+                <DataPreloader />
+                {/* AI page now provides its own background; no global backdrop here */}
+                <div className={isLandingPage ? '' : 'pt-20'}>
+                  {!isLandingPage && <Header />}
+                  <AnimatedLayout>
+                    <main className={`${isAiPage ? 'min-h-screen w-full p-0 m-0' : ''}`}>
+                      {isLandingPage
+                        ? children
+                        : isAiPage
+                          ? children
+                          : <div className="container mx-auto px-4 py-8">{children}</div>}
+                    </main>
+                  </AnimatedLayout>
+                  {shouldShowFooter && <Footer />}
+                </div>
 
-            {/* Ambient autoplay resume prompt (global, minimal UI) */}
-            {ambientResumePending && (
-              <div className="fixed bottom-6 right-6 z-[60]">
-                <button
-                  onClick={handleAmbientResumeClick}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white shadow-lg hover:bg-blue-500 transition-colors"
-                  title="Resume ambient sounds"
-                >
-                  <Play className="w-4 h-4" /> Resume Ambient Sounds
-                </button>
-              </div>
-            )}
+                {/* Token expiry notification intentionally disabled for fully silent refresh */}
+                {/* Rate limit notification disabled per request */}
 
-            {/* First-time tutorial overlay manager */}
-            {isAuthenticated && <TutorialManager />}
-            </ToastProvider>
-          </AudioProvider>
-        </TimeProvider>
-      </AuthProvider>
-    </NetworkProvider>
+
+                {/* Daily Cache Status - positioned at bottom-left for development */}
+                {process.env.NEXT_PUBLIC_APP_ENV === 'development' && <DailyCacheStatus />}
+
+                {/* Ambient autoplay resume prompt (global, minimal UI) */}
+                {ambientResumePending && (
+                  <div className="fixed bottom-6 right-6 z-[60]">
+                    <button
+                      onClick={handleAmbientResumeClick}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white shadow-lg hover:bg-blue-500 transition-colors"
+                      title="Resume ambient sounds"
+                    >
+                      <Play className="w-4 h-4" /> Resume Ambient Sounds
+                    </button>
+                  </div>
+                )}
+
+                {/* First-time tutorial overlay manager */}
+                {isAuthenticated && <TutorialManager />}
+              </ToastProvider>
+            </AudioProvider>
+          </TimeProvider>
+        </AuthProvider>
+      </NetworkProvider>
+    </QueryProvider>
   );
 } 

@@ -72,14 +72,14 @@ export default function FlashcardDisplay({
       className="col-span-2 rounded-lg p-4 shadow-md"
       style={{ background: "linear-gradient(135deg, #1F2938 0%, #1E2837 100%)" }}
     >
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-semibold text-white">
+      <div className="flex justify-between items-center mb-3 gap-3">
+        <h2 className="text-lg font-semibold text-white truncate">
           {selectedSet?.name || 'Select a Set'}
         </h2>
-        <button 
+        <button
           onClick={onAddCard}
           disabled={!selectedSet}
-          className="flex items-center gap-1 px-3 py-1 border border-gray-600 rounded-lg hover:bg-gray-700 text-sm active:scale-95 transform transition-all duration-75 text-white disabled:opacity-50"
+          className="flex items-center gap-1 px-3 py-1 border border-gray-600 rounded-lg hover:bg-gray-700 text-sm active:scale-95 transform transition-all duration-75 text-white disabled:opacity-50 flex-shrink-0"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -95,13 +95,13 @@ export default function FlashcardDisplay({
           onClick={handleCardClick}
         >
           <div className={`flip-card ${isFlipped ? 'flipped' : ''}`}>
-            {/* Front of card */} 
-            <div className="flip-card-front border border-gray-200 p-8">
-              <p className="text-xl text-center">{selectedSet?.cards[currentCard - 1]?.front}</p>
+            {/* Front of card */}
+            <div className="flip-card-front border border-gray-200 p-8 overflow-hidden">
+              <p className="text-xl text-center break-words overflow-auto max-h-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{selectedSet?.cards[currentCard - 1]?.front}</p>
             </div>
-            {/* Back of card */} 
-            <div className="flip-card-back border border-gray-200 p-8">
-              <p className="text-xl text-center">{selectedSet?.cards[currentCard - 1]?.back}</p>
+            {/* Back of card */}
+            <div className="flip-card-back border border-gray-200 p-8 overflow-hidden">
+              <p className="text-xl text-center break-words overflow-auto max-h-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{selectedSet?.cards[currentCard - 1]?.back}</p>
             </div>
           </div>
         </div>

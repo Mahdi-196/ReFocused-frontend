@@ -3,37 +3,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useCurrentDate } from '@/contexts/TimeContext';
 import { perAccountDailyStorage, getTodayDateString, migrateLegacyDateKeyToScoped, migrateLegacyUserDateKeyToScoped, cleanupOldDateEntries } from '@/utils/scopedStorage';
-import dynamic from 'next/dynamic';
 import PageTransition from '@/components/PageTransition';
 import logger from '@/utils/logger';
 
 import { HomePageSkeleton, SkeletonDemo } from '@/components/skeletons';
 
-// Priority 1: Critical above-the-fold components with SSR enabled
-const DailyMomentum = dynamic(() => import('../homeComponents/DailyMomentum'), {
-  ssr: true,
-});
-
-const QuoteOfTheDay = dynamic(() => import('../../components/QuoteOfTheDay'), {
-  ssr: true,
-});
-
-const WordOfTheDay = dynamic(() => import('../homeComponents/WordOfTheDay'), {
-  ssr: true,
-});
-
-// Secondary components
-const GoalTracker = dynamic(() => import('../homeComponents/GoalTracker'), {
-  ssr: false,
-});
-
-const MindFuel = dynamic(() => import('../homeComponents/MindFuel'), {
-  ssr: false,
-});
-
-const ProductivityScore = dynamic(() => import('../homeComponents/ProductivityScore'), {
-  ssr: false,
-});
+// Import components directly for faster loading (no lazy loading)
+import DailyMomentum from '../homeComponents/DailyMomentum';
+import QuoteOfTheDay from '../../components/QuoteOfTheDay';
+import WordOfTheDay from '../homeComponents/WordOfTheDay';
+import GoalTracker from '../homeComponents/GoalTracker';
+import MindFuel from '../homeComponents/MindFuel';
+import ProductivityScore from '../homeComponents/ProductivityScore';
 
 // Removed ApiTestingBox
 
@@ -116,17 +97,24 @@ const cleanupOldTasks = () => {
 // No-op: user-specific migration is no longer needed; tasks are shared by date
 
 const Home = () => {
+  const userDate = useCurrentDate();
   const [newTask, setNewTask] = useState('');
-  const [tasks, setTasks] = useState<Task[]>([]);
+  // Initialize tasks with saved data to prevent flash
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    // Use getTodayDateString() directly since we can't call hooks in initializer
+    const initialDate = getTodayDateString();
+    const savedTasks = loadTasksForDate(initialDate);
+    logTasks('initial:loaded', { length: savedTasks.length, date: initialDate });
+    return savedTasks;
+  });
   const isFirstTasksEffect = useRef(true);
   const hasHydratedRef = useRef(false);
   const hydrationGuardActiveRef = useRef(true);
-  const userDate = useCurrentDate();
   // Removed progressive loading; page renders as a whole after skeleton delay
 
   // No per-user clearing; tasks are shared per day
 
-  // Load today's tasks (user timezone-aware) from localStorage on component mount
+  // Re-load tasks when userDate changes
   useEffect(() => {
     const savedTasks = loadTasksForDate(userDate);
     logTasks('mount:loaded', { length: savedTasks.length });
@@ -139,7 +127,7 @@ const Home = () => {
     setTimeout(() => {
       hydrationGuardActiveRef.current = false;
     }, 500);
-    
+
     // Clean up old task entries to keep localStorage tidy
     cleanupOldTasks();
   }, [userDate]);
@@ -171,6 +159,17 @@ const Home = () => {
     // Always persist to today's key after any subsequent state update
     logTasks('effect:save', { length: tasks.length });
     saveTasksForDate(userDate, tasks);
+  }, [tasks, userDate]);
+
+  // Save immediately before page unload to prevent data loss
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      logTasks('beforeunload:save', { length: tasks.length });
+      saveTasksForDate(userDate, tasks);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [tasks, userDate]);
 
   // No manual dayChanged listener needed; tasks reload when userDate changes

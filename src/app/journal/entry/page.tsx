@@ -107,15 +107,18 @@ function EntryContent() {
 
     if (collectionsLoading) return; // Wait for collections to load
 
+    // If editing an existing entry, load it first to get its collection
+    if (entryIdParam) {
+      loadEntry(entryIdParam);
+      return; // loadEntry will set the collection from the entry data
+    }
+
+    // Otherwise, handle collection selection for new entries
     if (collectionId && collections.some(c => c.id.toString() === collectionId)) {
       setSelectedCollectionId(collectionId);
-      
-      // If editing an existing entry, load its data
-      if (entryIdParam) {
-        loadEntry(entryIdParam);
-      }
+
       // If creating a new entry with a title, set the title
-      else if (titleParam) {
+      if (titleParam) {
         setTitle(decodeURIComponent(titleParam));
       }
     } else if (collections.length > 0) {
@@ -172,6 +175,12 @@ function EntryContent() {
         setTitle(entry.title || "");
         setContent(entry.content || "");
         setHasUnsavedChanges(false);
+
+        // Set the collection ID from the entry data
+        if (entry.collection_id) {
+          setSelectedCollectionId(entry.collection_id.toString());
+        }
+
         // Update character count when loading entry
         const text = entry.content ? entry.content.replace(/<[^>]*>/g, '') : '';
         setCharCount(text.length);
@@ -184,6 +193,12 @@ function EntryContent() {
           setTitle(localEntry.title || "");
           setContent(localEntry.content || "");
           setHasUnsavedChanges(false);
+
+          // Set the collection ID from the local entry data
+          if (localEntry.collection_id) {
+            setSelectedCollectionId(localEntry.collection_id.toString());
+          }
+
           // Update character count when loading local entry
           const text = localEntry.content ? localEntry.content.replace(/<[^>]*>/g, '') : '';
           setCharCount(text.length);

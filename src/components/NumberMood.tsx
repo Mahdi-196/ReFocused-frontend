@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { saveMoodRating, getTodaysMood } from '@/services/moodService';
-import { useCurrentDate } from '@/contexts/TimeContext';
+import { useConsistentDate } from '@/hooks/useConsistentDate';
 
 interface MoodRating {
   happiness: number | null;
@@ -11,7 +11,7 @@ interface MoodRating {
 }
 
 export default function NumberMood() {
-  const currentDate = useCurrentDate();
+  const { currentDate, isReady: dateReady } = useConsistentDate();
   const [moodRatings, setMoodRatings] = useState<MoodRating>({
     happiness: null,
     focus: null,
@@ -21,19 +21,20 @@ export default function NumberMood() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasInitialSave, setHasInitialSave] = useState(false);
-  
+
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load existing mood data when time service is ready
   useEffect(() => {
     // Don't load if time service is not ready
-    if (currentDate === 'LOADING_DATE') {
+    if (!dateReady || currentDate === 'Loading...') {
+      console.log('[NumberMood] Skipping load - date not ready:', { dateReady, currentDate });
       return;
     }
+    console.log('[NumberMood] Loading mood for date:', currentDate);
     loadTodaysMood();
-  }, [currentDate]); // Depend on currentDate to reload when time changes
+  }, [currentDate, dateReady]);
 
-  // Listen for mood data cleared event
   useEffect(() => {
     const handleMoodDataCleared = () => {
       console.log('📢 [NUMBER MOOD] Received moodDataCleared event, resetting component...');
@@ -56,28 +57,40 @@ export default function NumberMood() {
     try {
       setLoading(true);
       const existingMood = await getTodaysMood();
-      
+
       if (existingMood) {
+        console.log('[NumberMood] Loaded existing mood:', existingMood);
         setMoodRatings({
           happiness: existingMood.happiness || null,
           focus: existingMood.focus || null,
           stress: existingMood.stress || null
         });
-        // If mood data exists, mark as having initial save
         setHasInitialSave(true);
+      } else {
+        console.log('[NumberMood] No existing mood data, resetting to null');
+        setMoodRatings({
+          happiness: null,
+          focus: null,
+          stress: null
+        });
+        setHasInitialSave(false);
       }
     } catch (err) {
-      console.warn('Failed to load existing mood data:', err);
+      console.warn('[NumberMood] Failed to load existing mood data:', err);
+      setMoodRatings({
+        happiness: null,
+        focus: null,
+        stress: null
+      });
+      setHasInitialSave(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // Save mood ratings to server
   const handleSave = useCallback(async () => {
-    // Validate that all ratings are selected
     if (moodRatings.happiness === null || moodRatings.focus === null || moodRatings.stress === null) {
-      return; // Silently return if not all ratings are set
+      return;
     }
 
     try {
@@ -89,7 +102,6 @@ export default function NumberMood() {
         stress: moodRatings.stress
       });
 
-      // Update local state with the saved data from the server
       setMoodRatings({
         happiness: savedMood.happiness || null,
         focus: savedMood.focus || null,
@@ -105,7 +117,6 @@ export default function NumberMood() {
     }
   }, [moodRatings.happiness, moodRatings.focus, moodRatings.stress]);
 
-  // Auto-save logic with debouncing
   useEffect(() => {
     const allRatingsSet = moodRatings.happiness !== null && 
                          moodRatings.focus !== null && 
@@ -113,23 +124,19 @@ export default function NumberMood() {
 
     if (!allRatingsSet) return;
 
-    // Clear any existing timeout
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // If this is the first time all ratings are set, save immediately
     if (!hasInitialSave) {
       handleSave();
       setHasInitialSave(true);
     } else {
-      // For subsequent changes, debounce the save
       debounceTimeoutRef.current = setTimeout(() => {
         handleSave();
       }, 1000);
     }
 
-    // Cleanup timeout on unmount or dependency change
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
@@ -137,23 +144,19 @@ export default function NumberMood() {
     };
   }, [moodRatings, hasInitialSave, handleSave]);
 
-  // Handle rating changes without saving
   const handleRatingChange = (type: keyof MoodRating, value: string) => {
     const numValue = parseInt(value);
-    
-    // Validate the rating value is within range
+
     if (isNaN(numValue) || numValue < 1 || numValue > 5) {
       console.warn('Invalid rating value:', value);
       return;
     }
-    
-    // Update local state
+
     setMoodRatings(prev => ({
       ...prev,
       [type]: numValue
     }));
 
-    // Clear any previous error states
     setError(null);
   };
 

@@ -119,31 +119,102 @@ const Pomodoro: React.FC = () => {
     return () => clearTimeout(timeout);
   }, []);
 
-  // === SESSION COMPLETION GUARD ===
   const sessionCompletionInProgress = useRef<boolean>(false);
-  
-  // === NATURAL SESSION COMPLETION - When timer reaches 0 ===
+
+  const showBrowserNotification = () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      console.warn('[NOTIFICATION] Browser notifications not supported');
+      return;
+    }
+
+    console.log('[NOTIFICATION] Current permission:', Notification.permission);
+
+    const getMessage = () => {
+      if (mode === 'pomodoro') {
+        return `Great work! Your ${pomodoroTime}-minute focus session is complete. Time for a break!`;
+      } else if (mode === 'short') {
+        return `Short break finished! Ready to focus again?`;
+      } else {
+        return `Long break finished! Ready for another focus session?`;
+      }
+    };
+
+    const showNotification = () => {
+      console.log('[NOTIFICATION] Creating notification...');
+      try {
+        const notification = new Notification('Timer Complete!', {
+          body: getMessage(),
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: 'pomodoro-timer',
+          requireInteraction: false,
+          silent: false,
+          vibrate: [200, 100, 200],
+        });
+
+        console.log('[NOTIFICATION] Notification created successfully');
+
+        setTimeout(() => notification.close(), 10000);
+
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+
+        notification.onerror = (err) => {
+          console.error('[NOTIFICATION] Error showing notification:', err);
+        };
+      } catch (error) {
+        console.error('[NOTIFICATION] Failed to create notification:', error);
+      }
+    };
+
+    if (Notification.permission === 'granted') {
+      console.log('[NOTIFICATION] Permission granted, showing notification');
+      showNotification();
+    } else if (Notification.permission !== 'denied') {
+      console.log('[NOTIFICATION] Requesting permission...');
+      Notification.requestPermission().then(permission => {
+        console.log('[NOTIFICATION] Permission response:', permission);
+        if (permission === 'granted') {
+          showNotification();
+        } else {
+          console.warn('[NOTIFICATION] Permission denied by user');
+        }
+      });
+    } else {
+      console.warn('[NOTIFICATION] Notifications blocked - user previously denied permission');
+    }
+  };
+
   const completeNaturalSession = async (autoStart: boolean): Promise<void> => {
-    // Prevent duplicate calls
     if (sessionCompletionInProgress.current) {
-      // === DEVELOPMENT ONLY - Debug logging ===
       if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
         console.log('⚠️ [TIMER] Session completion already in progress, ignoring duplicate call');
       }
       return;
     }
-    
+
     sessionCompletionInProgress.current = true;
-    // === DEVELOPMENT ONLY - Debug logging ===
     if (process.env.NEXT_PUBLIC_APP_ENV === 'development') {
       console.log('🎯 [TIMER] Natural session completion detected');
     }
-    
+
     try {
-      // Play notification sound for natural completion
-      audioService.playNotificationSound(notificationSound).catch(error => {
-        console.error('Failed to play notification sound:', error);
-      });
+      const soundId = audioSettings?.notificationSound || 'soft-bell';
+      audioService.playNotificationSound(soundId)
+        .then(success => {
+          if (success) {
+            console.log('[POMODORO] Notification sound played successfully');
+          } else {
+            console.warn('[POMODORO] Notification sound blocked or muted');
+          }
+        })
+        .catch(error => {
+          console.error('[POMODORO] Failed to play notification:', error);
+        });
+
+      showBrowserNotification();
 
       if (mode === "pomodoro" && isValidSession()) {
         // Track completed focus session only for valid natural completions

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { perAccountDailyStorage, cleanupOldDateEntries } from '@/utils/scopedStorage';
-import { useCurrentDate } from '@/contexts/TimeContext';
+import { useConsistentDate } from '@/hooks/useConsistentDate';
 import { Trash2, Plus, Check } from "lucide-react";
 import { incrementTasksDone } from "@/services/statisticsService";
 
@@ -21,14 +21,17 @@ export default function QuickNotes() {
   const [isClient, setIsClient] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean | null>(null);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
-  const userDate = useCurrentDate();
+  const { currentDate: userDate, isReady: dateReady } = useConsistentDate();
 
-  // Initialize client-side rendering flag
+  // Log when userDate changes
+  useEffect(() => {
+    console.log('[QuickNotes] userDate changed to:', userDate, 'isReady:', dateReady);
+  }, [userDate, dateReady]);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Reset success message after 3 seconds
   useEffect(() => {
     if (saveSuccess !== null) {
       const timer = setTimeout(() => {
@@ -38,55 +41,78 @@ export default function QuickNotes() {
     }
   }, [saveSuccess]);
 
-  // Load for the current backend date; cleanup older daily entries
   useEffect(() => {
-    if (!isClient) return;
+    const handleBeforeUnload = () => {
+      if (!isClient) return;
+      try {
+        const userData: UserNotesData = {
+          notes: notes,
+          todos: todos,
+          lastUpdated: Date.now()
+        };
+        console.log('[QuickNotes] beforeunload: Saving data', { userDate, notesLength: notes.length, todosCount: todos.length });
+        perAccountDailyStorage.setJSON<UserNotesData>(QUICK_NOTES_BASE_KEY, userData, userDate);
+        console.log('[QuickNotes] beforeunload: Data saved successfully');
+      } catch (error) {
+        console.error('[QuickNotes] Failed to save notes on beforeunload:', error);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isClient, notes, todos, userDate]);
+
+  useEffect(() => {
+    if (!isClient || !dateReady || userDate === 'Loading...') {
+      console.log('[QuickNotes] Skipping load - not ready yet:', { isClient, dateReady, userDate });
+      return;
+    }
     try {
+      console.log('[QuickNotes] Loading data for date:', userDate);
       const data = perAccountDailyStorage.getJSON<UserNotesData>(QUICK_NOTES_BASE_KEY, userDate);
+      console.log('[QuickNotes] Loaded data:', data ? { notesLength: data.notes?.length, todosCount: data.todos?.length } : null);
       if (data) {
         setNotes(data.notes || "");
         setTodos(Array.isArray(data.todos) ? data.todos : []);
       } else {
+        console.log('[QuickNotes] No data found, setting to empty');
         setNotes("");
         setTodos([]);
       }
-      // Remove any older-day entries so data is deleted after day change
       cleanupOldDateEntries(QUICK_NOTES_BASE_KEY, 0);
     } catch (error) {
-      console.error('Failed to load notes data:', error);
+      console.error('[QuickNotes] Failed to load notes data:', error);
       setNotes("");
       setTodos([]);
     }
-  }, [isClient, userDate]);
+  }, [isClient, dateReady, userDate]);
 
   const saveToLocalStorage = useCallback((notesData = notes, todosData = todos) => {
     if (!isClient) return false;
-    
+
     try {
       const userData: UserNotesData = {
         notes: notesData,
         todos: todosData,
         lastUpdated: Date.now()
       };
-      // Save under per-account daily key for backend date
+      console.log('[QuickNotes] Saving data:', { userDate, notesLength: notesData.length, todosCount: todosData.length });
       perAccountDailyStorage.setJSON<UserNotesData>(QUICK_NOTES_BASE_KEY, userData, userDate);
+      console.log('[QuickNotes] Data saved successfully');
       setSaveSuccess(true);
       return true;
     } catch (error) {
-      console.error('Failed to save notes to localStorage:', error);
+      console.error('[QuickNotes] Failed to save notes to localStorage:', error);
       setSaveSuccess(false);
       return false;
     }
   }, [isClient, notes, todos, userDate]);
 
-  // Debounced save function - save after user stops typing
   const debouncedSave = useCallback((notesContent: string, todosContent: string[]) => {
-    // Clear any existing timeout
     if (saveTimeout) {
       clearTimeout(saveTimeout);
     }
-    
-    // Set a new timeout for 1 second
+
     const timeout = setTimeout(() => {
       saveToLocalStorage(notesContent, todosContent);
     }, 1000);
@@ -99,11 +125,9 @@ export default function QuickNotes() {
     
     setNotes("");
     setTodos([]);
-    
+
     try {
-      // Clear for current backend date
       perAccountDailyStorage.remove(QUICK_NOTES_BASE_KEY, userDate);
-      // Ensure cleanup runs for any stray older entries as well
       cleanupOldDateEntries(QUICK_NOTES_BASE_KEY, 0);
       setSaveSuccess(true);
     } catch (error) {
@@ -163,7 +187,15 @@ export default function QuickNotes() {
               setNotes(newNotes);
               debouncedSave(newNotes, todos);
             }}
-            className="w-full h-full min-h-[300px] p-4 border border-gray-600 rounded-lg 
+            onBlur={() => {
+              // Save immediately when user clicks away from textarea
+              try {
+                saveToLocalStorage(notes, todos);
+              } catch (error) {
+                console.error('Failed to save notes on blur:', error);
+              }
+            }}
+            className="w-full h-full min-h-[300px] p-4 border border-gray-600 rounded-lg
                        focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none
                        bg-gray-700 text-white placeholder-gray-300"
           />
