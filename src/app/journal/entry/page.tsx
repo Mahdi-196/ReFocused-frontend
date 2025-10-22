@@ -156,6 +156,11 @@ function EntryContent() {
       setPasswordPrompt(null);
       setEnteredPassword("");
       setSelectedCollectionId(passwordPrompt.collectionId);
+
+      // If we were trying to load an entry, retry now that we have the token
+      if (entryId) {
+        await loadEntry(entryId);
+      }
     } else {
       toast.showError('Invalid password for this collection');
     }
@@ -171,14 +176,37 @@ function EntryContent() {
     try {
       setEntryId(id);
 
+      // Get the collection ID from URL if provided
+      const collectionIdFromUrl = searchParams.get('collection');
+
       // First, try to find the entry in local collections to get its collection ID
-      let foundCollectionId: string | undefined;
+      let foundCollectionId: string | undefined = collectionIdFromUrl || undefined;
       for (const collection of collections) {
         const localEntry = collection.entries.find(e => e.id === id);
         if (localEntry) {
           foundCollectionId = collection.id.toString();
           console.log('📝 [LOAD ENTRY] Found entry in collection:', foundCollectionId);
           break;
+        }
+      }
+
+      // If we have a collection ID, check if it's private and we need a token
+      if (foundCollectionId) {
+        const collection = collections.find(c => c.id.toString() === foundCollectionId);
+        const isPrivate = collection?.isPrivate ?? collection?.is_private;
+
+        if (isPrivate) {
+          const token = collectionTokens.get(foundCollectionId);
+          if (!token) {
+            // Need to prompt for password before loading the entry
+            console.log('🔐 [LOAD ENTRY] Private collection requires password');
+            setPasswordPrompt({
+              collectionId: foundCollectionId,
+              name: collection?.name || 'Private Collection'
+            });
+            setIsLoadingEntry(false);
+            return;
+          }
         }
       }
 

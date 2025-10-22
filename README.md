@@ -272,6 +272,8 @@ Date-aware cache that automatically invalidates at midnight UTC. Used for daily 
 
 **localStorage Persistence**
 User preferences, theme settings, and non-sensitive data persist across sessions with user-scoped isolation.
+
+
 ---
 
 ## AWS Deployment

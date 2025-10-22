@@ -180,7 +180,16 @@ export function useJournalState() {
   };
 
   const handleEditEntry = (entryId: string) => {
-    router.push(`/journal/entry?id=${entryId}&collection=${selectedCollectionId}`);
+    // Find the entry to get its collection ID
+    let entryCollectionId = selectedCollectionId;
+    for (const collection of collections) {
+      const entry = collection.entries.find(e => e.id === entryId);
+      if (entry) {
+        entryCollectionId = collection.id.toString();
+        break;
+      }
+    }
+    router.push(`/journal/entry?id=${entryId}&collection=${entryCollectionId}`);
   };
 
   // Collection Selection with Password Check
