@@ -183,8 +183,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(response.user);
       setIsAuthenticated(true);
 
-      // Navigate to dashboard after successful login
-      router.push('/dashboard');
+      // Navigate to home after successful login
+      router.push('/home');
 
     } catch (error) {
       console.error('Login error:', error);
@@ -214,8 +214,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(response.user);
       setIsAuthenticated(true);
 
-      // Navigate to dashboard after successful registration
-      router.push('/dashboard');
+      // Navigate to home after successful registration
+      router.push('/home');
 
     } catch (error) {
       console.error('Registration error:', error);

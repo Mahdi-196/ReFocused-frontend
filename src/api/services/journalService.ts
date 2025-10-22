@@ -106,10 +106,10 @@ class JournalService {
     try {
       const response = await client.get<CollectionResponse>(JOURNAL.COLLECTION_DETAIL(id));
       const entriesResponse = await client.get<PaginatedEntriesResponse>(JOURNAL.COLLECTION_ENTRIES(id));
-      
+
       // Handle paginated entries response
       const entriesData = entriesResponse.data.entries || [];
-      
+
       return {
         ...this.mapCollectionResponse(response.data),
         entries: this.mapEntriesResponse(entriesData),

@@ -10,10 +10,15 @@ class AudioService {
   // Preload audio files for better performance
   private audioCache: Map<string, HTMLAudioElement> = new Map();
   private notificationCache: Map<string, HTMLAudioElement> = new Map();
-  
+
   // Track pending play promises to prevent race conditions
   private playingPromises: Map<HTMLAudioElement, Promise<void>> = new Map();
   private audioStates: Map<HTMLAudioElement, 'idle' | 'playing' | 'paused' | 'loading'> = new Map();
+
+  // Web Audio API for better background support
+  private audioContext: AudioContext | null = null;
+  private notificationBuffer: AudioBuffer | null = null;
+  private notificationSource: AudioBufferSourceNode | null = null;
 
   constructor() {
     this.isBrowser = typeof window !== 'undefined' && typeof Audio !== 'undefined';
@@ -21,6 +26,35 @@ class AudioService {
       this.preloadAudioFiles();
       this.preloadNotificationSounds();
       this.initializeGlobalMuteListener();
+      this.initializeWebAudio();
+    }
+  }
+
+  private async initializeWebAudio() {
+    if (!this.isBrowser) return;
+
+    try {
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      this.audioContext = new AudioContextClass();
+
+      // Preload notification sound into buffer
+      const response = await fetch('/audio/notifications/soft-bell.mp3');
+      const arrayBuffer = await response.arrayBuffer();
+      this.notificationBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+
+      console.log('[AUDIO SERVICE] Web Audio API initialized for notifications');
+
+      // Start a silent oscillator to keep context alive
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+      gainNode.gain.value = 0.00001;
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+      oscillator.start();
+
+      console.log('[AUDIO SERVICE] Silent oscillator started to keep audio context active');
+    } catch (error) {
+      console.error('[AUDIO SERVICE] Failed to initialize Web Audio API:', error);
     }
   }
 
@@ -41,7 +75,7 @@ class AudioService {
       window.addEventListener('globalMuteChanged', (event: Event) => {
         const customEvent = event as CustomEvent;
         this.isGloballyMuted = customEvent.detail.isGloballyMuted;
-        
+
         if (this.currentAudio) {
           if (this.isGloballyMuted) {
             // Mute: pause current audio safely
@@ -85,6 +119,11 @@ class AudioService {
       audio.loop = false;
       this.notificationCache.set(soundId, audio);
       this.audioStates.set(audio, 'idle');
+
+      // Add ended event listener to reset state when sound finishes
+      audio.addEventListener('ended', () => {
+        this.audioStates.set(audio, 'idle');
+      });
     });
   }
 
@@ -241,24 +280,81 @@ class AudioService {
     try {
       // Don't play if globally muted
       if (this.isGloballyMuted) {
+        console.log('[AUDIO SERVICE] Not playing notification - globally muted');
         return false;
       }
 
+      if (!this.audioContext || !this.notificationBuffer) {
+        console.warn('[AUDIO SERVICE] Web Audio not ready, falling back to HTML Audio');
+        return await this.playNotificationFallback(soundId);
+      }
+
+      console.log('[AUDIO SERVICE] Playing notification with Web Audio API', {
+        contextState: this.audioContext.state,
+        hasBuffer: !!this.notificationBuffer
+      });
+
+      // Resume context if suspended
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+        console.log('[AUDIO SERVICE] Resumed suspended audio context');
+      }
+
+      // Stop previous notification if playing
+      if (this.notificationSource) {
+        try {
+          this.notificationSource.stop();
+        } catch (e) {}
+      }
+
+      // Create new source
+      const source = this.audioContext.createBufferSource();
+      source.buffer = this.notificationBuffer;
+
+      // Create gain node for volume control
+      const gainNode = this.audioContext.createGain();
+      const volume = this.masterVolume * this.notificationVolume;
+      gainNode.gain.value = volume;
+
+      // Connect: source -> gain -> destination
+      source.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      // Play
+      source.start(0);
+      this.notificationSource = source;
+
+      source.onended = () => {
+        console.log('[AUDIO SERVICE] Web Audio notification playback ended');
+        this.notificationSource = null;
+      };
+
+      console.log('[AUDIO SERVICE] Web Audio notification started successfully');
+      return true;
+    } catch (error) {
+      console.error('[AUDIO SERVICE] Error playing notification with Web Audio:', error);
+      return await this.playNotificationFallback(soundId);
+    }
+  }
+
+  private async playNotificationFallback(soundId: string): Promise<boolean> {
+    try {
       let audio = this.notificationCache.get(soundId);
       if (!audio) {
-        // Create on-demand
         audio = new Audio(`/audio/notifications/${soundId}.mp3`);
         audio.preload = 'auto';
         audio.loop = false;
         this.notificationCache.set(soundId, audio);
         this.audioStates.set(audio, 'idle');
+
+        audio.addEventListener('ended', () => {
+          this.audioStates.set(audio, 'idle');
+        });
       }
 
-      // Set volume for notification
       audio.volume = this.masterVolume * this.notificationVolume;
       audio.currentTime = 0;
-      
-      // Use safe play method
+
       return await this.safePlay(audio);
     } catch (error) {
       return false;
@@ -305,10 +401,22 @@ class AudioService {
     if (!this.isBrowser) return;
     // Stop all audio and clear promises
     this.stopAmbientSound();
-    
+
+    // Stop notification source
+    if (this.notificationSource) {
+      try {
+        this.notificationSource.stop();
+      } catch (e) {}
+    }
+
+    // Close audio context
+    if (this.audioContext) {
+      this.audioContext.close();
+    }
+
     // Clear all pending promises
     this.playingPromises.clear();
-    
+
     // Reset all audio states
     this.audioStates.forEach((state, audio) => {
       this.audioStates.set(audio, 'idle');
