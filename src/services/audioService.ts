@@ -37,6 +37,8 @@ class AudioService {
       const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
       this.audioContext = new AudioContextClass();
 
+      if (!this.audioContext) return;
+
       // Preload notification sound into buffer
       const response = await fetch('/audio/notifications/soft-bell.mp3');
       const arrayBuffer = await response.arrayBuffer();
@@ -348,7 +350,9 @@ class AudioService {
         this.audioStates.set(audio, 'idle');
 
         audio.addEventListener('ended', () => {
-          this.audioStates.set(audio, 'idle');
+          if (audio) {
+            this.audioStates.set(audio, 'idle');
+          }
         });
       }
 
