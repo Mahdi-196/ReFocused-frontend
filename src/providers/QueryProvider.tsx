@@ -19,9 +19,9 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
             // Don't refetch on window focus by default (can be overridden per query)
             refetchOnWindowFocus: false,
             // Refetch on mount only if data is stale
-            refetchOnMount: 'stale',
+            refetchOnMount: true,
             // Refetch on reconnect only if data is stale
-            refetchOnReconnect: 'stale',
+            refetchOnReconnect: true,
           },
         },
       })

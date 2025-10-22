@@ -149,7 +149,6 @@ const Pomodoro: React.FC = () => {
           tag: 'pomodoro-timer',
           requireInteraction: false,
           silent: false,
-          vibrate: [200, 100, 200],
         });
 
         console.log('[NOTIFICATION] Notification created successfully');
@@ -201,7 +200,7 @@ const Pomodoro: React.FC = () => {
     }
 
     try {
-      const soundId = audioSettings?.notificationSound || 'soft-bell';
+      const soundId = 'soft-bell';
       audioService.playNotificationSound(soundId)
         .then(success => {
           if (success) {
