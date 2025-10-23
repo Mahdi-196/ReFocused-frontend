@@ -20,15 +20,21 @@ ReFocused exists for many reasons, the main being consolidation. The app has abo
 
 ## Table of Contents
 
-1. [Tech Stack](#tech-stack)
-2. [Feature Rundown](#feature-rundown)
-3. [Authentication](#authentication)
-4. [State Management](#state-management)
-5. [Performance](#performance)
-6. [AWS Deployment](#aws-deployment)
+1. [AWS Deployment](#aws-deployment)
+2. [Tech Stack](#tech-stack)
+3. [Feature Rundown](#feature-rundown)
+4. [Authentication](#authentication)
+5. [State Management](#state-management)
+6. [Performance](#performance)
+
 
 
 ---
+## AWS Deployment
+
+### Architecture Overview
+
+![ReFocused Architecture Diagram](https://mahdi-readme-images.s3.us-east-1.amazonaws.com/Refocused--Architecture)
 
 ## Tech Stack
 
