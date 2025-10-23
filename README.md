@@ -280,10 +280,4 @@ Date-aware cache that automatically invalidates at midnight UTC. Used for daily 
 User preferences, theme settings, and non-sensitive data persist across sessions with user-scoped isolation.
 
 
----
 
-## AWS Deployment
-
-### Architecture Overview
-
-![ReFocused Architecture Diagram](https://mahdi-readme-images.s3.us-east-1.amazonaws.com/Refocused-Architecture+)
