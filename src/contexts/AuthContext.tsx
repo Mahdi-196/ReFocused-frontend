@@ -183,8 +183,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(response.user);
       setIsAuthenticated(true);
 
-      // Navigate to home after successful login
-      router.push('/home');
+      // Navigate to home after successful login - use hard navigation to ensure auth state is fully initialized
+      window.location.href = '/home';
 
     } catch (error) {
       console.error('Login error:', error);
@@ -214,8 +214,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(response.user);
       setIsAuthenticated(true);
 
-      // Navigate to home after successful registration
-      router.push('/home');
+      // Navigate to home after successful registration - use hard navigation to ensure auth state is fully initialized
+      window.location.href = '/home';
 
     } catch (error) {
       console.error('Registration error:', error);
