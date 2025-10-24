@@ -279,17 +279,37 @@ class JournalService {
     }
   }
 
-  async updateEntry(id: string, data: UpdateEntryRequest): Promise<Entry> {
+  async updateEntry(id: string, data: UpdateEntryRequest, collectionId?: string): Promise<Entry> {
     try {
-      // Get the entry first to determine its collection for access token
-      const entryResponse = await client.get<EntryResponse>(JOURNAL.ENTRY_DETAIL(id));
       const headers: Record<string, string> = {};
-      
+
+      // If collectionId is provided, use it directly to get access token
+      // Otherwise, get the entry first to determine its collection
+      let finalCollectionId = collectionId;
+
+      if (!finalCollectionId) {
+        // Add access token to the GET request in case it's a private entry
+        const getHeaders: Record<string, string> = {};
+        // Try all stored tokens until we find one that works
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('REF_COLLECTION_TOKENS') : null;
+        if (stored) {
+          const tokens = JSON.parse(stored);
+          // Try each token in the GET request
+          for (const [tokenCollectionId, token] of Object.entries(tokens)) {
+            getHeaders['X-Collection-Access-Token'] = token as string;
+            break; // Use the first token for now
+          }
+        }
+
+        const entryResponse = await client.get<EntryResponse>(JOURNAL.ENTRY_DETAIL(id), { headers: getHeaders });
+        finalCollectionId = entryResponse.data.collection_id.toString();
+      }
+
       // Add access token header for private collections
-      const accessToken = this.getCollectionToken(entryResponse.data.collection_id.toString());
+      const accessToken = this.getCollectionToken(finalCollectionId);
       if (accessToken) {
         headers['X-Collection-Access-Token'] = accessToken;
-        console.log('🔐 Adding access token for collection:', entryResponse.data.collection_id);
+        console.log('🔐 [UPDATE ENTRY] Adding access token for collection:', finalCollectionId);
       }
 
       const response = await client.put<EntryResponse>(JOURNAL.ENTRY_DETAIL(id), data, { headers });
@@ -299,17 +319,37 @@ class JournalService {
     }
   }
 
-  async deleteEntry(id: string): Promise<void> {
+  async deleteEntry(id: string, collectionId?: string): Promise<void> {
     try {
-      // Get the entry first to determine its collection for access token
-      const entryResponse = await client.get<EntryResponse>(JOURNAL.ENTRY_DETAIL(id));
       const headers: Record<string, string> = {};
-      
+
+      // If collectionId is provided, use it directly to get access token
+      // Otherwise, get the entry first to determine its collection
+      let finalCollectionId = collectionId;
+
+      if (!finalCollectionId) {
+        // Add access token to the GET request in case it's a private entry
+        const getHeaders: Record<string, string> = {};
+        // Try all stored tokens until we find one that works
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('REF_COLLECTION_TOKENS') : null;
+        if (stored) {
+          const tokens = JSON.parse(stored);
+          // Try each token in the GET request
+          for (const [tokenCollectionId, token] of Object.entries(tokens)) {
+            getHeaders['X-Collection-Access-Token'] = token as string;
+            break; // Use the first token for now
+          }
+        }
+
+        const entryResponse = await client.get<EntryResponse>(JOURNAL.ENTRY_DETAIL(id), { headers: getHeaders });
+        finalCollectionId = entryResponse.data.collection_id.toString();
+      }
+
       // Add access token header for private collections
-      const accessToken = this.getCollectionToken(entryResponse.data.collection_id.toString());
+      const accessToken = this.getCollectionToken(finalCollectionId);
       if (accessToken) {
         headers['X-Collection-Access-Token'] = accessToken;
-        console.log('🔐 Adding access token for collection:', entryResponse.data.collection_id);
+        console.log('🔐 [DELETE ENTRY] Adding access token for collection:', finalCollectionId);
       }
 
       await client.delete(JOURNAL.ENTRY_DETAIL(id), { headers });

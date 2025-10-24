@@ -32,7 +32,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultTab = 'lo
   const [isLoading, setIsLoading] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
-  const MIN_PASSWORD_LENGTH = 5;
+  const MIN_PASSWORD_LENGTH = 8;
 
   // Reset form when modal opens - but not on tab changes to prevent jerky animation
   useEffect(() => {
