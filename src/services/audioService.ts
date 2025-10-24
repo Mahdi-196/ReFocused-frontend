@@ -17,7 +17,7 @@ class AudioService {
 
   // Web Audio API for better background support
   private audioContext: AudioContext | null = null;
-  private notificationBuffer: AudioBuffer | null = null;
+  private notificationBuffers: Map<string, AudioBuffer> = new Map();
   private notificationSource: AudioBufferSourceNode | null = null;
 
   constructor() {
@@ -39,10 +39,20 @@ class AudioService {
 
       if (!this.audioContext) return;
 
-      // Preload notification sound into buffer
-      const response = await fetch('/audio/notifications/soft-bell.mp3');
-      const arrayBuffer = await response.arrayBuffer();
-      this.notificationBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      // Preload all notification sounds into buffers
+      const notificationIds = ['gentle-chime', 'soft-bell', 'zen-ding'];
+
+      for (const soundId of notificationIds) {
+        try {
+          const response = await fetch(`/audio/notifications/${soundId}.mp3`);
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = await this.audioContext.decodeAudioData(arrayBuffer);
+          this.notificationBuffers.set(soundId, buffer);
+          console.log(`[AUDIO SERVICE] Loaded ${soundId} into Web Audio buffer`);
+        } catch (error) {
+          console.error(`[AUDIO SERVICE] Failed to load ${soundId}:`, error);
+        }
+      }
 
       console.log('[AUDIO SERVICE] Web Audio API initialized for notifications');
 
@@ -286,14 +296,17 @@ class AudioService {
         return false;
       }
 
-      if (!this.audioContext || !this.notificationBuffer) {
-        console.warn('[AUDIO SERVICE] Web Audio not ready, falling back to HTML Audio');
+      const buffer = this.notificationBuffers.get(soundId);
+
+      if (!this.audioContext || !buffer) {
+        console.warn('[AUDIO SERVICE] Web Audio not ready or buffer not found, falling back to HTML Audio');
         return await this.playNotificationFallback(soundId);
       }
 
       console.log('[AUDIO SERVICE] Playing notification with Web Audio API', {
+        soundId,
         contextState: this.audioContext.state,
-        hasBuffer: !!this.notificationBuffer
+        hasBuffer: !!buffer
       });
 
       // Resume context if suspended
@@ -311,7 +324,7 @@ class AudioService {
 
       // Create new source
       const source = this.audioContext.createBufferSource();
-      source.buffer = this.notificationBuffer;
+      source.buffer = buffer;
 
       // Create gain node for volume control
       const gainNode = this.audioContext.createGain();
@@ -331,7 +344,7 @@ class AudioService {
         this.notificationSource = null;
       };
 
-      console.log('[AUDIO SERVICE] Web Audio notification started successfully');
+      console.log('[AUDIO SERVICE] Web Audio notification started successfully:', soundId);
       return true;
     } catch (error) {
       console.error('[AUDIO SERVICE] Error playing notification with Web Audio:', error);
