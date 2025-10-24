@@ -275,7 +275,7 @@ export function useCollections() {
         };
         
         console.log('📝 Updating existing entry:', entry.id, 'in collection:', collectionId);
-        savedEntry = await journalService.updateEntry(entry.id, updateData);
+        savedEntry = await journalService.updateEntry(entry.id, updateData, collectionId);
       } else {
         // Create new entry
         const collectionIdInt = parseInt(collectionId);
@@ -359,7 +359,7 @@ export function useCollections() {
   // Delete entry from collection
   const deleteEntry = async (collectionId: string, entryId: string): Promise<boolean> => {
     try {
-      await journalService.deleteEntry(entryId);
+      await journalService.deleteEntry(entryId, collectionId);
       
       // Update local state
       setCollections(prev =>
