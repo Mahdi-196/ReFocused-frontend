@@ -231,7 +231,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
         <div className="p-8 mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
                 <Activity className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -350,7 +350,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
                       </span>
                       <button
                         onClick={togglePlayPause}
-                        className="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                        className="w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors shadow-lg"
                         aria-label={`${isPlaying ? 'Pause' : 'Start'} ${selectedTechnique.label}`}
                       >
                         {isPlaying ? (
@@ -364,7 +364,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
 
                   {/* Breathing Phase Indicator */}
                   {selectedTechnique.key === 'box' && isPlaying && (
-                    <div className="bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-700/50 rounded-xl p-4 mb-4">
+                    <div className="bg-gray-700/40 border border-gray-600/50 rounded-xl p-4 mb-4">
                       <p className="text-sm text-blue-300 font-medium mb-2">Current Phase</p>
                       <p className="text-lg font-bold text-blue-200 capitalize">
                         {breathPhase === 'hold2' ? 'Hold (Empty)' : breathPhase}
@@ -416,7 +416,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
 
               {/* Technique Header */}
               <div className="text-center mb-8 pt-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   {modalTechnique.icon}
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-3">
@@ -528,7 +528,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
                     </span>
                     <button
                       onClick={togglePlayPause}
-                      className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                      className="w-16 h-16 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors shadow-lg"
                       aria-label={`${isPlaying ? 'Pause' : 'Start'} ${modalTechnique.label}`}
                     >
                       {isPlaying ? (
@@ -543,7 +543,7 @@ export default function BreathworkExercises({ techniques = BREATHING_TECHNIQUES 
 
               {/* Breathing Phase Indicator */}
               {modalTechnique.key === 'box' && isPlaying && (
-                <div className="bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-700/50 rounded-xl p-6 mb-8 text-center">
+                <div className="bg-gray-700/40 border border-gray-600/50 rounded-xl p-6 mb-8 text-center">
                   <p className="text-sm text-blue-300 font-medium mb-2">Current Phase</p>
                   <p className="text-2xl font-bold text-blue-200 capitalize">
                     {breathPhase === 'hold2' ? 'Hold (Empty)' : breathPhase}
