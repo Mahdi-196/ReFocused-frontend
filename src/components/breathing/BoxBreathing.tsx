@@ -83,16 +83,16 @@ export default function BoxBreathing({ isPlaying, timeLeft, durationSec, onToggl
         <div className="flex flex-col items-center justify-center space-y-4">
           {/* Timer display */}
           <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg shadow-blue-500/10 border border-white/20">
-            <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="text-3xl font-bold text-blue-600">
               {formatTime(timeLeft)}
             </span>
           </div>
-          
+
           {/* Breathing instruction */}
-          <div className={`bg-gradient-to-r from-blue-100/90 to-indigo-100/90 backdrop-blur-sm rounded-full px-6 py-3 border border-blue-200/50 shadow-lg transition-all duration-500 ${
+          <div className={`bg-blue-100/90 backdrop-blur-sm rounded-full px-6 py-3 border border-blue-200/50 shadow-lg transition-all duration-500 ${
             isPlaying ? 'animate-pulse shadow-blue-500/20' : 'shadow-blue-500/10'
           }`}>
-            <span className="text-sm font-semibold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+            <span className="text-sm font-semibold text-blue-700">
               {getBreathingPhase()}
             </span>
           </div>

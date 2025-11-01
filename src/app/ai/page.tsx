@@ -391,7 +391,7 @@ const AiPage = () => {
 
   return (
     <PageTransition>
-      <div className="relative min-h-screen w-screen max-w-none ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] bg-gradient-to-b from-slate-950 via-slate-950 to-blue-900/40 flex flex-col overflow-hidden">
+      <div className="relative min-h-screen w-screen max-w-none ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] flex flex-col overflow-hidden">
         {/* Background overlays removed to ensure full-width uniform gradient without edge contrast */}
         {/* No in-page header; global header remains above. */}
 
@@ -482,12 +482,12 @@ const AiPage = () => {
                         >
                           {message.role === 'assistant' && (
                             <div className="flex-shrink-0">
-                              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-xl ring-1 ring-white/20">
-                                <Image 
-                                  src="/canva-brain.png" 
-                                  alt="ReFocused AI" 
-                                  width={32} 
-                                  height={32} 
+                              <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl ring-1 ring-white/20">
+                                <Image
+                                  src="/canva-brain.png"
+                                  alt="ReFocused AI"
+                                  width={32}
+                                  height={32}
                                   className="text-white"
                                 />
                               </div>
@@ -498,7 +498,7 @@ const AiPage = () => {
                             <div
                               className={`rounded-2xl px-5 py-4 shadow-lg ${
                                 message.role === 'user'
-                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+                                  ? 'bg-blue-600 text-white'
                                   : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white'
                               }`}
                             >
@@ -535,12 +535,12 @@ const AiPage = () => {
                           className="flex gap-6"
                         >
                           <div className="flex-shrink-0">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-xl ring-1 ring-white/20">
-                              <Image 
-                                src="/canva-brain.png" 
-                                alt="ReFocused AI" 
-                                width={32} 
-                                height={32} 
+                            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl ring-1 ring-white/20">
+                              <Image
+                                src="/canva-brain.png"
+                                alt="ReFocused AI"
+                                width={32}
+                                height={32}
                                 className="text-white animate-pulse"
                               />
                             </div>
@@ -638,7 +638,7 @@ const AiPage = () => {
                 <button
                   type="submit"
                   disabled={!inputMessage.trim() || isLoading || dailyMessageCount >= messageLimit}
-                  className="flex-shrink-0 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl text-white disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-500 hover:to-indigo-500 transition-all duration-300 min-w-[60px] h-[60px] flex items-center justify-center shadow-lg hover:shadow-xl"
+                  className="flex-shrink-0 p-4 bg-blue-600 rounded-2xl text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-500 transition-all duration-300 min-w-[60px] h-[60px] flex items-center justify-center shadow-lg hover:shadow-xl"
                 >
                   {isLoading ? (
                     <Loader2 className="w-6 h-6 animate-spin" />

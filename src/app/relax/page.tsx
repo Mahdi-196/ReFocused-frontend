@@ -156,17 +156,14 @@ export default function RelaxPage() {
           <div className="transition-all duration-300">
             {activeMode === 'breathing' ? (
               <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-5 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
-                {/* Toggle Switch in Top Left */}
                 <div className="flex justify-start mb-4">
                   <div className="relative bg-gray-700/50 rounded-full p-1 flex w-64">
-                    {/* Sliding Background */}
                     <div
-                      className={`absolute top-1 bottom-1 w-1/2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-md transition-transform duration-300 ease-in-out ${
+                      className={`absolute top-1 bottom-1 w-1/2 bg-gradient-to-r from-blue-500 to-[#4D81C2] rounded-full shadow-md transition-transform duration-300 ease-in-out ${
                         activeMode === ('meditation' as RelaxMode) ? 'translate-x-full' : 'translate-x-0'
                       }`}
                     />
-                    
-                    {/* Toggle Buttons */}
+
                     <button
                       onClick={() => setActiveMode('breathing')}
                       className={`relative z-10 flex items-center justify-center gap-2 px-4 py-3 rounded-full font-medium transition-all duration-200 flex-1 ${
@@ -196,17 +193,14 @@ export default function RelaxPage() {
               </div>
             ) : (
               <div className="bg-gradient-to-br from-gray-800/80 to-slate-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-xl p-5 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
-                {/* Toggle Switch in Top Left */}
                 <div className="flex justify-start mb-4">
                   <div className="relative bg-gray-700/50 rounded-full p-1 flex w-64">
-                    {/* Sliding Background */}
                     <div
-                      className={`absolute top-1 bottom-1 w-1/2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-md transition-transform duration-300 ease-in-out ${
+                      className={`absolute top-1 bottom-1 w-1/2 bg-gradient-to-r from-blue-500 to-[#4D81C2] rounded-full shadow-md transition-transform duration-300 ease-in-out ${
                         activeMode === ('meditation' as RelaxMode) ? 'translate-x-full' : 'translate-x-0'
                       }`}
                     />
-                    
-                    {/* Toggle Buttons */}
+
                     <button
                       onClick={() => setActiveMode('breathing')}
                       className={`relative z-10 flex items-center justify-center gap-2 px-4 py-3 rounded-full font-medium transition-all duration-200 flex-1 ${
@@ -233,7 +227,7 @@ export default function RelaxPage() {
                 </div>
                 
                 <div className="text-center mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 via-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-2">
                     <Brain className="w-6 h-6 text-white" />
                   </div>
                   <h3 className="text-base font-bold text-white mb-1">Guided Mindfulness Session</h3>
@@ -248,27 +242,27 @@ export default function RelaxPage() {
               </div>
 
               {/* Meditation Instructions */}
-              <div className="mt-4 p-3 bg-gradient-to-br from-indigo-900/50 via-blue-900/50 to-violet-900/50 border border-indigo-700/40 rounded-lg backdrop-blur-sm">
+              <div className="mt-4 p-3 bg-gray-700/50 border border-gray-600/40 rounded-lg backdrop-blur-sm">
                 <button
                   onClick={() => setShowMeditationGuide(!showMeditationGuide)}
-                  className="flex items-center gap-2 w-full text-left hover:text-indigo-300 transition-colors duration-200"
+                  className="flex items-center gap-2 w-full text-left hover:text-blue-300 transition-colors duration-200"
                 >
-                  <h4 className="font-semibold text-indigo-200">Meditation Guide</h4>
-                  <Info className="w-4 h-4 text-indigo-300" />
+                  <h4 className="font-semibold text-blue-200">Meditation Guide</h4>
+                  <Info className="w-4 h-4 text-blue-300" />
                 </button>
                 
                                   {showMeditationGuide && (
                     <div className="mt-2 animate-in slide-in-from-top-2 duration-300">
-                      <ul className="space-y-1 text-xs text-indigo-200">
+                      <ul className="space-y-1 text-xs text-blue-200">
                         <li>• Find a comfortable seated position</li>
                         <li>• Close your eyes or soften your gaze</li>
                         <li>• Focus on your natural breathing rhythm</li>
                         <li>• When thoughts arise, gently return to your breath</li>
                         <li>• Allow yourself to simply be present</li>
                       </ul>
-                      
-                      <div className="mt-2 p-2 bg-indigo-800/40 border border-indigo-600/50 rounded-md">
-                      <p className="text-xs text-indigo-200">
+
+                      <div className="mt-2 p-2 bg-gray-800/40 border border-gray-600/50 rounded-md">
+                      <p className="text-xs text-blue-200">
                         🧘‍♀️ <strong>Tip:</strong> Start with shorter sessions and gradually increase the duration as you build your practice.
                       </p>
                     </div>
@@ -326,7 +320,7 @@ export default function RelaxPage() {
                   ) : (
                     currentTheme && (
                       <div className="text-center">
-                        <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-violet-400 bg-clip-text text-transparent">
+                        <h3 className="text-xl font-bold mb-2 text-blue-400">
                           {currentTheme.name}
                         </h3>
                         <p className="text-gray-400 text-sm mb-4 italic">

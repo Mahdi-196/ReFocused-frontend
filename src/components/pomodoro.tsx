@@ -489,7 +489,7 @@ const Pomodoro: React.FC = () => {
     if (mode === "pomodoro") setTimeLeft(pomodoroTime * 60);
     else if (mode === "short") setTimeLeft(shortBreakTime * 60);
     else setTimeLeft(longBreakTime * 60);
-  }, [pomodoroTime, shortBreakTime, longBreakTime, mode, isRunning]);
+  }, [pomodoroTime, shortBreakTime, longBreakTime, mode]);
 
   // Initialize temporary settings when opening the modal
   const openSettings = () => {
@@ -663,15 +663,14 @@ const Pomodoro: React.FC = () => {
       {/* Main Timer Section - Centered */}
       <div className="flex-1 flex items-center justify-center py-4">
         <div className="flex flex-col items-center space-y-6">
-          {/* Timer Circle */}
           <div className="relative w-52 h-52 flex items-center justify-center">
             <svg
               width="100%"
               height="100%"
               viewBox="0 0 100 100"
-              className="absolute inset-0 drop-shadow-lg"
+              className="absolute inset-0"
+              style={{ overflow: "visible" }}
             >
-              {/* Background Circle */}
               <circle
                 cx="50"
                 cy="50"
@@ -680,7 +679,7 @@ const Pomodoro: React.FC = () => {
                 stroke="#374151"
                 strokeWidth="3"
               />
-              {/* Progress Circle */}
+
               <circle
                 cx="50"
                 cy="50"
@@ -688,17 +687,18 @@ const Pomodoro: React.FC = () => {
                 fill="none"
                 stroke="#3B82F6"
                 strokeWidth="3"
+                strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={dashOffset}
                 style={{
                   transition: "stroke-dashoffset 0.3s linear",
                   transform: "rotate(-90deg)",
                   transformOrigin: "50% 50%",
-                  filter: "drop-shadow(0 0 6px rgba(59, 130, 246, 0.5))"
+                  filter: isRunning ? "drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 16px rgba(59, 130, 246, 0.4))" : "none"
                 }}
               />
             </svg>
-            <div className="z-10 text-center">
+            <div className="relative text-center" style={{ zIndex: 10 }}>
               <span className="text-5xl font-bold text-white drop-shadow-lg">
                 {formatTime(timeLeft)}
               </span>

@@ -84,7 +84,7 @@ export default function DeepBreathing({ isPlaying, timeLeft, durationSec, onTogg
             cy="100"
             r={75 * breathingDepth}
             fill="url(#deepGradient)"
-            stroke="#6366f1"
+            stroke="#3b82f6"
             strokeWidth="6"
             opacity="0.8"
             style={{
@@ -127,7 +127,7 @@ export default function DeepBreathing({ isPlaying, timeLeft, durationSec, onTogg
                       cx={x}
                       cy={y}
                       r="2"
-                      fill="#6366f1"
+                      fill="#3b82f6"
                       opacity={0.4 + 0.3 * Math.sin(cycleProgress * 4 * Math.PI + particle)}
                       className="animate-pulse"
                       style={{
@@ -143,7 +143,7 @@ export default function DeepBreathing({ isPlaying, timeLeft, durationSec, onTogg
                   cx="100"
                   cy="100"
                   r="5"
-                  fill="#6366f1"
+                  fill="#3b82f6"
                   opacity="0.8"
                   className="animate-ping"
                   style={{
@@ -157,13 +157,13 @@ export default function DeepBreathing({ isPlaying, timeLeft, durationSec, onTogg
           {/* Gradient definitions */}
           <defs>
             <radialGradient id="deepGradient">
-              <stop offset="0%" stopColor="#e0e7ff" stopOpacity="0.4" />
-              <stop offset="60%" stopColor="#6366f1" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.1" />
+              <stop offset="0%" stopColor="#dbeafe" stopOpacity="0.4" />
+              <stop offset="60%" stopColor="#3b82f6" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#2563eb" stopOpacity="0.1" />
             </radialGradient>
             <radialGradient id="innerDeepGradient">
-              <stop offset="0%" stopColor="#c7d2fe" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+              <stop offset="0%" stopColor="#bfdbfe" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
             </radialGradient>
           </defs>
         </svg>
@@ -172,17 +172,17 @@ export default function DeepBreathing({ isPlaying, timeLeft, durationSec, onTogg
       {/* Middle section with timer and instructions */}
       <div className="flex flex-col items-center space-y-3 flex-grow justify-center">
         {/* Timer display */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg shadow-indigo-500/10 border border-white/20">
-          <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg shadow-blue-500/10 border border-white/20">
+          <span className="text-2xl font-bold text-blue-600">
             {formatTime(timeLeft)}
           </span>
         </div>
-        
+
         {/* Breathing instruction */}
-        <div className={`bg-gradient-to-r from-indigo-100/90 to-blue-100/90 backdrop-blur-sm rounded-full px-4 py-2 border border-indigo-200/50 shadow-lg transition-all duration-500 ${
-          isPlaying ? 'animate-pulse shadow-indigo-500/20' : 'shadow-indigo-500/10'
+        <div className={`bg-blue-100/90 backdrop-blur-sm rounded-full px-4 py-2 border border-blue-200/50 shadow-lg transition-all duration-500 ${
+          isPlaying ? 'animate-pulse shadow-blue-500/20' : 'shadow-blue-500/10'
         }`}>
-          <span className="text-sm font-semibold bg-gradient-to-r from-indigo-700 to-blue-700 bg-clip-text text-transparent">
+          <span className="text-sm font-semibold text-blue-700">
             {getBreathingPhase()}
           </span>
         </div>
@@ -199,7 +199,7 @@ export default function DeepBreathing({ isPlaying, timeLeft, durationSec, onTogg
         {/* Play/pause button */}
         <button
           onClick={onTogglePlay}
-          className="w-14 h-14 bg-indigo-500 hover:bg-indigo-600 rounded-full flex items-center justify-center transition-colors shadow-lg"
+          className="w-14 h-14 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors shadow-lg"
           aria-label={`${isPlaying ? 'Pause' : 'Start'} deep breathing`}
         >
           {isPlaying ? (
