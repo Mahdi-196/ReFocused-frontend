@@ -84,8 +84,8 @@ export default function HomePage() {
     <div className="overflow-hidden">
       {/* Hero Section */}
       <section id="top" className="relative min-h-[85vh] flex items-center justify-center py-16 px-4 bg-[#10182B] overflow-hidden">
-        {/* Base gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#10182B] via-[#10182B] to-[#0c1324]"></div>
+        {/* Base background */}
+        <div className="absolute inset-0 bg-[#10182B]"></div>
         
         {/* Optimized floating dots background - reduced from 15 to 8 for better performance */}
         <div className="absolute inset-0 overflow-hidden opacity-60">
@@ -148,12 +148,12 @@ export default function HomePage() {
           </div>
           
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">ReFocused</span>
+            <span className="text-[#42b9e5]">ReFocused</span>
           </h1>
-          
+
           <h2 className="text-3xl md:text-5xl font-bold mb-8 text-white">
             <span className="text-white">Transform Your</span><br />
-            <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">Productivity</span>
+            <span className="text-[#42b9e5]">Productivity</span>
           </h2>
           
           <p className="text-lg md:text-xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed">
@@ -163,7 +163,7 @@ export default function HomePage() {
           {/* Features highlights */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-10">
             <div className="p-4 flex items-start">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4 shadow-[0_0_10px_rgba(66,185,229,0.2)]">
+              <div className="bg-[#42b9e5]/20 p-3 rounded-lg mr-4 shadow-[0_0_10px_rgba(66,185,229,0.2)]">
                 <FaBrain className="w-6 h-6 text-[#42b9e5]" />
               </div>
               <div className="text-left">
@@ -171,9 +171,9 @@ export default function HomePage() {
                 <p className="text-slate-300 text-sm">Personalized recommendations based on your unique patterns</p>
               </div>
             </div>
-            
+
             <div className="p-4 flex items-start">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg mr-4 shadow-[0_0_10px_rgba(66,185,229,0.2)]">
+              <div className="bg-[#42b9e5]/20 p-3 rounded-lg mr-4 shadow-[0_0_10px_rgba(66,185,229,0.2)]">
                 <FiCheckCircle className="w-6 h-6 text-[#42b9e5]" />
               </div>
               <div className="text-left">
@@ -185,9 +185,9 @@ export default function HomePage() {
           
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-20 mb-8">
-            <button 
+            <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="px-8 py-3 bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 min-h-[52px] flex items-center justify-center"
+              className="px-8 py-3 bg-[#42b9e5] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(66,185,229,0.4)] transition-all duration-300 transform hover:scale-105 min-h-[52px] flex items-center justify-center"
             >
               Start with ReFocused
             </button>
@@ -266,15 +266,15 @@ export default function HomePage() {
 
       {/* ReFocused Features Section */}
       <FeaturesSection>
-      <section id="features" className="py-12 px-4 bg-gradient-to-b from-[#0c1324] to-[#10182B]">
+      <section id="features" className="py-12 px-4 bg-[#0c1324]">
         <div className="container mx-auto">
           <div className="text-center mb-10">
-            <div className="inline-block px-4 py-1.5 rounded-full bg-gradient-to-r from-[#42b9e5]/20 to-[#4f83ed]/20 text-[#42b9e5] mb-4 text-sm">
+            <div className="inline-block px-4 py-1.5 rounded-full bg-[#42b9e5]/20 text-[#42b9e5] mb-4 text-sm">
               <FiZap className="inline mr-1 w-4 h-4" />
               ReFocused Features
             </div>
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-              Everything You Need to <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">Succeed</span>
+              Everything You Need to <span className="text-[#42b9e5]">Succeed</span>
             </h2>
             <p className="text-base text-slate-300 max-w-xl mx-auto">
               Experience simple yet effective tools designed to help you succeed with an easy to use interface and intuitive navigation that keeps you focused on what matters.
@@ -283,8 +283,8 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Daily Momentum */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-[#42b9e5]/20 p-3 rounded-lg w-fit mb-4">
                 <FiTarget className="w-5 h-5 text-[#42b9e5]" />
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Daily Momentum</h3>
@@ -294,8 +294,8 @@ export default function HomePage() {
             </div>
 
             {/* Premium Focus Sessions */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-[#42b9e5]/20 p-3 rounded-lg w-fit mb-4">
                 <FiClock className="w-5 h-5 text-[#42b9e5]" />
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Premium Focus Sessions</h3>
@@ -305,8 +305,8 @@ export default function HomePage() {
             </div>
 
             {/* Intelligent Habit Building */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-[#42b9e5]/20 p-3 rounded-lg w-fit mb-4">
                 <FaBrain className="w-5 h-5 text-[#42b9e5]" />
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Intelligent Habit Building</h3>
@@ -316,8 +316,8 @@ export default function HomePage() {
             </div>
 
             {/* Guided Reflection */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-[#42b9e5]/20 p-3 rounded-lg w-fit mb-4">
                 <FiBook className="w-5 h-5 text-[#42b9e5]" />
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Guided Reflection</h3>
@@ -327,8 +327,8 @@ export default function HomePage() {
             </div>
 
             {/* Mindful Restoration */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-[#42b9e5]/20 p-3 rounded-lg w-fit mb-4">
                 <FiHeart className="w-5 h-5 text-[#42b9e5]" />
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Mindful Restoration</h3>
@@ -338,8 +338,8 @@ export default function HomePage() {
             </div>
 
             {/* Smart Recommendations */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-[#42b9e5]/20 to-[#4f83ed]/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-blue-500/30 transition-all duration-300">
+              <div className="bg-[#42b9e5]/20 p-3 rounded-lg w-fit mb-4">
                 <FiBarChart2 className="w-5 h-5 text-[#42b9e5]" />
               </div>
               <h3 className="text-lg font-bold text-white mb-3">Smart Recommendations</h3>
@@ -357,7 +357,7 @@ export default function HomePage() {
       <section className="py-12 px-4 bg-[#10182B]">
         <div className="container mx-auto">
           <div className="text-center mb-10">
-            <div className="inline-block px-4 py-1.5 rounded-full bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-400 mb-4 text-sm">
+            <div className="inline-block px-4 py-1.5 rounded-full bg-green-500/20 text-green-400 mb-4 text-sm">
               <FaRobot className="inline mr-1 w-4 h-4" />
               ReFocused AI
             </div>
@@ -368,8 +368,8 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
             {/* Self-Help Focused */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-green-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-green-500/30 transition-all duration-300">
+              <div className="bg-green-500/20 p-3 rounded-lg w-fit mb-4">
                 <FaBrain className="w-5 h-5 text-green-400" />
               </div>
               <h3 className="text-base font-bold text-white mb-3">Self Help Focused</h3>
@@ -379,8 +379,8 @@ export default function HomePage() {
             </div>
 
             {/* Conversational Guidance */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-green-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-green-500/30 transition-all duration-300">
+              <div className="bg-green-500/20 p-3 rounded-lg w-fit mb-4">
                 <FiUsers className="w-5 h-5 text-green-400" />
               </div>
               <h3 className="text-base font-bold text-white mb-3">Conversational Guidance</h3>
@@ -390,8 +390,8 @@ export default function HomePage() {
             </div>
 
             {/* Goal-Oriented */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-green-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-green-500/30 transition-all duration-300">
+              <div className="bg-green-500/20 p-3 rounded-lg w-fit mb-4">
                 <FiTarget className="w-5 h-5 text-green-400" />
               </div>
               <h3 className="text-base font-bold text-white mb-3">Goal Oriented</h3>
@@ -401,8 +401,8 @@ export default function HomePage() {
             </div>
 
             {/* Growth Mindset */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-green-500/30 transition-all duration-300">
-              <div className="bg-gradient-to-br from-green-500/20 to-teal-500/20 p-3 rounded-lg w-fit mb-4">
+            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-xl p-5 hover:border-green-500/30 transition-all duration-300">
+              <div className="bg-green-500/20 p-3 rounded-lg w-fit mb-4">
                 <FiTrendingUp className="w-5 h-5 text-green-400" />
               </div>
               <h3 className="text-base font-bold text-white mb-3">Growth Mindset</h3>
@@ -419,10 +419,10 @@ export default function HomePage() {
 
       {/* Final CTA Section */}
       <CTASection>
-      <section className="py-12 px-4 bg-gradient-to-b from-[#10182B] to-[#0c1324]">
+      <section className="py-12 px-4 bg-[#10182B]">
         <div className="container mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-            Ready to Transform Your <span className="bg-gradient-to-r from-[#42b9e5] to-[#4f83ed] bg-clip-text text-transparent">Productivity</span>?
+            Ready to Transform Your <span className="text-[#42b9e5]">Productivity</span>?
           </h2>
           <p className="text-base text-slate-300 max-w-xl mx-auto mb-8">
             Join thousands of users who have already improved their focus, productivity, and wellbeing with ReFocused.
