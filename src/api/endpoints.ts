@@ -35,6 +35,7 @@ export const GOALS = {
   LIST: '/v1/goals', // Main endpoint for fetching goals with duration filtering
   PROGRESS: (id: number | string) => `/v1/goals/${id}/progress`,
   DETAIL: (id: number | string) => `/v1/goals/${id}`,
+  DELETE: (id: number | string) => `/v1/goals/${id}`,
   HISTORY: '/v1/goals/history', // New endpoint for completed goals history
   STATS: '/v1/goals/stats', // Enhanced stats endpoint
 };

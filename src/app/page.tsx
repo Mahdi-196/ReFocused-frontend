@@ -84,9 +84,11 @@ export default function HomePage() {
     <div className="overflow-hidden">
       {/* Hero Section */}
       <section id="top" className="relative min-h-[85vh] flex items-center justify-center py-16 px-4 bg-[#10182B] overflow-hidden">
-        {/* Base background */}
+        {/* Base background with gradient overlay */}
         <div className="absolute inset-0 bg-[#10182B]"></div>
-        
+        <div className="absolute inset-0 bg-gradient-to-br from-[#42b9e5]/10 via-transparent to-[#4f83ed]/10"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#42b9e5]/5 via-transparent to-transparent"></div>
+
         {/* Optimized floating dots background - reduced from 15 to 8 for better performance */}
         <div className="absolute inset-0 overflow-hidden opacity-60">
           <div className="absolute w-3 h-3 bg-[#42b9e5]/60 rounded-full float-1" style={{ top: '20%', left: '15%' }}></div>
@@ -264,6 +266,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Gradient transition from hero to features */}
+      <div className="h-24 bg-gradient-to-b from-[#10182B] to-[#0c1324]"></div>
+
       {/* ReFocused Features Section */}
       <FeaturesSection>
       <section id="features" className="py-12 px-4 bg-[#0c1324]">
@@ -351,6 +356,9 @@ export default function HomePage() {
         </div>
       </section>
       </FeaturesSection>
+
+      {/* Gradient transition from features to AI section */}
+      <div className="h-24 bg-gradient-to-b from-[#0c1324] to-[#10182B]"></div>
 
       {/* ReFocused AI Section */}
       <AISection>

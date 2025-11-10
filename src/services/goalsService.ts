@@ -817,15 +817,39 @@ export class GoalsService {
     try {
       logger.info('Fetching goal details', { goalId }, 'GOALS_SERVICE');
       const response = await client.get<Goal>(GOALS.DETAIL(goalId));
-      
+
       if (!response.data) {
         throw new Error('Goal not found');
       }
-      
+
       return response.data;
     } catch (error) {
       logger.error('Failed to fetch goal details', error, 'GOALS_SERVICE');
       throw new Error('Unable to load goal details. Please try again.');
+    }
+  }
+
+  /**
+   * Delete a goal
+   */
+  async deleteGoal(goalId: number): Promise<void> {
+    try {
+      logger.info('Deleting goal', { goalId }, 'GOALS_SERVICE');
+      await client.delete(GOALS.DELETE(goalId));
+
+      // Dispatch event to notify components
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('goalDeleted', {
+          detail: { goalId }
+        });
+        window.dispatchEvent(event);
+        console.log('📢 Dispatched goalDeleted event:', event.detail);
+      }
+
+      logger.info('Successfully deleted goal', { goalId }, 'GOALS_SERVICE');
+    } catch (error) {
+      logger.error('Failed to delete goal', error, 'GOALS_SERVICE');
+      throw new Error('Unable to delete goal. Please try again.');
     }
   }
 

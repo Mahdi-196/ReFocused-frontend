@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { History } from 'lucide-react';
+import { History, Trash2 } from 'lucide-react';
 import { IoCheckmarkDoneSharp, IoCheckmark } from "react-icons/io5";
 import { Trophy } from 'lucide-react';
 import { 
@@ -317,6 +317,23 @@ const GoalTracker: React.FC = () => {
     });
   };
 
+  const handleDeleteGoal = async (goal: Goal) => {
+    if (!window.confirm(`Are you sure you want to delete "${goal.name}"?`)) {
+      return;
+    }
+
+    // Optimistic update - remove the goal from the list immediately
+    setGoals(prevGoals => prevGoals.filter(g => g.id !== goal.id));
+
+    try {
+      await goalsService.deleteGoal(goal.id);
+    } catch (error) {
+      // Revert optimistic update on error
+      loadGoals();
+      console.error('Failed to delete goal:', error);
+    }
+  };
+
   const renderGoalActions = (goal: Goal): React.ReactNode[] => {
     const actions: React.ReactNode[] = [];
     const expired = isGoalExpired(goal);
@@ -349,6 +366,15 @@ const GoalTracker: React.FC = () => {
       }`}>
         <div className="flex justify-between items-center text-sm mb-1">
           <div className="flex items-center gap-2">
+            {/* Delete button - only visible on hover */}
+            <button
+              onClick={() => handleDeleteGoal(goal)}
+              className="p-1 text-gray-400 hover:text-red-400 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+              aria-label="Delete goal"
+              title="Delete goal"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
             <span className={`font-medium ${
               expired ? 'text-gray-400 line-through' : 'text-gray-200'
             }`}>
