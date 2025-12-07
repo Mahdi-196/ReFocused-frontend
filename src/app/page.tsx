@@ -433,7 +433,7 @@ export default function HomePage() {
             Ready to Transform Your <span className="text-[#42b9e5]">Productivity</span>?
           </h2>
           <p className="text-base text-slate-300 max-w-xl mx-auto mb-8">
-            Join thousands of users who have already improved their focus, productivity, and wellbeing with ReFocused.
+            Join a growing user base who have already improved their focus, productivity, and wellbeing with ReFocused.
           </p>
           
           <div className="flex justify-center">
