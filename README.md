@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-ReFocused is a comprehensive productivity ecosystem designed to consolidate daily tools—Pomodoro, journaling, habit tracking, and study aids—into a single, cohesive application. Beyond standard CRUD, each component is engineered for scale, security, and extensibility.
+ReFocused is a comprehensive productivity ecosystem designed to consolidate daily tools—Pomodoro, journaling, habit tracking, and study aids—into a single, cohesive application. Beyond standard CR[...]
 
 This repository documentation covers the entire stack:
 
@@ -19,7 +19,9 @@ This repository documentation covers the entire stack:
 
 ## 1. Cloud Architecture & DevOps (AWS)
 
-The ReFocused infrastructure is built on a high-availability, hybrid serverless/container architecture hosted primarily on AWS. It leverages a Virtual Private Cloud (VPC) for security and AWS Lambda functions for scalable compute.
+![ReFocused Cloud Architecture](https://mahdi-readme-images.s3.us-east-1.amazonaws.com/Refocused--Architecture)
+
+The ReFocused infrastructure is built on a high-availability, hybrid serverless/container architecture hosted primarily on AWS. It leverages a Virtual Private Cloud (VPC) for security and AWS Lambda f[...]
 
 ### Infrastructure Breakdown
 
