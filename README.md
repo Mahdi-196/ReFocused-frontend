@@ -1,283 +1,158 @@
-# ReFocused Frontend
+# ReFocused Platform: Master Architecture & Documentation
 
 **Live Project:** [refocused.app](https://refocused.app)
 
 ---
 
-## What This Is
+## Project Overview
 
-ReFocused is an all in one app with lots of practical features you would use on a daily basis things such as Pomodoro, journaling, habit tracking, breathing exercises, and much more. ReFocused is easy to use and mobile friendly. It keeps you logged in, doesn't bother you with any spam, and just gives you the tools to supercharge your general productivity.
+ReFocused is a comprehensive productivity ecosystem designed to consolidate daily tools—Pomodoro, journaling, habit tracking, and study aids—into a single, cohesive application. Beyond standard CRUD features, it integrates a custom-trained 1.2B parameter LLM to provide personalized productivity insights.
 
+This repository documentation covers the entire stack:
+
+- **Cloud & DevOps:** AWS Serverless & Container Architecture  
+- **Frontend:** Next.js 15 Client  
+- **Backend:** FastAPI Async Server  
+- **AI Pipeline:** Custom GPT-NeoX Training & Fine-tuning  
+
+---
+
+## 1. Cloud Architecture & DevOps (AWS)
+
+The ReFocused infrastructure is built on a high-availability, hybrid serverless/container architecture hosted primarily on AWS. It leverages a Virtual Private Cloud (VPC) for security and AWS Lambda for event-driven microservices.
+
+### Infrastructure Breakdown
+
+#### A. Core Application Hosting
+
+- **Frontend (AWS Amplify):** Hosting for the Next.js application, utilizing Route 53 for DNS management (client and server).
+- **Backend (AWS App Runner):** Core FastAPI backend as a containerized service.
+- **ECR (Elastic Container Registry):** Stores Docker images for App Runner.
+- **VPC Connector:** Enables secure communication between App Runner and private database/cache layers inside the VPC.
+
+#### B. The "Refocused-VPC" (Network Layer)
+
+Critical data services are isolated within a custom VPC:
+
+- **Public Subnet:**
+  - **EC2 NAT Instance:** Provides private resources outbound internet access without inbound exposure.
+  - **Internet Gateway:** Manages inbound/outbound traffic.
+
+- **Private Subnet:**
+  - **Amazon RDS:** PostgreSQL database for persistent user data.
+  - **ElasticCache for Redis:** Session, caching, and rate limiting.
+
+#### C. Serverless Microservices Architecture
+
+Some features are offloaded to Lambda/API Gateway for scalable compute:
+
+- **Email Service:**
+  - **Trigger:** API Gateway.
+  - **Flow:** SNS Topics trigger decoupled Lambdas.
+  - **Storage:** Reads/modifies DynamoDB.
+  - **Action:** SES dispatch for email.
+
+- **AI Inference Engine:**
+  - **Compute:** Dedicated ai-handler Lambda.
+  - **Model Loading:** From S3 and ECR.
+  - **Persistence:** DynamoDB for history/prompts.
+
+- **Feedback & Feature Voting:**
+  - Gateways trigger Lambdas, data written to DynamoDB for performance and isolation.
 
 ---
 
-## Why This Exists
+## 2. Frontend (Client)
 
-ReFocused exists for many reasons, the main being consolidation. The app has about 8 main features that I have personally installed individual apps for. It is something I actually use it's super simple to use, and every feature is a simple thing iterated on. I wanted to make something that can have real value and anyone can use. I learned a lot about building a full stack application, going from frontend to backend to deployment, rewrites from Vite to Next.js. Only one word could really describe it, and that's iteration. This exists as a real standalone application that I and many others use daily, but it also is a big leap in my journey and a great learning experience where I got to jump into new things and suck at first, then iterate my way to this final product.
+Highly iterated, responsive web app built to consolidate productivity apps.
 
+### Tech Stack
+
+- **Core:** Next.js 15.2 (App Router), React 19, TypeScript 5.7
+- **State/Data:** TanStack React Query 5, Context API (Auth, Time, Audio)
+- **Styling:** Tailwind CSS 4, Framer Motion, Lucide React
+- **Key Libs:** Quill (Rich Text), date-fns, bcryptjs, Google OAuth
+
+### Key Features
+
+- **Pomodoro Timer:** 100ms refresh, local persistence, stats.
+- **Habit Tracking:** Streaks, calendar, analytics.
+- **Journal:** Encrypted rich-text entries, password protection.
+- **Study System:** Flashcard sets, spaced repetition, progress tracking.
+- **Breathing Exercises:** SVG animations for guided techniques.
+
+### Performance & Architecture
+
+- **State Management:** Pure Context API + Hooks; specialized contexts (Auth, Time, AiConversation).
+- **Optimistic Updates:** React Query with cache invalidation (stale: 5 min).
+- **Daily Caching:** useDailyCache hook resets at midnight UTC.
 
 ---
 
-## Table of Contents
+## 3. Backend API
 
-1. [AWS Deployment](#aws-deployment)
-2. [Tech Stack](#tech-stack)
-3. [Feature Rundown](#feature-rundown)
-4. [Authentication](#authentication)
-5. [State Management](#state-management)
-6. [Performance](#performance)
+Asynchronous, high-performance API built with FastAPI. Targets sub-100ms response times and massive scalability.
 
+### Tech Stack
 
+- **Framework:** FastAPI 0.104, Uvicorn (ASGI)
+- **Language:** Python 3.11
+- **Database:** PostgreSQL (AsyncPG + SQLAlchemy 2.0)
+- **Caching:** Redis (Asyncio)
+- **Security:** OAuth2 (Google), JWT (HS256/RS256), Passlib (Bcrypt)
+- **Observability:** OpenTelemetry, Sentry, Prometheus
+
+### Security Implementation
+
+- **Authentication:** Hybrid HTTP-Only Cookies (primary), JWT Bearer (fallback)
+- **Token Management:** Silent refresh (every 15s), blacklist on logout, auto-logout
+
+- **Protection Layers:**
+  - **Rate Limiting:** Token bucket (global: 500/min, AI endpoints: 50/day)
+  - **CSRF:** Double-submit cookie pattern
+  - **Headers:** HSTS, CSP, X-Frame-Options
+
+### Scalability
+
+- **DB Pooling:** Managed via AsyncPG
+- **Redis Caching:** Sessions, counters, daily content (midnight reset)
+- **Middleware:** Security, GZip compression, structured logging
 
 ---
-## AWS Deployment
 
-### Architecture Overview
+## 4. ReFocused AI (Model Pipeline)
 
-![ReFocused Architecture Diagram](https://mahdi-readme-images.s3.us-east-1.amazonaws.com/Refocused--Architecture)
+Custom-trained 1.2B Parameter Language Model (GPT-NeoX architecture) powers productivity features.
 
-## Tech Stack
+### Pipeline Overview
 
-### Core Framework
-**Next.js 15.2.4** with App Router • **React 19.1.0** • **TypeScript 5.7.2** (strict mode)
+- **Data Collection:** Reddit, Wikipedia (real-time)
+- **Processing:** Deduplication, quality scoring, balanced splits
+- **Tokenization:** Custom BPE (GPT-2 style)
+- **Training:**
+  - **Framework:** PyTorch 2.0+ with CUDA
+  - **Optimization:** Mixed precision, torch.compile
+  - **Infra:** Checkpoint uploads to Google Cloud Storage
+- **Fine-Tuning:** LoRA and full fine-tuning (Chat, Code, Instruction)
 
-### Key Dependencies
-**TanStack React Query 5.80.7** - Data fetching and caching layer
-**Axios 1.9.0** - HTTP client with interceptors
-**Framer Motion 12.16.0** - Smooth animations and transitions
-**Quill 2.0.3** - Rich text editor for journal entries
-**Lucide React 0.503.0** - Modern icon library
-**React Icons 5.5.0** - Additional icon sets
-**Date-fns 4.1.0** - Date manipulation utilities
-**bcryptjs 3.0.2** - Client-side password hashing
-**UUID 11.1.0** - Unique identifier generation
-**Google Accounts API 0.0.16** - OAuth integration
+### Model Stats
 
-### Styling & UI
-**Tailwind CSS 4.0.17** - Utility-first CSS framework
-**PostCSS 8.5.3** - CSS processing
-**React Loading Skeleton 3.5.0** - Loading state components
+- **Arch:** GPT-NeoX
+- **Parameters:** ~1.2B
+- **Context Window:** 2048 tokens
+- **Vocab:** 50,257 tokens
+- **Deployment:** Weights exported to S3, loaded into Lambda for inference
 
-### Testing & Quality
-**Jest 30.0.5** - Testing framework
-**React Testing Library 16.3.0** - Component testing
-**ESLint 9.21.0** - Code linting
-**TypeScript ESLint 8.29.1** - TypeScript-specific linting
+---
 
-### Build Tools
-**Next Bundle Analyzer 15.3.3** - Bundle size analysis
-**Babel 7.28.3** - JavaScript transpilation
-**Yarn 4.5.2** - Package manager
+## Setup & Usage
 
-### File Structure Layout
+The AI repository provides a full CLI for managing the pipeline:
 
+```bash
+# Start training with the test config
+./start_training.sh --config test --gcs-credentials keys.json
+
+# Fine-tune for chat
+python 06_fine_tuning/fine_tune.py --task chat --base-model final_model
 ```
-/src
-├── /app                          # Next.js App Router - Application pages
-│   ├── layout.tsx               # Root layout with metadata & providers
-│   ├── page.tsx                 # Landing page
-│   ├── /home                    # Dashboard page
-│   ├── /journal                 # Journal entries & rich text editor
-│   ├── /study                   # Flashcard study system
-│   ├── /track                   # Habit tracking with calendar
-│   ├── /relax                   # Breathing exercises & meditation
-│   ├── /ai                      # AI-powered productivity features
-│   ├── /profile                 # User profile management
-│   └── /legal                   # Privacy, terms, cookies, data protection
-│
-├── /components                  # 67+ Reusable UI components
-│   ├── QueryProvider.tsx        # TanStack Query configuration
-│   ├── ClientLayoutWrapper.tsx  # Client-side layout wrapper
-│   ├── AuthModal.tsx            # Login/register modal
-│   ├── ErrorBoundary.tsx        # Error handling wrapper
-│   ├── /auth                    # Authentication components
-│   ├── /breathing               # Breathing exercise components
-│   └── [other components]
-│
-├── /contexts                    # 5 React Context providers
-│   ├── AuthContext.tsx          # Authentication state & methods
-│   ├── TimeContext.tsx          # Time synchronization with backend
-│   ├── AudioContext.tsx         # Global audio mute state
-│   ├── ToastContext.tsx         # Toast notification system
-│   └── AiConversationContext.tsx # AI conversation state
-│
-├── /hooks                       # 11+ Custom React hooks
-│   ├── useAuth.ts               # Authentication hook
-│   ├── useTime.ts               # Time synchronization hook
-│   ├── useDailyCache.ts         # Daily cache management
-│   ├── useGoogleAuth.ts         # Google OAuth integration
-│   ├── useMonthlyProductivity.ts # Monthly stats tracking
-│   ├── useNetworkMonitor.ts     # Network status detection
-│   └── [other hooks]
-│
-├── /services                    # 17 Business logic services
-│   ├── authService.ts           # Authentication operations
-│   ├── timeService.ts           # Time/date synchronization
-│   ├── cacheService.ts          # Cache management
-│   ├── goalsService.ts          # Goals CRUD operations
-│   ├── studyService.ts          # Flashcard system logic
-│   ├── habitsService.ts         # Habit tracking logic
-│   ├── journalService.ts        # Journal entry management
-│   ├── moodService.ts           # Mood tracking
-│   ├── statisticsService.ts     # Statistics calculations
-│   └── [other services]
-│
-├── /utils                       # Utility functions
-│   ├── tokenRefresh.ts          # Automatic token refresh manager
-│   ├── tokenValidator.ts        # JWT validation & parsing
-│   ├── cookieAuth.ts            # Cookie authentication manager
-│   ├── csrf.ts                  # CSRF protection utilities
-│   ├── rateLimiting.ts          # Rate limiting handler
-│   ├── scopedStorage.ts         # User-scoped localStorage
-│   ├── logger.ts                # Logging utility
-│   ├── dateHelpers.ts           # Date manipulation
-│   └── [other utilities]
-│
-├── /types                       # TypeScript type definitions
-│   ├── goal.ts
-│   ├── activityLogging.ts
-│   ├── monthlyProductivity.ts
-│   └── [other types]
-
-```
----
-
-## Feature Rundown
-
-### Pomodoro Timer
-Session tracking with break automation • localStorage persistence across page refreshes • Focus session statistics • 100ms UI refresh rate for smooth countdown display
-
-### Habit Tracking
-Daily habit completion with calendar visualization • Streak tracking with progress bars • Monthly habit analytics • Gratitude journal integration
-
-### Journal System
-Rich text editor powered by Quill.js • Optional password protection with bcryptjs encryption • Multiple journal collections • Search and filter capabilities
-
-### Flashcard Study System
-Create and manage flashcard sets • Study session tracking • Progress statistics • Quick notes (auto-delete at daily reset) • Task management and tracking 
-
-### Breathing Exercises & Meditation
-10+ guided breathing techniques (Box Breathing, 4-7-8, Star Breathing, etc.) • Animated SVG visualizations • Real-time phase indicators • Ambient soundscapes with volume control • Session duration tracking
-
-### AI-Powered Productivity
-Personalized insights and recommendations • Daily usage limit (100 messages/day) • Conversation history management • Context-aware suggestions
-
-### Goal Management
-Create goals with custom progress tracking • Interactive drag-based percentage input • Goal completion history with time-to-completion analytics • Calendar view integration • Filtering and pagination
-
-### Monthly Productivity Analytics
-Comprehensive productivity scoring • Monthly trend visualization • Activity logging and insights • Habit completion rates • Study session summaries
-
-### Real-Time Features
-Network status detection with offline support • Day change detection for automatic cache invalidation • Toast notifications for user feedback • Smooth UI updates with 100ms refresh intervals
-
-### User Profile
-Avatar selection and customization • Account settings management • Google OAuth integration • Email/password authentication
-
----
-
-## Authentication
-
-### Frontend Authentication Architecture
-
-**Primary Method: HTTP-Only Cookies**
-Secure cookie-based authentication handled by the backend with automatic cookie management. Cookies are HTTP-only, preventing JavaScript access for enhanced security.
-
-**Fallback Method: localStorage JWT**
-When cookies aren't available or supported, the system falls back to storing JWT tokens in localStorage under the `REF_TOKEN` key with user-scoped storage.
-
-### Token Management
-
-**Automatic Silent Token Refresh**
-Background monitoring checks token expiry every 15 seconds. When a token is within 3 minutes of expiration, the system automatically attempts a silent refresh using the `/v1/auth/refresh` endpoint without interrupting the user experience.
-
-**Token Validator**
-Client-side JWT validation parses token structure, checks expiration timestamps, and extracts user information without requiring backend verification for every request.
-
-**Auto-Logout Protection**
-If token refresh fails or the token is within 30 seconds of expiry, the system automatically logs out the user to prevent authentication errors.
-
-
-## State Management
-
-### Context-Based Architecture
-
-ReFocused uses React Context API for global state management instead of Redux, providing a lightweight and performant solution with 5 specialized context providers:
-
-### 1. AuthContext
-Manages user authentication state, login/logout operations, and user profile data. Automatically initializes on app mount and persists authentication across page refreshes.
-
-### 2. TimeContext
-Synchronizes time and date with the backend server every 30 minutes to ensure consistency across timezones. Provides timezone management with browser detection and user override capabilities. Includes mock date support for testing and development.
-
-**Specialized Hooks:**
-`useTime()` - Access synchronized time
-`useCurrentDate()` - Get current date with caching
-`useDateFormatting()` - Format dates consistently
-`useTimezone()` - Manage user timezone preferences
-
-### 3. AudioContext
-Controls global audio mute state for ambient sounds and meditation features. State persists to localStorage with user-scoped storage.
-
-### 4. ToastContext
-Manages toast notification display for user feedback throughout the application.
-
-### 5. AiConversationContext
-Handles AI conversation state including message history and conversation management.
-
-### Custom Hooks Layer
-
-11+ custom hooks provide composable logic for common features:
-
-**useAuth()** - Authentication context access
-**useDailyCache()** - Daily cache management with automatic invalidation
-**useContentCache()** - Content refresh operations
-**useDailyContent()** - Daily motivational content loading
-**useGoogleAuth()** - Google OAuth integration
-**useMonthlyProductivity()** - Monthly statistics tracking
-**useNetworkMonitor()** - Network status detection
-**useSettings()** - User settings management
-**useStreakData()** - Habit streak calculations
-
-### Data Fetching with TanStack React Query
-
-**Configuration:**
-Retry attempts: 1
-Refetch on window focus: Disabled
-Stale time: 5 minutes
-
-React Query handles server state management with automatic caching, background refetching, and cache invalidation. Used extensively in study, journal, and tracking features.
-
-### User-Scoped Storage
-
-All localStorage data is scoped per user account using the `scopedStorage` utility, preventing data leakage between different user sessions on shared devices.
-
-### No Redux - Pure Context Approach
-
-By using Context API with custom hooks and React Query, the application avoids Redux boilerplate while maintaining predictable state management patterns.
-
----
-
-## Performance
-
-### Code Splitting & Lazy Loading
-
-**Dynamic Imports**
-Components are loaded on-demand using Next.js dynamic imports, reducing initial bundle size and improving First Contentful Paint (FCP). Routes automatically code-split at the page level.
-
-**Lazy Component Loading**
-Large components like AuthModal, Journal Editor, and Study components load only when needed with custom skeleton loading states for smooth UX.
-
-### Multi-Layer Caching Strategy
-
-**Daily Cache System**
-Date-aware cache that automatically invalidates at midnight UTC. Used for daily motivational quotes, words, and productivity themes. Includes cache size monitoring and cleanup.
-
-**React Query Cache**
-5-minute stale time for API responses with automatic background refetching. Retry logic with 1 attempt prevents unnecessary server load.
-
-**localStorage Persistence**
-User preferences, theme settings, and non-sensitive data persist across sessions with user-scoped isolation.
-
-
-
