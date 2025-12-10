@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-ReFocused is a comprehensive productivity ecosystem designed to consolidate daily tools—Pomodoro, journaling, habit tracking, and study aids—into a single, cohesive application. Beyond standard CRUD features, it integrates a custom-trained 1.2B parameter LLM to provide personalized productivity insights.
+ReFocused is a comprehensive productivity ecosystem designed to consolidate daily tools—Pomodoro, journaling, habit tracking, and study aids—into a single, cohesive application. Beyond standard CRUD, each component is engineered for scale, security, and extensibility.
 
 This repository documentation covers the entire stack:
 
@@ -19,7 +19,7 @@ This repository documentation covers the entire stack:
 
 ## 1. Cloud Architecture & DevOps (AWS)
 
-The ReFocused infrastructure is built on a high-availability, hybrid serverless/container architecture hosted primarily on AWS. It leverages a Virtual Private Cloud (VPC) for security and AWS Lambda for event-driven microservices.
+The ReFocused infrastructure is built on a high-availability, hybrid serverless/container architecture hosted primarily on AWS. It leverages a Virtual Private Cloud (VPC) for security and AWS Lambda functions for scalable compute.
 
 ### Infrastructure Breakdown
 
@@ -89,7 +89,7 @@ Highly iterated, responsive web app built to consolidate productivity apps.
 
 ---
 
-## 3. Backend API
+## 3. Backend API ([Mahdi-196/ReFocused-backend](https://github.com/Mahdi-196/ReFocused-backend))
 
 Asynchronous, high-performance API built with FastAPI. Targets sub-100ms response times and massive scalability.
 
@@ -120,7 +120,7 @@ Asynchronous, high-performance API built with FastAPI. Targets sub-100ms respons
 
 ---
 
-## 4. ReFocused AI (Model Pipeline)
+## 4. ReFocused AI ([Mahdi-196/ReFocused-AI](https://github.com/Mahdi-196/ReFocused-AI))
 
 Custom-trained 1.2B Parameter Language Model (GPT-NeoX architecture) powers productivity features.
 
