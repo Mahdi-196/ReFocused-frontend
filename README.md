@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-ReFocused is a comprehensive productivity ecosystem designed to consolidate daily tools—Pomodoro, journaling, habit tracking, and study aids—into a single, cohesive application. Beyond standard CR[...]
+ReFocused is a comprehensive productivity ecosystem designed to consolidate daily tools Pomodoro, journaling, habit tracking, and study tools as a singl cohesive application.
 
 This repository documentation covers the entire stack:
 
@@ -21,7 +21,7 @@ This repository documentation covers the entire stack:
 
 ![ReFocused Cloud Architecture](https://mahdi-readme-images.s3.us-east-1.amazonaws.com/Refocused--Architecture)
 
-The ReFocused infrastructure is built on a high-availability, hybrid serverless/container architecture hosted primarily on AWS. It leverages a Virtual Private Cloud (VPC) for security and AWS Lambda f[...]
+The ReFocused infrastructure is built on a high availability, hybrid serverless/container architecture hosted primarily on AWS. It leverages a Virtual Private Cloud (VPC) for security and AWS Lambda f[...]
 
 ### Infrastructure Breakdown
 
@@ -55,7 +55,7 @@ Some features are offloaded to Lambda/API Gateway for scalable compute:
   - **Action:** SES dispatch for email.
 
 - **AI Inference Engine:**
-  - **Compute:** Dedicated ai-handler Lambda.
+  - **Compute:** Dedicated ai handler Lambda.
   - **Model Loading:** From S3 and ECR.
   - **Persistence:** DynamoDB for history/prompts.
 
@@ -73,13 +73,13 @@ Highly iterated, responsive web app built to consolidate productivity apps.
 - **Core:** Next.js 15.2 (App Router), React 19, TypeScript 5.7
 - **State/Data:** TanStack React Query 5, Context API (Auth, Time, Audio)
 - **Styling:** Tailwind CSS 4, Framer Motion, Lucide React
-- **Key Libs:** Quill (Rich Text), date-fns, bcryptjs, Google OAuth
+- **Key Libs:** Quill (Rich Text), date fns, bcryptjs, Google OAuth
 
 ### Key Features
 
 - **Pomodoro Timer:** 100ms refresh, local persistence, stats.
 - **Habit Tracking:** Streaks, calendar, analytics.
-- **Journal:** Encrypted rich-text entries, password protection.
+- **Journal:** Encrypted rich text entries, password protection.
 - **Study System:** Flashcard sets, spaced repetition, progress tracking.
 - **Breathing Exercises:** SVG animations for guided techniques.
 
@@ -93,7 +93,7 @@ Highly iterated, responsive web app built to consolidate productivity apps.
 
 ## 3. Backend API ([Mahdi-196/ReFocused-backend](https://github.com/Mahdi-196/ReFocused-backend))
 
-Asynchronous, high-performance API built with FastAPI. Targets sub-100ms response times and massive scalability.
+Asynchronous, high performance API built with FastAPI. Targets sub 100ms response times and massive scalability.
 
 ### Tech Stack
 
@@ -106,13 +106,13 @@ Asynchronous, high-performance API built with FastAPI. Targets sub-100ms respons
 
 ### Security Implementation
 
-- **Authentication:** Hybrid HTTP-Only Cookies (primary), JWT Bearer (fallback)
-- **Token Management:** Silent refresh (every 15s), blacklist on logout, auto-logout
+- **Authentication:** Hybrid HTTP Only Cookies (primary), JWT Bearer (fallback)
+- **Token Management:** Silent refresh (every 15s), blacklist on logout, auto logout
 
 - **Protection Layers:**
   - **Rate Limiting:** Token bucket (global: 500/min, AI endpoints: 50/day)
-  - **CSRF:** Double-submit cookie pattern
-  - **Headers:** HSTS, CSP, X-Frame-Options
+  - **CSRF:** Double submit cookie pattern
+  - **Headers:** HSTS, CSP, X Frame Options
 
 ### Scalability
 
@@ -128,18 +128,18 @@ Custom-trained 1.2B Parameter Language Model (GPT-NeoX architecture) powers prod
 
 ### Pipeline Overview
 
-- **Data Collection:** Reddit, Wikipedia (real-time)
+- **Data Collection:** Reddit, Wikipedia (real time)
 - **Processing:** Deduplication, quality scoring, balanced splits
 - **Tokenization:** Custom BPE (GPT-2 style)
 - **Training:**
   - **Framework:** PyTorch 2.0+ with CUDA
   - **Optimization:** Mixed precision, torch.compile
   - **Infra:** Checkpoint uploads to Google Cloud Storage
-- **Fine-Tuning:** LoRA and full fine-tuning (Chat, Code, Instruction)
+- **Fine Tuning:** LoRA and full fine tuning (Chat, Code, Instruction)
 
 ### Model Stats
 
-- **Arch:** GPT-NeoX
+- **Arch:** GPT NeoX
 - **Parameters:** ~1.2B
 - **Context Window:** 2048 tokens
 - **Vocab:** 50,257 tokens
