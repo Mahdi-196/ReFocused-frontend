@@ -1,7 +1,4 @@
 # ReFocused Platform: Master Architecture & Documentation
-
-**Live Project:** [refocused.app](https://refocused.app)
-
 ---
 
 ## Project Overview
